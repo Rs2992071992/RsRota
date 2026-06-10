@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { carregarRota } from "@/lib/rotas-service";
-import { fmtEuro, fmtNum, fmtNum2 } from "@/lib/format";
+import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
+import { estadoPagamento } from "@/lib/calc/pagamentos";
 import { AlertaBadge } from "@/components/Badge";
 import ParagemAcoes from "@/components/ParagemAcoes";
+import PagoToggle from "@/components/PagoToggle";
+import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
 import type { ParagemEditavel } from "@/components/ParagemEditor";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +142,9 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         </div>
       </div>
 
+      {/* Cobranças — estado de pagamento (prazo 90 dias) */}
+      <Cobrancas paragens={paragensRaw} faturado={rota.receitaTotal} />
+
       {/* Paragens detalhadas */}
       <div className="card overflow-x-auto">
         <h2 className="mb-3 font-semibold">Paragens</h2>
@@ -156,7 +162,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
               <th className="th text-right">Port. extra</th>
               <th className="th text-right">Custo paragem</th>
               <th className="th text-right">€/kg</th>
-              <th className="th text-right">Receita paga</th>
+              <th className="th text-right">A cobrar</th>
               <th className="th text-right">Ações</th>
             </tr>
           </thead>
@@ -209,4 +215,84 @@ function Item({ label, valor }: { label: string; valor: number }) {
 
 function raw(paragens: { id: number; receitaPaga: number }[], id: number): number {
   return paragens.find((p) => p.id === id)?.receitaPaga ?? 0;
+}
+
+/** Linha de cobrança (subconjunto de Paragem necessário para o estado de pagamento). */
+type ParagemCobranca = {
+  id: number;
+  cliente: string;
+  data: Date;
+  receitaPaga: number;
+  pago: boolean;
+};
+
+/** Carta de cobranças da rota: resumo de tesouraria + lista por paragem com toggle Pago. */
+function Cobrancas({ paragens, faturado }: { paragens: ParagemCobranca[]; faturado: number }) {
+  const comReceita = paragens.filter((p) => p.receitaPaga > 0);
+  const recebido = comReceita.filter((p) => p.pago).reduce((a, p) => a + p.receitaPaga, 0);
+  const porReceber = comReceita.filter((p) => !p.pago).reduce((a, p) => a + p.receitaPaga, 0);
+  const linhas = comReceita.map((p) => ({ ...p, info: estadoPagamento(p.data, p.pago) }));
+  const vencidos = linhas.filter((l) => l.info.estado === "VENCIDO").length;
+
+  return (
+    <div className="card">
+      <h2 className="mb-1 font-semibold">Cobranças</h2>
+      <p className="mb-3 text-xs text-gray-500">
+        Os clientes têm 90 dias (a contar da data da paragem) para pagar. Marque “Pago” quando o
+        valor for encaixado. Não afeta o cálculo de custo/lucro.
+      </p>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">Faturado</p>
+          <p className="text-lg font-bold">{fmtEuro(faturado)}</p>
+        </div>
+        <div className="rounded-lg bg-green-50 p-3">
+          <p className="text-xs text-gray-500">Recebido</p>
+          <p className="text-lg font-bold text-green-700">{fmtEuro(recebido)}</p>
+        </div>
+        <div className="rounded-lg bg-amber-50 p-3">
+          <p className="text-xs text-gray-500">Por receber</p>
+          <p className="text-lg font-bold text-amber-700">{fmtEuro(porReceber)}</p>
+        </div>
+        <div className={`rounded-lg p-3 ${vencidos > 0 ? "bg-red-50" : "bg-gray-50"}`}>
+          <p className="text-xs text-gray-500">Vencidos (+90 d)</p>
+          <p className={`text-lg font-bold ${vencidos > 0 ? "text-red-700" : ""}`}>{vencidos}</p>
+        </div>
+      </div>
+
+      {linhas.length === 0 ? (
+        <p className="text-sm text-gray-500">Sem valores a cobrar nesta rota.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="th">Cliente</th>
+                <th className="th text-right">Valor</th>
+                <th className="th">Vence</th>
+                <th className="th">Estado</th>
+                <th className="th text-right">Pago</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {linhas.map((l) => (
+                <tr key={l.id}>
+                  <td className="td font-medium">{l.cliente}</td>
+                  <td className="td text-right">{fmtEuro(l.receitaPaga)}</td>
+                  <td className="td">{fmtData(l.info.dataVencimento)}</td>
+                  <td className="td">
+                    <EstadoPagamentoBadge estado={l.info.estado} dias={l.info.diasRestantes} />
+                  </td>
+                  <td className="td text-right">
+                    <PagoToggle paragemId={l.id} pago={l.pago} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -148,8 +148,15 @@ model Paragem {
   // Override opcional do preço de referência do combustível para esta paragem.
   precoCombRefOverride Float?
 
-  // Receita paga pelo cliente por esta paragem (editável no escritório).
+  // Valor a cobrar ao cliente por esta paragem (faturado, editável no escritório).
+  // Mantém o nome `receitaPaga` por compatibilidade (calc/import/export/snapshot).
   receitaPaga Float @default(0)
+
+  // Estado de cobrança. Os clientes têm 90 dias (a contar de `data`) para pagar.
+  // `pago` = valor encaixado; `dataPagamento` = quando foi marcado pago (informativo).
+  // Camada de tesouraria: NÃO entra no cálculo de custo/lucro da rota.
+  pago          Boolean   @default(false)
+  dataPagamento DateTime?
 
   // Colunas Espanha — meramente informativas (poupança), nunca entram no custo.
   litrosEspanha Float?

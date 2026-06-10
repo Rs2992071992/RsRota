@@ -1,17 +1,29 @@
 import Link from "next/link";
 import { exigirPerfil } from "@/lib/session";
+import { prisma } from "@/lib/db";
+import { PRAZO_DIAS } from "@/lib/calc/pagamentos";
 
 const navItems = [
   { href: "/escritorio/dashboard", label: "Dashboard" },
   { href: "/escritorio/rotas", label: "Rotas" },
+  { href: "/escritorio/cobrancas", label: "Cobranças" },
   { href: "/escritorio/motoristas", label: "Motoristas" },
   { href: "/escritorio/veiculos", label: "Veículos" },
   { href: "/escritorio/parametros", label: "Parâmetros" },
   { href: "/escritorio/importar", label: "Importar" },
 ];
 
-export default function EscritorioLayout({ children }: { children: React.ReactNode }) {
+/** Conta paragens vencidas: não pagas, com valor, e cuja data + 90 dias já passou. */
+async function contarVencidos(): Promise<number> {
+  const limite = new Date(Date.now() - PRAZO_DIAS * 24 * 60 * 60 * 1000);
+  return prisma.paragem.count({
+    where: { pago: false, receitaPaga: { gt: 0 }, data: { lt: limite } },
+  });
+}
+
+export default async function EscritorioLayout({ children }: { children: React.ReactNode }) {
   exigirPerfil("ESCRITORIO");
+  const vencidos = await contarVencidos();
   return (
     <div className="min-h-screen">
       <header className="border-b border-gray-200 bg-white">
@@ -23,9 +35,14 @@ export default function EscritorioLayout({ children }: { children: React.ReactNo
                 <Link
                   key={it.href}
                   href={it.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                  className="relative rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
                 >
                   {it.label}
+                  {it.href === "/escritorio/cobrancas" && vencidos > 0 && (
+                    <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                      {vencidos}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>

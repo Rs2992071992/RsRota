@@ -47,10 +47,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const data: Record<string, unknown> = { ...d };
   if (d.data) data.data = new Date(d.data);
 
-  // Recongela o snapshot com o motorista (inalterado) e o veículo final desta paragem.
-  const veiculoId = d.veiculoId !== undefined ? d.veiculoId : auth.paragem.veiculoId;
-  const snapshot = await snapshotParaRegisto(auth.paragem.motoristaId, veiculoId);
-  data.snapshot = snapshot as unknown as Prisma.InputJsonValue;
+  // Estado de cobrança: ao marcar pago sem data, regista a data de hoje; ao desmarcar,
+  // limpa a data de pagamento.
+  if (d.pago !== undefined) {
+    if (d.pago) {
+      data.dataPagamento = d.dataPagamento ? new Date(d.dataPagamento) : new Date();
+    } else {
+      data.dataPagamento = null;
+    }
+  } else if (d.dataPagamento !== undefined) {
+    data.dataPagamento = d.dataPagamento ? new Date(d.dataPagamento) : null;
+  }
+
+  // Só recongela o snapshot (gel dos custos) se o veículo mudou — caso contrário um
+  // simples toggle "Pago" re-congelaria os custos aos parâmetros de hoje (histórico
+  // estável; ver lição snapshot em tasks/lessons.md).
+  if (d.veiculoId !== undefined && d.veiculoId !== auth.paragem.veiculoId) {
+    const snapshot = await snapshotParaRegisto(auth.paragem.motoristaId, d.veiculoId);
+    data.snapshot = snapshot as unknown as Prisma.InputJsonValue;
+  }
 
   const atualizada = await prisma.paragem.update({ where: { id }, data });
   return NextResponse.json({ ok: true, paragem: atualizada });

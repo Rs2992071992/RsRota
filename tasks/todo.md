@@ -5,6 +5,30 @@ Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphin
 ## Fases (concluídas)
 - [x] Fase 1–7 — App completa, validada end-to-end (ver histórico abaixo)
 
+## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
+
+Clientes têm 90 dias (a contar da data da paragem) para pagar. Separar "valor a
+cobrar" (campo `receitaPaga`, só relabel) de "pago" (novo `pago` + `dataPagamento`).
+Camada de tesouraria: NÃO afeta custo/lucro (totais validados intactos).
+
+- [x] Schema: `Paragem.pago` (Bool) + `dataPagamento` (DateTime?) — `prisma db push` no Neon
+- [x] `lib/calc/pagamentos.ts` (puro) `estadoPagamento()` + 6 testes (PAGO/A_AGUARDAR/VENCIDO)
+- [x] `validacao.ts` (+pago/dataPagamento) e PATCH `/api/paragens/[id]`: set/clear
+  dataPagamento + **guard snapshot** (só recongela se o veículo mudar)
+- [x] `components/PagoToggle.tsx` (checkbox otimista) + `EstadoPagamentoBadge.tsx`
+- [x] Carta "Cobranças" no detalhe da rota (Faturado/Recebido/Por receber/Vencidos + lista)
+- [x] Página global `/escritorio/cobrancas` (vencidos primeiro) + menu com badge de vencidos
+- [x] 47 testes verdes, build OK, db push OK → commit+push (deploy Vercel automático)
+
+## 🗑️ Apagar rotas e paragens (2026-06-10)
+- [x] API `DELETE /api/rotas/[idRota]` — apaga a rota inteira (deleteMany das
+  paragens), escritório-only, 404 se não existir
+- [x] Lista Rotas: nova coluna "Ações" + botão Apagar por rota (confirmação com nº
+  de paragens) — `app/escritorio/rotas/ApagarRota.tsx`
+- [x] Detalhe da rota: botão "Apagar" ao lado de "Editar" em cada paragem
+  (reutiliza `DELETE /api/paragens/[id]`) — `components/ParagemAcoes.tsx`
+- [x] Build OK, commit+push `1ede883` → deploy Vercel automático
+
 ## 🚚 Multi-motorista / multi-veículo (2026-06-10)
 
 Cada motorista tem o seu salário/parâmetros e cada veículo os seus custos; ao

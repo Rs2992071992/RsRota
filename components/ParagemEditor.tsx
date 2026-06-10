@@ -241,7 +241,7 @@ export default function ParagemEditor({
           {campo("horasExtra", "Horas Extra")}
           {campo("litrosEspanha", "Litros Espanha")}
           {campo("custoEspanha", "Custo Espanha (€)")}
-          {mostrarReceita && campo("receitaPaga", "Receita paga (€)")}
+          {mostrarReceita && campo("receitaPaga", "Valor a cobrar (€)")}
         </div>
 
         <div className="mt-5 flex items-center justify-between">

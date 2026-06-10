@@ -33,6 +33,8 @@ export const paragemSchema = z
     horasExtra: numNaoNeg.default(0),
     precoCombRefOverride: numOpcional,
     receitaPaga: numNaoNeg.default(0),
+    pago: z.boolean().default(false),
+    dataPagamento: z.string().nullable().optional(),
     litrosEspanha: numOpcional,
     custoEspanha: numOpcional,
   })
