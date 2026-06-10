@@ -2,6 +2,7 @@ import Link from "next/link";
 import { carregarRotas, opcoesFiltro, type FiltrosRota } from "@/lib/rotas-service";
 import { fmtEuro, fmtNum, fmtData } from "@/lib/format";
 import { AlertaBadge } from "@/components/Badge";
+import ApagarRota from "./ApagarRota";
 import type { RotaCalc } from "@/lib/calc/types";
 
 export const dynamic = "force-dynamic";
@@ -149,12 +150,13 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
               <SortableTh label="Receita" sortKey="receita" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <SortableTh label="Lucro" sortKey="lucro" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <th className="th">Alerta</th>
+              <th className="th text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rotas.length === 0 && (
               <tr>
-                <td className="td text-gray-400" colSpan={8}>
+                <td className="td text-gray-400" colSpan={9}>
                   Sem rotas para os filtros escolhidos.
                 </td>
               </tr>
@@ -180,6 +182,9 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
                 </td>
                 <td className="td">
                   <AlertaBadge alerta={r.alerta} />
+                </td>
+                <td className="td text-right">
+                  <ApagarRota idRota={r.idRota} nParagens={r.paragens.length} />
                 </td>
               </tr>
             ))}
