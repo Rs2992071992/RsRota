@@ -2,6 +2,13 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-06-10] | `vitest`/`vite` falhavam com `Host version "0.21.5" does not match
+  binary version "0.28.0"`: o esbuild aninhado do vite (0.21.5) resolvia o binário de
+  plataforma `@esbuild/darwin-arm64` hasteado em 0.28.0. | Fix não destrutivo: instalar o
+  binário correspondente aninhado —
+  `npm install @esbuild/darwin-arm64@0.21.5 --no-save --prefix node_modules/vite/node_modules/esbuild`.
+  Não mexer no esbuild de topo (0.28.0). Problema de ambiente, não do código.
+
 - [2026-06-07] | O Excel tinha um bug no "Coef Real" (col P): referenciava a coluna `I`
   (Portagens, um número) em vez do tipo de veículo, pelo que os testes `="VAZIO"`/`="CAMIAO"`
   nunca davam match. | Ao replicar lógica de Excel, validar cada fórmula contra os valores

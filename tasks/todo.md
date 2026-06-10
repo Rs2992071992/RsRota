@@ -17,12 +17,12 @@ Objetivo: URL pública estável para partilhar a app (Next.js 14 + Prisma).
 - [x] `prisma generate` valida com provider postgres
 
 ### Passos do utilizador (contas externas)
-- [ ] Criar base Postgres gratuita na Neon (https://neon.tech)
-- [ ] `DATABASE_URL` local → Neon; correr `npm run db:push && npm run db:seed`
-- [ ] (Opcional) Re-importar o Excel real pela UI de importação
-- [ ] Criar repo GitHub e fazer push
-- [ ] Importar projeto na Vercel; definir env vars `DATABASE_URL` + `AUTH_SECRET`
-- [ ] Deploy → obter URL pública
+- [x] Base Postgres na Neon criada
+- [x] Schema sincronizado + dados locais (40 paragens/13 rotas) migrados p/ Neon
+- [x] Migração SQLite→Neon (script prisma/migrate-sqlite-to-neon.ts) preservou ids/PINs
+- [x] Repo GitHub gocris78-cmyk/app-logistica + push
+- [x] Vercel: env vars DATABASE_URL + AUTH_SECRET definidas
+- [x] Deploy OK → https://app-logistica-olive.vercel.app (login 200, API 401 ✓)
 - [ ] Trocar PINs por defeito (escritório 1234 / motorista 0000) em produção
 
 ## Histórico de validação

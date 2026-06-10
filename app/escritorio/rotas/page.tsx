@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { carregarRotas, opcoesFiltro, type FiltrosRota } from "@/lib/rotas-service";
-import { fmtEuro, fmtNum } from "@/lib/format";
+import { fmtEuro, fmtNum, fmtData } from "@/lib/format";
 import { AlertaBadge } from "@/components/Badge";
+import type { RotaCalc } from "@/lib/calc/types";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,21 @@ interface SearchParams {
   cliente?: string;
   tipoVeiculo?: string;
   estado?: string;
+  sort?: string;
+  dir?: string;
 }
+
+type SortKey = "data" | "paragens" | "km" | "custo" | "receita" | "lucro";
+
+// Valor numérico ordenável por chave (datas → timestamp).
+const sortValue: Record<SortKey, (r: RotaCalc) => number> = {
+  data: (r) => r.dataInicio.getTime(),
+  paragens: (r) => r.paragens.length,
+  km: (r) => r.kmTotais,
+  custo: (r) => r.custoTotalRota,
+  receita: (r) => r.receitaTotal,
+  lucro: (r) => r.lucro,
+};
 
 export default async function RotasPage({ searchParams }: { searchParams: SearchParams }) {
   const filtros: FiltrosRota = {
@@ -23,6 +38,26 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
   };
 
   const [rotas, opcoes] = await Promise.all([carregarRotas(filtros), opcoesFiltro()]);
+
+  // Ordenação dinâmica por clique no cabeçalho. Sem `sort`, mantém-se a ordem
+  // por defeito do serviço (lucro crescente — as rotas problemáticas primeiro).
+  const sort = (searchParams.sort as SortKey) || undefined;
+  const dir = searchParams.dir === "desc" ? "desc" : "asc";
+  if (sort && sortValue[sort]) {
+    const f = sortValue[sort];
+    rotas.sort((a, b) => (dir === "asc" ? f(a) - f(b) : f(b) - f(a)));
+  }
+
+  // Constrói o href de ordenação preservando os filtros atuais e alternando dir.
+  const sortHref = (key: SortKey) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(searchParams)) {
+      if (v && k !== "sort" && k !== "dir") params.set(k, String(v));
+    }
+    params.set("sort", key);
+    params.set("dir", sort === key && dir === "asc" ? "desc" : "asc");
+    return `/escritorio/rotas?${params.toString()}`;
+  };
 
   const totalCusto = rotas.reduce((a, r) => a + r.custoTotalRota, 0);
   const totalReceita = rotas.reduce((a, r) => a + r.receitaTotal, 0);
@@ -107,18 +142,19 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
           <thead className="bg-gray-50">
             <tr>
               <th className="th">ID Rota</th>
-              <th className="th">Paragens</th>
-              <th className="th text-right">KM</th>
-              <th className="th text-right">Custo</th>
-              <th className="th text-right">Receita</th>
-              <th className="th text-right">Lucro</th>
+              <SortableTh label="Data" sortKey="data" sort={sort} dir={dir} hrefFor={sortHref} />
+              <SortableTh label="Paragens" sortKey="paragens" sort={sort} dir={dir} hrefFor={sortHref} />
+              <SortableTh label="KM" sortKey="km" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
+              <SortableTh label="Custo" sortKey="custo" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
+              <SortableTh label="Receita" sortKey="receita" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
+              <SortableTh label="Lucro" sortKey="lucro" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <th className="th">Alerta</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rotas.length === 0 && (
               <tr>
-                <td className="td text-gray-400" colSpan={7}>
+                <td className="td text-gray-400" colSpan={8}>
                   Sem rotas para os filtros escolhidos.
                 </td>
               </tr>
@@ -129,6 +165,11 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
                   <Link href={`/escritorio/rotas/${encodeURIComponent(r.idRota)}`} className="text-brand hover:underline">
                     {r.idRota}
                   </Link>
+                </td>
+                <td className="td whitespace-nowrap">
+                  {r.dataInicio.getTime() === r.dataFim.getTime()
+                    ? fmtData(r.dataInicio)
+                    : `${fmtData(r.dataInicio)} – ${fmtData(r.dataFim)}`}
                 </td>
                 <td className="td">{r.paragens.length}</td>
                 <td className="td text-right">{fmtNum(r.kmTotais)}</td>
@@ -146,5 +187,35 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
         </table>
       </div>
     </div>
+  );
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  sort,
+  dir,
+  hrefFor,
+  align,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort?: SortKey;
+  dir: "asc" | "desc";
+  hrefFor: (key: SortKey) => string;
+  align?: "right";
+}) {
+  const ativo = sort === sortKey;
+  const seta = ativo ? (dir === "asc" ? "▲" : "▼") : "";
+  return (
+    <th className={`th ${align === "right" ? "text-right" : ""}`}>
+      <Link
+        href={hrefFor(sortKey)}
+        className={`inline-flex items-center gap-1 hover:text-brand ${ativo ? "text-brand" : ""}`}
+      >
+        {label}
+        <span className="text-[10px]">{seta}</span>
+      </Link>
+    </th>
   );
 }

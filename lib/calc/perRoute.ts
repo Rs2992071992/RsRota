@@ -64,8 +64,17 @@ export function calcularRota(
 
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
 
+  // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
+  const tempos = paragens
+    .map((p) => (p.data ? new Date(p.data).getTime() : NaN))
+    .filter((t) => !Number.isNaN(t));
+  const dataInicio = tempos.length ? new Date(Math.min(...tempos)) : new Date();
+  const dataFim = tempos.length ? new Date(Math.max(...tempos)) : dataInicio;
+
   return {
     idRota,
+    dataInicio,
+    dataFim,
     paragens: calc,
     somaCustoParagens,
     somaNoites,

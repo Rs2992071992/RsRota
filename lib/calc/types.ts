@@ -75,6 +75,7 @@ export interface CustosDerivados {
 export interface ParagemInput {
   id?: number;
   idRota: string;
+  data?: Date | string | null;
   cliente: string;
   tipoViagem: TipoViagem | string;
   tipoVeiculo: TipoVeiculo | string;
@@ -134,6 +135,9 @@ export interface RateioCliente {
 /** Resultado do cálculo de uma rota. */
 export interface RotaCalc {
   idRota: string;
+  /** Data da 1ª paragem (início) e da última (fim) da rota. */
+  dataInicio: Date;
+  dataFim: Date;
   paragens: ParagemCalc[];
   // Componentes do custo total
   somaCustoParagens: number;

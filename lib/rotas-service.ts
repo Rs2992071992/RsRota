@@ -18,6 +18,7 @@ export function paragemToInput(p: Paragem): ParagemInput {
   return {
     id: p.id,
     idRota: p.idRota,
+    data: p.data,
     cliente: p.cliente,
     tipoViagem: p.tipoViagem,
     tipoVeiculo: p.tipoVeiculo,
