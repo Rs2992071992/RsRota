@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { fmtEuro, fmtData } from "@/lib/format";
+import { fmtEuro } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
-import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
-import PagoToggle from "@/components/PagoToggle";
+import CobrancasTabela, { type LinhaCobranca } from "@/components/CobrancasTabela";
 
 export const dynamic = "force-dynamic";
 
-// Ordem de prioridade na lista: vencidos primeiro, depois a aguardar, pagos no fim.
+// Ordem por defeito: vencidos primeiro, depois a aguardar, pagos no fim.
 const PRIORIDADE = { VENCIDO: 0, A_AGUARDAR: 1, PAGO: 2 } as const;
 
 export default async function ContasAReceber() {
@@ -16,21 +14,30 @@ export default async function ContasAReceber() {
     select: { id: true, idRota: true, cliente: true, data: true, receitaPaga: true, pago: true },
   });
 
-  const linhas = paragens
-    .map((p) => ({ ...p, info: estadoPagamento(p.data, p.pago) }))
+  const linhas: LinhaCobranca[] = paragens
+    .map((p) => {
+      const info = estadoPagamento(p.data, p.pago);
+      return {
+        id: p.id,
+        idRota: p.idRota,
+        cliente: p.cliente,
+        valor: p.receitaPaga,
+        pago: p.pago,
+        estado: info.estado,
+        diasRestantes: info.diasRestantes,
+        dataVencimento: info.dataVencimento.toISOString(),
+      };
+    })
     .sort((a, b) => {
-      const pa = PRIORIDADE[a.info.estado];
-      const pb = PRIORIDADE[b.info.estado];
+      const pa = PRIORIDADE[a.estado];
+      const pb = PRIORIDADE[b.estado];
       if (pa !== pb) return pa - pb;
-      // Dentro do mesmo estado: vencimento mais próximo primeiro.
-      return a.info.dataVencimento.getTime() - b.info.dataVencimento.getTime();
+      return new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime();
     });
 
-  const porReceber = linhas.filter((l) => !l.pago).reduce((a, l) => a + l.receitaPaga, 0);
-  const vencido = linhas
-    .filter((l) => l.info.estado === "VENCIDO")
-    .reduce((a, l) => a + l.receitaPaga, 0);
-  const nVencidos = linhas.filter((l) => l.info.estado === "VENCIDO").length;
+  const porReceber = linhas.filter((l) => !l.pago).reduce((a, l) => a + l.valor, 0);
+  const vencido = linhas.filter((l) => l.estado === "VENCIDO").reduce((a, l) => a + l.valor, 0);
+  const nVencidos = linhas.filter((l) => l.estado === "VENCIDO").length;
 
   return (
     <div className="space-y-5">
@@ -38,7 +45,7 @@ export default async function ContasAReceber() {
         <h1 className="text-2xl font-bold">Contas a receber</h1>
         <p className="text-sm text-gray-500">
           Os clientes têm 90 dias (a contar da data da paragem) para pagar. Os valores vencidos
-          (+90 dias) aparecem primeiro.
+          (+90 dias) aparecem primeiro. Clique num título de coluna para ordenar.
         </p>
       </div>
 
@@ -61,38 +68,7 @@ export default async function ContasAReceber() {
         {linhas.length === 0 ? (
           <p className="text-sm text-gray-500">Sem valores a cobrar registados.</p>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="th">Rota</th>
-                <th className="th">Cliente</th>
-                <th className="th text-right">Valor</th>
-                <th className="th">Vence</th>
-                <th className="th">Estado</th>
-                <th className="th text-right">Pago</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {linhas.map((l) => (
-                <tr key={l.id} className={l.info.estado === "VENCIDO" ? "bg-red-50/40" : ""}>
-                  <td className="td">
-                    <Link href={`/escritorio/rotas/${encodeURIComponent(l.idRota)}`} className="font-medium text-brand hover:underline">
-                      {l.idRota}
-                    </Link>
-                  </td>
-                  <td className="td">{l.cliente}</td>
-                  <td className="td text-right">{fmtEuro(l.receitaPaga)}</td>
-                  <td className="td">{fmtData(l.info.dataVencimento)}</td>
-                  <td className="td">
-                    <EstadoPagamentoBadge estado={l.info.estado} dias={l.info.diasRestantes} />
-                  </td>
-                  <td className="td text-right">
-                    <PagoToggle paragemId={l.id} pago={l.pago} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CobrancasTabela linhas={linhas} />
         )}
       </div>
     </div>
