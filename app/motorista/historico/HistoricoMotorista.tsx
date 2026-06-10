@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import ParagemEditor, { type ParagemEditavel } from "@/components/ParagemEditor";
+import ParagemEditor, { type ParagemEditavel, type VeiculoOpcao } from "@/components/ParagemEditor";
 import { fmtData, fmtNum } from "@/lib/format";
 
 export type ParagemHist = ParagemEditavel;
@@ -10,10 +10,11 @@ export type ParagemHist = ParagemEditavel;
 interface Props {
   paragens: ParagemHist[];
   zonas: string[];
+  veiculos: VeiculoOpcao[];
   valorNoite: number;
 }
 
-export default function HistoricoMotorista({ paragens, zonas, valorNoite }: Props) {
+export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoite }: Props) {
   const [aEditar, setAEditar] = useState<ParagemHist | null>(null);
 
   // Agrupa por ID Rota, mantendo a ordem (mais recente primeiro).
@@ -88,6 +89,7 @@ export default function HistoricoMotorista({ paragens, zonas, valorNoite }: Prop
         <ParagemEditor
           paragem={aEditar}
           zonas={zonas}
+          veiculos={veiculos}
           valorNoite={valorNoite}
           onClose={() => setAEditar(null)}
         />

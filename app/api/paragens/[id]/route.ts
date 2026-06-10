@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
+import { snapshotParaRegisto } from "@/lib/snapshot-service";
 
 // Atualização parcial — usada para editar a receita (escritório) ou corrigir uma
 // paragem (escritório, ou o próprio motorista nas suas paragens).
@@ -44,6 +46,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const d = parsed.data;
   const data: Record<string, unknown> = { ...d };
   if (d.data) data.data = new Date(d.data);
+
+  // Recongela o snapshot com o motorista (inalterado) e o veículo final desta paragem.
+  const veiculoId = d.veiculoId !== undefined ? d.veiculoId : auth.paragem.veiculoId;
+  const snapshot = await snapshotParaRegisto(auth.paragem.motoristaId, veiculoId);
+  data.snapshot = snapshot as unknown as Prisma.InputJsonValue;
 
   const atualizada = await prisma.paragem.update({ where: { id }, data });
   return NextResponse.json({ ok: true, paragem: atualizada });

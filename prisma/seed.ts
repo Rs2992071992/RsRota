@@ -15,7 +15,7 @@ async function main() {
     create: { id: 1 }, // todos os defaults estão no schema
   });
 
-  // --- Pneus por eixo ---
+  // --- Pneus por eixo (template global: veiculoId null) ---
   const pneus = [
     { eixo: "1 Eixo", custo: 1280, km: 180000, ordem: 1 },
     { eixo: "2 Eixo", custo: 1680, km: 120000, ordem: 2 }, // 420 × 4
@@ -23,8 +23,19 @@ async function main() {
     { eixo: "4 Eixo", custo: 620, km: 180000, ordem: 4 },
     { eixo: "5 Eixo", custo: 880, km: 180000, ordem: 5 },
   ];
-  if ((await prisma.pneu.count()) === 0) {
+  if ((await prisma.pneu.count({ where: { veiculoId: null } })) === 0) {
     await prisma.pneu.createMany({ data: pneus });
+  }
+
+  // --- Veículo por defeito (frota) com os valores atuais + os seus pneus ---
+  if ((await prisma.veiculo.count()) === 0) {
+    await prisma.veiculo.create({
+      data: {
+        nome: "Camião principal",
+        // restantes campos de custo usam os defaults do schema (= valores §3.4)
+        pneus: { create: pneus.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km, ordem: p.ordem })) },
+      },
+    });
   }
 
   // --- Tabela de portagens (classe 4, só de ida) ---

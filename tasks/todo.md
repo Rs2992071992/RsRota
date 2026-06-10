@@ -5,6 +5,23 @@ Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphin
 ## Fases (concluídas)
 - [x] Fase 1–7 — App completa, validada end-to-end (ver histórico abaixo)
 
+## 🚚 Multi-motorista / multi-veículo (2026-06-10)
+
+Cada motorista tem o seu salário/parâmetros e cada veículo os seus custos; ao
+registar uma rota, as despesas usam os parâmetros do motorista + veículo usados
+(frota partilhada) e ficam **congeladas** (snapshot) → histórico estável.
+
+- [x] Schema: modelo `Veiculo`, `Pneu.veiculoId`, 7 campos salariais em `Utilizador`,
+  `Paragem.veiculoId` + `snapshot Json`
+- [x] Motor: `ParagemSnapshot` + `efetivos()`; cálculo usa snapshot (fallback contexto)
+- [x] `lib/calc/snapshot.ts` (puro) + `lib/snapshot-service.ts` (DB) — congelam custos
+- [x] APIs: paragens (veiculoId + snapshot), `/api/veiculos` CRUD, motoristas PATCH
+  salário, parametros (pneus globais scoped)
+- [x] UI: página Veículos, menu, salários em Motoristas, seletor de veículo no registo/editor
+- [x] Seed + `prisma/migrate-multi-driver.ts`; 41 testes verdes, build OK, HILP01=1487,73 €
+- [ ] **Produção (ação do utilizador)**: `prisma db push` no Neon + correr
+  `npx tsx prisma/migrate-multi-driver.ts` (ver instruções no fim da conversa)
+
 ## 🚀 Deploy em produção (2026-06-10) — Opção A: hospedagem permanente
 
 Objetivo: URL pública estável para partilhar a app (Next.js 14 + Prisma).

@@ -20,7 +20,7 @@ interface Props {
 
 const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = [
   {
-    titulo: "Motorista",
+    titulo: "Motorista (valores por defeito)",
     campos: [
       ["salarioMensal", "Salário mensal (€)"],
       ["seguroMensal", "Seguro mensal (€)"],
@@ -32,7 +32,7 @@ const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = 
     ],
   },
   {
-    titulo: "Veículo",
+    titulo: "Veículo (valores por defeito)",
     campos: [
       ["valorAquisicao", "Valor de aquisição (€)"],
       ["valorResidual", "Valor residual (€)"],
@@ -124,6 +124,17 @@ export default function ParametrosForm({
       {estado === "erro" && (
         <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Erro ao guardar.</p>
       )}
+
+      <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+        Os blocos <strong>Motorista</strong> e <strong>Veículo</strong> abaixo são apenas os{" "}
+        <strong>valores por defeito</strong> (modelo para novos motoristas/veículos). Os custos
+        reais de cada motorista editam-se em <strong>Motoristas</strong> e os de cada camião em{" "}
+        <strong>Veículos</strong>.
+      </p>
+      <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+        Os pneus aqui são o <strong>template global</strong>; cada veículo tem os seus próprios na
+        página de Veículos.
+      </p>
 
       {/* Valores derivados (validação) */}
       <div className="card border-brand/30 bg-brand/5">

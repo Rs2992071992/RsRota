@@ -5,6 +5,7 @@ const navItems = [
   { href: "/escritorio/dashboard", label: "Dashboard" },
   { href: "/escritorio/rotas", label: "Rotas" },
   { href: "/escritorio/motoristas", label: "Motoristas" },
+  { href: "/escritorio/veiculos", label: "Veículos" },
   { href: "/escritorio/parametros", label: "Parâmetros" },
   { href: "/escritorio/importar", label: "Importar" },
 ];

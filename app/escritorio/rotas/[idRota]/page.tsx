@@ -11,10 +11,14 @@ export const dynamic = "force-dynamic";
 
 export default async function RotaDetalhe({ params }: { params: { idRota: string } }) {
   const idRota = decodeURIComponent(params.idRota);
-  const [{ rota, paragensRaw }, portagens, parametros] = await Promise.all([
+  const [{ rota, paragensRaw }, portagens, parametros, veiculos] = await Promise.all([
     carregarRota(idRota),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
+    prisma.veiculo.findMany({
+      orderBy: { nome: "asc" },
+      select: { id: true, nome: true, matricula: true },
+    }),
   ]);
   if (!rota) notFound();
 
@@ -29,6 +33,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       data: p.data.toISOString(),
       tipoViagem: p.tipoViagem,
       tipoVeiculo: p.tipoVeiculo,
+      veiculoId: p.veiculoId,
       cliente: p.cliente,
       kmInicial: p.kmInicial,
       kmFinal: p.kmFinal,
@@ -172,7 +177,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                 <td className="td text-right">{fmtEuro(p.id ? raw(paragensRaw, p.id) : 0)}</td>
                 <td className="td text-right">
                   {p.id && editavel(p.id) ? (
-                    <ParagemAcoes paragem={editavel(p.id)!} zonas={zonas} valorNoite={valorNoite} />
+                    <ParagemAcoes paragem={editavel(p.id)!} zonas={zonas} veiculos={veiculos} valorNoite={valorNoite} />
                   ) : (
                     "—"
                   )}

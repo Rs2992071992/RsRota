@@ -2,6 +2,20 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-06-10] | Multi-motorista/multi-veículo: mover salário/veículo dos `Parametros`
+  globais para `Utilizador`/`Veiculo` poderia ter quebrado os totais validados
+  (HILP01 = 1487,73 €). | Não migrar de forma destrutiva: manter as colunas em
+  `Parametros` como defaults/template e congelar um `snapshot` (Json) por paragem no
+  registo; o motor (`efetivos` em perStop.ts) usa o snapshot se existir, senão cai no
+  contexto atual. Paragens importadas (snapshot null) reproduzem os valores atuais →
+  totais preservados ao cêntimo. Os 36 testes existentes passaram sem alteração.
+- [2026-06-10] | `kmAnuais` entra TANTO no custo do motorista como no custo fixo do
+  veículo (em `derivarCustos`). Ao separar parâmetros por motorista vs veículo surge a
+  dúvida de a quem pertence. | Decisão: `kmAnuais` fica no motorista e amortiza também
+  os custos fixos do veículo no snapshot (merge {global ⊕ motorista ⊕ veículo}). Modelo
+  de km anual único, igual ao Excel. Na pré-visualização de Veículos usa-se um km de
+  referência (95 000), rotulado como tal, porque o valor real depende do motorista.
+
 - [2026-06-10] | `vitest`/`vite` falhavam com `Host version "0.21.5" does not match
   binary version "0.28.0"`: o esbuild aninhado do vite (0.21.5) resolvia o binário de
   plataforma `@esbuild/darwin-arm64` hasteado em 0.28.0. | Fix não destrutivo: instalar o

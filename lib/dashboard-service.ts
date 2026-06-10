@@ -3,7 +3,8 @@ import { carregarContexto } from "@/lib/contexto";
 import { calcularParagem } from "@/lib/calc/perStop";
 import { calcularRotas } from "@/lib/calc/perRoute";
 import { valorPortagem } from "@/lib/calc/lookups";
-import { paragemToInput } from "@/lib/rotas-service";
+import { paragemToInput, includeRelacoes } from "@/lib/rotas-service";
+import { carregarBaseSnapshot } from "@/lib/snapshot-service";
 
 export interface DashboardData {
   kpis: {
@@ -23,12 +24,14 @@ export interface DashboardData {
 }
 
 export async function carregarDashboard(): Promise<DashboardData> {
-  const [paragensRaw, ctx] = await Promise.all([
-    prisma.paragem.findMany({ orderBy: { data: "asc" } }),
+  const [paragensRaw, ctx, baseSnap] = await Promise.all([
+    prisma.paragem.findMany({ orderBy: { data: "asc" }, include: includeRelacoes }),
     carregarContexto(),
+    carregarBaseSnapshot(),
   ]);
 
-  const inputs = paragensRaw.map(paragemToInput);
+  // Input (com snapshot efetivo) calculado uma vez e reutilizado em todos os agregados.
+  const inputs = paragensRaw.map((p) => paragemToInput(p, baseSnap));
   const rotas = calcularRotas(inputs, ctx);
 
   // KPIs
@@ -74,8 +77,9 @@ export async function carregarDashboard(): Promise<DashboardData> {
 
   // Evolução mensal (por paragem, somando todas as componentes de custo + receita)
   const mensal = new Map<string, { custo: number; receita: number }>();
-  for (const p of paragensRaw) {
-    const calc = calcularParagem(paragemToInput(p), ctx);
+  for (let i = 0; i < paragensRaw.length; i++) {
+    const p = paragensRaw[i];
+    const calc = calcularParagem(inputs[i], ctx);
     const portagem = valorPortagem(p.zonaPortagem, ctx.tabelaPortagens).valor;
     const custo =
       calc.custoParagem +
@@ -101,8 +105,9 @@ export async function carregarDashboard(): Promise<DashboardData> {
     adblue = 0,
     portagens = 0,
     extras = 0;
-  for (const p of paragensRaw) {
-    const c = calcularParagem(paragemToInput(p), ctx);
+  for (let i = 0; i < paragensRaw.length; i++) {
+    const p = paragensRaw[i];
+    const c = calcularParagem(inputs[i], ctx);
     combustivel += c.custoCombustivel;
     motorista += c.custoMotorista;
     veiculo += c.custoVeiculo;

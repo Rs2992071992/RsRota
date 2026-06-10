@@ -52,12 +52,45 @@ model Parametros {
 }
 
 /// Pneus por eixo (custo por km = custo / km de vida).
+/// veiculoId null = pneus "globais" (template/fallback); senão pertencem a um veículo.
 model Pneu {
   id    Int    @id @default(autoincrement())
   eixo  String // "1 Eixo", "2 Eixo", ...
   custo Float
   km    Float
   ordem Int    @default(0)
+
+  veiculoId Int?
+  veiculo   Veiculo? @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  @@index([veiculoId])
+}
+
+/// Veículo da frota. Cada camião tem os seus próprios custos (acquisição, seguros,
+/// manutenção, pneus, capacidades). Os valores por defeito replicam os de `Parametros`.
+model Veiculo {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  matricula String?
+  ativo     Boolean @default(true)
+
+  valorAquisicao    Float @default(127000)
+  valorResidual     Float @default(88000)
+  vidaUtilAnos      Float @default(3)
+  iucAnual          Float @default(600)
+  taxaJuros         Float @default(0.02)
+  seguroAnual       Float @default(4000)
+  reparacoesAnuais  Float @default(1500)
+  revisaoAnual      Float @default(1200)
+  inspecaoAnual     Float @default(100)
+  capacidadeCamiao  Float @default(14000)
+  capacidadeReboque Float @default(24000)
+
+  pneus    Pneu[]
+  paragens Paragem[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 }
 
 /// Tabela de portagens (zona -> valor, classe 4, só de ida).
@@ -86,6 +119,16 @@ model Paragem {
   // Motorista que registou a paragem (null em dados importados/antigos).
   motoristaId Int?
   motorista   Utilizador? @relation(fields: [motoristaId], references: [id])
+
+  // Veículo usado nesta paragem (frota partilhada). null em dados antigos -> fallback.
+  // Apagar um veículo põe veiculoId a null; o snapshot já congelado preserva os custos.
+  veiculoId Int?
+  veiculo   Veiculo? @relation(fields: [veiculoId], references: [id], onDelete: SetNull)
+
+  // Snapshot dos custos efetivos (taxas/escalares) congelados no momento do registo.
+  // Quando presente, o cálculo usa-o em vez dos parâmetros atuais (histórico estável).
+  // Forma: ver ParagemSnapshot em lib/calc/types.ts.
+  snapshot Json?
 
   kmInicial Float
   kmFinal   Float
@@ -118,6 +161,7 @@ model Paragem {
   @@index([idRota])
   @@index([data])
   @@index([motoristaId])
+  @@index([veiculoId])
 }
 
 /// Utilizadores: escritório (uma linha) e N motoristas, cada um com ID + PIN.
@@ -127,6 +171,15 @@ model Utilizador {
   nome    String? // nome do motorista (null para escritório)
   perfil  String // "ESCRITORIO" | "MOTORISTA"
   pinHash String
+
+  // Parâmetros salariais próprios de cada motorista (defaults = valores atuais §3.4).
+  salarioMensal    Float @default(1345)
+  seguroMensal     Float @default(30)
+  percentEncargos  Float @default(0.235)
+  alimentacaoDia   Float @default(6.4)
+  diasAlimentacao  Float @default(19)
+  kmAnuais         Float @default(95000)
+  fatorAnualizacao Float @default(14)
 
   paragens Paragem[]
 

@@ -8,7 +8,7 @@ export default async function RegistoPage({
 }: {
   searchParams: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
 }) {
-  const [portagens, params, rotasRecentes] = await Promise.all([
+  const [portagens, params, rotasRecentes, veiculos] = await Promise.all([
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.paragem.findMany({
@@ -16,6 +16,11 @@ export default async function RegistoPage({
       distinct: ["idRota"],
       orderBy: { data: "desc" },
       take: 15,
+    }),
+    prisma.veiculo.findMany({
+      where: { ativo: true },
+      orderBy: { nome: "asc" },
+      select: { id: true, nome: true, matricula: true, capacidadeCamiao: true, capacidadeReboque: true },
     }),
   ]);
 
@@ -29,6 +34,7 @@ export default async function RegistoPage({
   return (
     <RegistoForm
       zonas={portagens.map((p) => p.zona)}
+      veiculos={veiculos}
       capacidadeCamiao={params?.capacidadeCamiao ?? 14000}
       capacidadeReboque={params?.capacidadeReboque ?? 24000}
       valorNoite={params?.valorNoite ?? 70}

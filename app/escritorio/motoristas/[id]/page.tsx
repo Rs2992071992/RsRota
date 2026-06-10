@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { fmtData, fmtNum } from "@/lib/format";
+import MotoristaParamsForm from "./MotoristaParamsForm";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,20 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
           <span className="text-base font-normal text-gray-400">({motorista.codigo})</span>
         </h1>
       </div>
+
+      <MotoristaParamsForm
+        id={motorista.id}
+        inicial={{
+          nome: motorista.nome,
+          salarioMensal: motorista.salarioMensal,
+          seguroMensal: motorista.seguroMensal,
+          percentEncargos: motorista.percentEncargos,
+          alimentacaoDia: motorista.alimentacaoDia,
+          diasAlimentacao: motorista.diasAlimentacao,
+          kmAnuais: motorista.kmAnuais,
+          fatorAnualizacao: motorista.fatorAnualizacao,
+        }}
+      />
 
       {paragens.length === 0 ? (
         <div className="card text-sm text-gray-500">Este motorista ainda não registou paragens.</div>

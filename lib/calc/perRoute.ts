@@ -1,4 +1,4 @@
-import { calcularParagem, coeficienteReal, pesoTransportado, type ContextoCalculo } from "./perStop";
+import { calcularParagem, coeficienteReal, efetivos, pesoTransportado, type ContextoCalculo } from "./perStop";
 import { valorPortagem } from "./lookups";
 import type { ParagemInput, RateioCliente, RotaCalc } from "./types";
 
@@ -11,18 +11,20 @@ export function calcularRota(
   paragens: ParagemInput[],
   ctx: ContextoCalculo,
 ): RotaCalc {
+  // Custos efetivos por paragem (snapshot congelado ou contexto atual).
+  const effs = paragens.map((p) => efetivos(p, ctx));
   const calc = paragens.map((p) => calcularParagem(p, ctx));
 
   // Componentes do custo total da rota.
   const somaCustoParagens = calc.reduce((a, c) => a + c.custoParagem, 0);
-  // Noites: nº de noites × valor por noite (parâmetro do escritório).
+  // Noites: nº de noites × valor por noite (congelado por paragem).
   const somaNoites = paragens.reduce(
-    (a, p) => a + (p.noitesFora || 0) * ctx.params.valorNoite,
+    (a, p, i) => a + (p.noitesFora || 0) * effs[i].valorNoite,
     0,
   );
   const somaAlimentacao = paragens.reduce((a, p) => a + (p.alimentacao || 0), 0);
   const somaHorasExtraValor = paragens.reduce(
-    (a, p) => a + (p.horasExtra || 0) * ctx.params.valorHoraExtra,
+    (a, p, i) => a + (p.horasExtra || 0) * effs[i].valorHoraExtra,
     0,
   );
   const somaPortagensTabela = paragens.reduce(
@@ -37,8 +39,9 @@ export function calcularRota(
     somaHorasExtraValor +
     somaPortagensTabela;
 
-  // Rentabilidade.
-  const precoMinimo = custoTotalRota * ctx.params.margemMinima;
+  // Rentabilidade. Margem mínima congelada (primeira paragem; fallback contexto).
+  const margemMinima = effs[0]?.margemMinima ?? ctx.params.margemMinima;
+  const precoMinimo = custoTotalRota * margemMinima;
   const receitaTotal = paragens.reduce((a, p) => a + (p.receitaPaga || 0), 0);
   const lucro = receitaTotal - custoTotalRota;
   const alerta: RotaCalc["alerta"] = lucro < 0 ? "🔴 PREJUÍZO" : "🟢 OK";
@@ -46,8 +49,9 @@ export function calcularRota(
   // Rateio por cliente (auditável). custo atribuído de cada paragem =
   // coefReal × custo total da rota; agregamos por cliente.
   const porCliente = new Map<string, RateioCliente>();
-  for (const p of paragens) {
-    const coef = coeficienteReal(p.tipoVeiculo, pesoTransportado(p), ctx.params);
+  for (let i = 0; i < paragens.length; i++) {
+    const p = paragens[i];
+    const coef = coeficienteReal(p.tipoVeiculo, pesoTransportado(p), effs[i]);
     const atribuido = coef * custoTotalRota;
     const chave = p.cliente || "(sem cliente)";
     const atual = porCliente.get(chave) ?? {

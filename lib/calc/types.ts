@@ -71,9 +71,30 @@ export interface CustosDerivados {
   };
 }
 
+/**
+ * Snapshot dos custos efetivos de uma paragem, congelados no registo (histórico
+ * estável). Contém os dois custos/km derivados (do motorista e do veículo usados)
+ * e os escalares globais aplicáveis. É guardado em `Paragem.snapshot` (Json) e
+ * usado pelo motor em vez dos parâmetros atuais quando presente.
+ */
+export interface ParagemSnapshot {
+  custoMotoristaPorKm: number;
+  custoVeiculoPorKm: number;
+  capacidadeCamiao: number;
+  capacidadeReboque: number;
+  precoCombRef: number;
+  consumoAdblue: number;
+  precoAdblue: number;
+  valorNoite: number;
+  valorHoraExtra: number;
+  margemMinima: number;
+}
+
 /** Dados de uma paragem necessários ao cálculo. */
 export interface ParagemInput {
   id?: number;
+  /** Custos efetivos congelados; quando ausente, usa-se o contexto atual (fallback). */
+  snapshot?: ParagemSnapshot;
   idRota: string;
   data?: Date | string | null;
   cliente: string;

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSessao, getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
+import { snapshotParaRegisto } from "@/lib/snapshot-service";
 
 // POST /api/paragens — cria uma paragem (motorista ou escritório).
 export async function POST(req: Request) {
@@ -18,10 +20,17 @@ export async function POST(req: Request) {
   }
   const d = parsed.data;
 
+  // Congela o snapshot de custos (motorista + veículo usados) no momento do registo.
+  const motoristaId = sessao.perfil === "MOTORISTA" ? sessao.id : null;
+  const veiculoId = d.veiculoId ?? null;
+  const snapshot = await snapshotParaRegisto(motoristaId, veiculoId);
+
   const criada = await prisma.paragem.create({
     data: {
       // Carimba o motorista que registou (escritório fica também associado à sua conta).
-      motoristaId: sessao.perfil === "MOTORISTA" ? sessao.id : null,
+      motoristaId,
+      veiculoId,
+      snapshot: snapshot as unknown as Prisma.InputJsonValue,
       idRota: d.idRota,
       data: new Date(d.data),
       tipoViagem: d.tipoViagem,

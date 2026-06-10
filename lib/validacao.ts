@@ -18,6 +18,7 @@ export const paragemSchema = z
     data: z.string().min(1, "Data obrigatória"),
     tipoViagem: z.enum(TIPOS_VIAGEM),
     tipoVeiculo: z.enum(TIPOS_VEICULO),
+    veiculoId: z.number().int().positive().nullable().optional(),
     cliente: z.string().trim().min(1, "Cliente obrigatório"),
     kmInicial: numNaoNeg,
     kmFinal: numNaoNeg,
@@ -41,3 +42,40 @@ export const paragemSchema = z
   });
 
 export type ParagemForm = z.infer<typeof paragemSchema>;
+
+const n = z.number().finite();
+
+/** Schema de um veículo da frota (custos próprios + pneus). */
+export const veiculoSchema = z.object({
+  nome: z.string().trim().min(1, "Nome obrigatório"),
+  matricula: z.string().trim().nullable().optional(),
+  ativo: z.boolean().optional(),
+  valorAquisicao: n,
+  valorResidual: n,
+  vidaUtilAnos: n.positive("Deve ser > 0"),
+  iucAnual: n,
+  taxaJuros: n,
+  seguroAnual: n,
+  reparacoesAnuais: n,
+  revisaoAnual: n,
+  inspecaoAnual: n,
+  capacidadeCamiao: n.positive("Deve ser > 0"),
+  capacidadeReboque: n.positive("Deve ser > 0"),
+  pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
+});
+
+export type VeiculoForm = z.infer<typeof veiculoSchema>;
+
+/** Schema dos parâmetros salariais próprios de um motorista. */
+export const motoristaParamsSchema = z.object({
+  nome: z.string().trim().nullable().optional(),
+  salarioMensal: n,
+  seguroMensal: n,
+  percentEncargos: n,
+  alimentacaoDia: n,
+  diasAlimentacao: n,
+  kmAnuais: n.positive("Deve ser > 0"),
+  fatorAnualizacao: n,
+});
+
+export type MotoristaParamsForm = z.infer<typeof motoristaParamsSchema>;

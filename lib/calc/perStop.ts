@@ -4,6 +4,7 @@ import type {
   EscalaoConsumo,
   ParagemCalc,
   ParagemInput,
+  ParagemSnapshot,
   ParametrosCusto,
   PortagemItem,
 } from "./types";
@@ -15,6 +16,30 @@ export interface ContextoCalculo {
   tabelaPortagens: PortagemItem[];
 }
 
+/** Apenas os campos de capacidade — aceita um snapshot ou os parâmetros globais. */
+type ComCapacidades = Pick<ParagemSnapshot, "capacidadeCamiao" | "capacidadeReboque">;
+
+/**
+ * Custos efetivos de uma paragem: usa o snapshot congelado quando existe, senão
+ * cai no contexto atual (parâmetros globais). Centraliza a regra "por-motorista/
+ * por-veículo + histórico estável" para o resto do motor.
+ */
+export function efetivos(p: ParagemInput, ctx: ContextoCalculo): ParagemSnapshot {
+  if (p.snapshot) return p.snapshot;
+  return {
+    custoMotoristaPorKm: ctx.derivados.custoMotoristaPorKm,
+    custoVeiculoPorKm: ctx.derivados.custoVeiculoPorKm,
+    capacidadeCamiao: ctx.params.capacidadeCamiao,
+    capacidadeReboque: ctx.params.capacidadeReboque,
+    precoCombRef: ctx.params.precoCombRef,
+    consumoAdblue: ctx.params.consumoAdblue,
+    precoAdblue: ctx.params.precoAdblue,
+    valorNoite: ctx.params.valorNoite,
+    valorHoraExtra: ctx.params.valorHoraExtra,
+    margemMinima: ctx.params.margemMinima,
+  };
+}
+
 /**
  * Peso transportado de uma paragem. O registo do motorista tem KG Carregados e
  * KG Descarregados; o peso que esteve a bordo nessa etapa é o maior dos dois.
@@ -24,10 +49,10 @@ export function pesoTransportado(p: ParagemInput): number {
 }
 
 /** Capacidade do veículo conforme o tipo. */
-function capacidade(tipoVeiculo: string, params: ParametrosCusto): number {
+function capacidade(tipoVeiculo: string, cap: ComCapacidades): number {
   return tipoVeiculo === "CAMIAO+REBOQUE"
-    ? params.capacidadeReboque
-    : params.capacidadeCamiao;
+    ? cap.capacidadeReboque
+    : cap.capacidadeCamiao;
 }
 
 /**
@@ -35,29 +60,30 @@ function capacidade(tipoVeiculo: string, params: ParametrosCusto): number {
  * Trata peso 0 e dados em falta de forma graciosa (sem divisão por zero).
  */
 export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemCalc {
-  const { params, derivados, tabelaConsumo, tabelaPortagens } = ctx;
+  const { tabelaConsumo, tabelaPortagens } = ctx;
+  const eff = efetivos(p, ctx);
 
   const kmFeitos = (p.kmFinal || 0) - (p.kmInicial || 0);
   const peso = pesoTransportado(p);
 
   // Coeficiente de carga: "Volume" para LEVE; senão peso / capacidade.
   const coeficienteCarga: number | "Volume" =
-    p.tipoVeiculo === "LEVE" ? "Volume" : peso / capacidade(p.tipoVeiculo, params);
+    p.tipoVeiculo === "LEVE" ? "Volume" : peso / capacidade(p.tipoVeiculo, eff);
 
   // Consumo (lookup aproximado) e combustível.
   const consumoL100 = consumoPorCarga(peso, tabelaConsumo);
   const litrosGastos = (consumoL100 / 100) * kmFeitos;
   const precoCombUsado =
-    p.precoCombRefOverride != null ? p.precoCombRefOverride : params.precoCombRef;
+    p.precoCombRefOverride != null ? p.precoCombRefOverride : eff.precoCombRef;
   const custoCombustivel = litrosGastos * precoCombUsado;
 
   // AdBlue.
-  const adblueLitros = (kmFeitos * params.consumoAdblue) / 100;
-  const custoAdblue = adblueLitros * params.precoAdblue;
+  const adblueLitros = (kmFeitos * eff.consumoAdblue) / 100;
+  const custoAdblue = adblueLitros * eff.precoAdblue;
 
   // Motorista e veículo (custo/km × km feitos).
-  const custoMotorista = derivados.custoMotoristaPorKm * kmFeitos;
-  const custoVeiculo = derivados.custoVeiculoPorKm * kmFeitos;
+  const custoMotorista = eff.custoMotoristaPorKm * kmFeitos;
+  const custoVeiculo = eff.custoVeiculoPorKm * kmFeitos;
 
   // Portagem da tabela (entra no custo da ROTA, não no da paragem).
   const portagemTabela = valorPortagem(p.zonaPortagem, tabelaPortagens).valor;
@@ -77,7 +103,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   const litrosEspanha = p.litrosEspanha || 0;
   const custoEspanha = p.custoEspanha || 0;
   const poupancaEspanha =
-    litrosEspanha > 0 ? litrosEspanha * params.precoCombRef - custoEspanha : 0;
+    litrosEspanha > 0 ? litrosEspanha * eff.precoCombRef - custoEspanha : 0;
 
   return {
     id: p.id,
@@ -116,16 +142,16 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
 export function coeficienteReal(
   tipoVeiculo: string,
   peso: number,
-  params: ParametrosCusto,
+  cap: ComCapacidades,
 ): number {
   if (peso <= 0 || tipoVeiculo === "VAZIO" || tipoVeiculo === "LEVE") {
     return 1;
   }
   if (tipoVeiculo === "CAMIAO") {
-    return peso / params.capacidadeCamiao;
+    return peso / cap.capacidadeCamiao;
   }
   if (tipoVeiculo === "CAMIAO+REBOQUE") {
-    return peso / params.capacidadeReboque;
+    return peso / cap.capacidadeReboque;
   }
   return 1;
 }

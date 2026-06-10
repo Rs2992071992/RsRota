@@ -1,8 +1,25 @@
 import { prisma } from "@/lib/db";
 import { carregarContexto } from "@/lib/contexto";
 import { calcularRota, calcularRotas } from "@/lib/calc/perRoute";
-import type { ParagemInput, RotaCalc } from "@/lib/calc/types";
-import type { Paragem } from "@prisma/client";
+import {
+  carregarBaseSnapshot,
+  snapshotDeEntidades,
+  type BaseSnapshot,
+} from "@/lib/snapshot-service";
+import type { ParagemInput, ParagemSnapshot, RotaCalc } from "@/lib/calc/types";
+import type { Paragem, Pneu, Utilizador, Veiculo } from "@prisma/client";
+
+/** Paragem com as relações necessárias para resolver o snapshot efetivo. */
+type ParagemComRelacoes = Paragem & {
+  motorista: Utilizador | null;
+  veiculo: (Veiculo & { pneus: Pneu[] }) | null;
+};
+
+/** Include reutilizável para carregar paragens com motorista + veículo (+ pneus). */
+export const includeRelacoes = {
+  motorista: true,
+  veiculo: { include: { pneus: { orderBy: { ordem: "asc" as const } } } },
+};
 
 export interface FiltrosRota {
   de?: Date;
@@ -13,10 +30,18 @@ export interface FiltrosRota {
   estado?: string;
 }
 
-/** Converte um registo Paragem da BD no input do motor de cálculo. */
-export function paragemToInput(p: Paragem): ParagemInput {
+/**
+ * Converte um registo Paragem da BD no input do motor. O snapshot efetivo é:
+ * (1) o snapshot congelado em BD, se existir; senão (2) calculado a partir do
+ * motorista + veículo da paragem; senão (3) defaults globais (legado/importado).
+ */
+export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): ParagemInput {
+  const snapshot =
+    (p.snapshot as ParagemSnapshot | null) ??
+    snapshotDeEntidades(baseSnap, p.motorista, p.veiculo);
   return {
     id: p.id,
+    snapshot,
     idRota: p.idRota,
     data: p.data,
     cliente: p.cliente,
@@ -54,12 +79,16 @@ export async function carregarRotas(filtros: FiltrosRota = {}): Promise<RotaCalc
   if (filtros.cliente) where.cliente = filtros.cliente;
   if (filtros.tipoVeiculo) where.tipoVeiculo = filtros.tipoVeiculo;
 
-  const [paragens, ctx] = await Promise.all([
-    prisma.paragem.findMany({ where, orderBy: { data: "asc" } }),
+  const [paragens, ctx, baseSnap] = await Promise.all([
+    prisma.paragem.findMany({ where, orderBy: { data: "asc" }, include: includeRelacoes }),
     carregarContexto(),
+    carregarBaseSnapshot(),
   ]);
 
-  let rotas = calcularRotas(paragens.map(paragemToInput), ctx);
+  let rotas = calcularRotas(
+    paragens.map((p) => paragemToInput(p, baseSnap)),
+    ctx,
+  );
 
   if (filtros.estado === "prejuizo") rotas = rotas.filter((r) => r.lucro < 0);
   if (filtros.estado === "lucro") rotas = rotas.filter((r) => r.lucro >= 0);
@@ -70,14 +99,19 @@ export async function carregarRotas(filtros: FiltrosRota = {}): Promise<RotaCalc
 /** Calcula uma única rota pelo seu ID (para a página de detalhe). */
 export async function carregarRota(idRota: string): Promise<{
   rota: RotaCalc | null;
-  paragensRaw: Paragem[];
+  paragensRaw: ParagemComRelacoes[];
 }> {
-  const [paragensRaw, ctx] = await Promise.all([
-    prisma.paragem.findMany({ where: { idRota }, orderBy: { data: "asc" } }),
+  const [paragensRaw, ctx, baseSnap] = await Promise.all([
+    prisma.paragem.findMany({ where: { idRota }, orderBy: { data: "asc" }, include: includeRelacoes }),
     carregarContexto(),
+    carregarBaseSnapshot(),
   ]);
   if (paragensRaw.length === 0) return { rota: null, paragensRaw: [] };
-  const rota = calcularRota(idRota, paragensRaw.map(paragemToInput), ctx);
+  const rota = calcularRota(
+    idRota,
+    paragensRaw.map((p) => paragemToInput(p, baseSnap)),
+    ctx,
+  );
   return { rota, paragensRaw };
 }
 

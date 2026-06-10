@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSessao } from "@/lib/session";
-import { motoristaParamsSchema } from "@/lib/validacao";
+import { veiculoSchema } from "@/lib/validacao";
 
-// PATCH /api/motoristas/[id] — edita os parâmetros salariais de um motorista
-// (só escritório). Não afeta paragens já registadas (snapshot congelado).
+// PATCH /api/veiculos/[id] — atualiza um veículo + substitui os seus pneus.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   if (getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
@@ -13,25 +12,30 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 
   const body = await req.json().catch(() => null);
-  const parsed = motoristaParamsSchema.safeParse(body);
+  const parsed = veiculoSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 },
     );
   }
+  const { pneus, ...dados } = parsed.data;
 
-  const user = await prisma.utilizador.findUnique({ where: { id } });
-  if (!user || user.perfil !== "MOTORISTA") {
-    return NextResponse.json({ erro: "Motorista não encontrado." }, { status: 404 });
-  }
+  const existe = await prisma.veiculo.findUnique({ where: { id } });
+  if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
 
-  await prisma.utilizador.update({ where: { id }, data: parsed.data });
+  await prisma.$transaction([
+    prisma.veiculo.update({ where: { id }, data: dados }),
+    prisma.pneu.deleteMany({ where: { veiculoId: id } }),
+    prisma.pneu.createMany({
+      data: pneus.map((p, i) => ({ veiculoId: id, eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })),
+    }),
+  ]);
   return NextResponse.json({ ok: true });
 }
 
-// DELETE /api/motoristas/[id] — apaga um motorista (só escritório).
-// As paragens dele ficam com motoristaId = null (não se apagam dados).
+// DELETE /api/veiculos/[id] — apaga um veículo. As paragens ficam com veiculoId
+// null (o snapshot congelado preserva os custos históricos).
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   if (getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
@@ -39,14 +43,9 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 
-  const user = await prisma.utilizador.findUnique({ where: { id } });
-  if (!user || user.perfil !== "MOTORISTA") {
-    return NextResponse.json({ erro: "Motorista não encontrado." }, { status: 404 });
-  }
+  const existe = await prisma.veiculo.findUnique({ where: { id } });
+  if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
 
-  await prisma.$transaction([
-    prisma.paragem.updateMany({ where: { motoristaId: id }, data: { motoristaId: null } }),
-    prisma.utilizador.delete({ where: { id } }),
-  ]);
+  await prisma.veiculo.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

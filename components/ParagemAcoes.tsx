@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import ParagemEditor, { type ParagemEditavel } from "@/components/ParagemEditor";
+import ParagemEditor, { type ParagemEditavel, type VeiculoOpcao } from "@/components/ParagemEditor";
 
 interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
+  veiculos: VeiculoOpcao[];
   valorNoite: number;
 }
 
 /** Botão "Editar" (escritório) que abre o editor completo da paragem. */
-export default function ParagemAcoes({ paragem, zonas, valorNoite }: Props) {
+export default function ParagemAcoes({ paragem, zonas, veiculos, valorNoite }: Props) {
   const [aberto, setAberto] = useState(false);
   return (
     <>
@@ -24,6 +25,7 @@ export default function ParagemAcoes({ paragem, zonas, valorNoite }: Props) {
         <ParagemEditor
           paragem={paragem}
           zonas={zonas}
+          veiculos={veiculos}
           valorNoite={valorNoite}
           mostrarReceita
           onClose={() => setAberto(false)}

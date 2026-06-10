@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 
 /** Campos editáveis de uma paragem (subconjunto do modelo Prisma). */
+export interface VeiculoOpcao {
+  id: number;
+  nome: string;
+  matricula: string | null;
+}
+
 export interface ParagemEditavel {
   id: number;
   idRota: string;
   data: string; // ISO (yyyy-mm-dd)
   tipoViagem: string;
   tipoVeiculo: string;
+  veiculoId: number | null;
   cliente: string;
   kmInicial: number;
   kmFinal: number;
@@ -29,6 +36,7 @@ export interface ParagemEditavel {
 interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
+  veiculos: VeiculoOpcao[];
   valorNoite: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
@@ -38,6 +46,7 @@ interface Props {
 export default function ParagemEditor({
   paragem,
   zonas,
+  veiculos,
   valorNoite,
   mostrarReceita = false,
   onClose,
@@ -45,6 +54,7 @@ export default function ParagemEditor({
   const router = useRouter();
   const [f, setF] = useState({
     ...paragem,
+    veiculoId: paragem.veiculoId === null ? "" : String(paragem.veiculoId),
     data: paragem.data.slice(0, 10),
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
@@ -67,6 +77,7 @@ export default function ParagemEditor({
         data: f.data,
         tipoViagem: f.tipoViagem,
         tipoVeiculo: f.tipoVeiculo,
+        veiculoId: f.veiculoId ? Number(f.veiculoId) : null,
         cliente: f.cliente.trim(),
         kmInicial: Number(f.kmInicial),
         kmFinal: Number(f.kmFinal),
@@ -164,13 +175,29 @@ export default function ParagemEditor({
               ))}
             </select>
           </div>
-          <div className="col-span-2">
+          <div>
             <label className="label">Tipo Veículo</label>
             <select className="input" value={f.tipoVeiculo} onChange={(e) => set("tipoVeiculo", e.target.value)}>
               {/* Inclui o valor atual mesmo que já não esteja na lista (ex.: dados antigos). */}
               {Array.from(new Set([f.tipoVeiculo, ...TIPOS_VEICULO])).map((t) => (
                 <option key={t} value={t}>
                   {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Veículo (camião)</label>
+            <select
+              className="input"
+              value={f.veiculoId}
+              onChange={(e) => set("veiculoId", e.target.value as never)}
+            >
+              <option value="">— sem veículo —</option>
+              {veiculos.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                  {v.matricula ? ` (${v.matricula})` : ""}
                 </option>
               ))}
             </select>

@@ -4,8 +4,17 @@ import { useMemo, useState } from "react";
 import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 import { fmtEuro } from "@/lib/format";
 
+export interface VeiculoOpcao {
+  id: number;
+  nome: string;
+  matricula: string | null;
+  capacidadeCamiao: number;
+  capacidadeReboque: number;
+}
+
 interface Props {
   zonas: string[];
+  veiculos: VeiculoOpcao[];
   capacidadeCamiao: number;
   capacidadeReboque: number;
   valorNoite: number;
@@ -20,6 +29,7 @@ const estadoBase = {
   data: hoje(),
   tipoViagem: "Ida",
   tipoVeiculo: "CAMIAO+REBOQUE",
+  veiculoId: "",
   cliente: "",
   kmInicial: "",
   kmFinal: "",
@@ -38,6 +48,7 @@ type Campos = typeof estadoBase;
 
 export default function RegistoForm({
   zonas,
+  veiculos,
   capacidadeCamiao,
   capacidadeReboque,
   valorNoite,
@@ -48,6 +59,7 @@ export default function RegistoForm({
     ...estadoBase,
     idRota: inicial?.idRota || "",
     tipoVeiculo: inicial?.tipoVeiculo || estadoBase.tipoVeiculo,
+    veiculoId: veiculos.length === 1 ? String(veiculos[0].id) : "",
     kmInicial: inicial?.kmInicial || "",
   };
 
@@ -62,7 +74,10 @@ export default function RegistoForm({
 
   const num = (s: string) => (s.trim() === "" ? 0 : Number(s));
   const peso = Math.max(num(f.kgCarregados), num(f.kgDescarregados));
-  const capacidade = f.tipoVeiculo === "CAMIAO+REBOQUE" ? capacidadeReboque : capacidadeCamiao;
+  const veiculoSel = veiculos.find((v) => String(v.id) === f.veiculoId);
+  const capCamiao = veiculoSel?.capacidadeCamiao ?? capacidadeCamiao;
+  const capReboque = veiculoSel?.capacidadeReboque ?? capacidadeReboque;
+  const capacidade = f.tipoVeiculo === "CAMIAO+REBOQUE" ? capReboque : capCamiao;
   const custoNoites = num(f.noitesFora) * valorNoite;
 
   // Avisos (não bloqueiam).
@@ -82,6 +97,7 @@ export default function RegistoForm({
   function validar(): boolean {
     const e: Record<string, string> = {};
     if (!f.idRota.trim()) e.idRota = "Obrigatório";
+    if (veiculos.length > 0 && !f.veiculoId) e.veiculoId = "Escolha o veículo";
     if (!f.cliente.trim()) e.cliente = "Obrigatório";
     if (!f.data) e.data = "Obrigatório";
     if (f.kmInicial === "") e.kmInicial = "Obrigatório";
@@ -107,6 +123,7 @@ export default function RegistoForm({
         data: f.data,
         tipoViagem: f.tipoViagem,
         tipoVeiculo: f.tipoVeiculo,
+        veiculoId: f.veiculoId ? Number(f.veiculoId) : null,
         cliente: f.cliente.trim(),
         kmInicial: num(f.kmInicial),
         kmFinal: num(f.kmFinal),
@@ -142,6 +159,7 @@ export default function RegistoForm({
         idRota: f.idRota,
         data: f.data,
         tipoVeiculo: f.tipoVeiculo,
+        veiculoId: f.veiculoId,
         kmInicial: f.kmFinal,
       });
     } catch {
@@ -227,19 +245,39 @@ export default function RegistoForm({
           </div>
         </div>
 
-        <div>
-          <label className="label">Tipo Veículo</label>
-          <select
-            className="input"
-            value={f.tipoVeiculo}
-            onChange={(e) => set("tipoVeiculo", e.target.value)}
-          >
-            {TIPOS_VEICULO.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Tipo Veículo</label>
+            <select
+              className="input"
+              value={f.tipoVeiculo}
+              onChange={(e) => set("tipoVeiculo", e.target.value)}
+            >
+              {TIPOS_VEICULO.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Veículo (camião)</label>
+            <select
+              className="input"
+              value={f.veiculoId}
+              onChange={(e) => set("veiculoId", e.target.value)}
+              disabled={veiculos.length === 0}
+            >
+              <option value="">{veiculos.length === 0 ? "Sem veículos" : "— escolher —"}</option>
+              {veiculos.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                  {v.matricula ? ` (${v.matricula})` : ""}
+                </option>
+              ))}
+            </select>
+            {erros.veiculoId && <p className="mt-1 text-xs text-red-600">{erros.veiculoId}</p>}
+          </div>
         </div>
 
         <div>

@@ -57,9 +57,11 @@ export async function PUT(req: Request) {
 
   await prisma.$transaction([
     prisma.parametros.update({ where: { id: 1 }, data: params }),
-    prisma.pneu.deleteMany({}),
+    // Apenas os pneus "globais" (template/fallback). Os pneus por-veículo são geridos
+    // na página de Veículos e não devem ser apagados aqui.
+    prisma.pneu.deleteMany({ where: { veiculoId: null } }),
     prisma.pneu.createMany({
-      data: pneus.map((p, i) => ({ eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })),
+      data: pneus.map((p, i) => ({ eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1, veiculoId: null })),
     }),
     prisma.tabelaPortagem.deleteMany({}),
     prisma.tabelaPortagem.createMany({ data: portagens }),

@@ -10,7 +10,8 @@ import type { ParametrosCusto } from "@/lib/calc/types";
 export async function carregarContexto(): Promise<ContextoCalculo> {
   const [params, pneus, consumo, portagens] = await Promise.all([
     prisma.parametros.findUnique({ where: { id: 1 } }),
-    prisma.pneu.findMany({ orderBy: { ordem: "asc" } }),
+    // Pneus "globais" (template/fallback). Os pneus por-veículo entram via snapshot.
+    prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
     prisma.tabelaConsumo.findMany({ orderBy: { cargaKg: "asc" } }),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
   ]);
