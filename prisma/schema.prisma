@@ -1,0 +1,134 @@
+// Camada de dados. Provider PostgreSQL (produção, ex.: Neon).
+// Para dev local pode-se apontar o DATABASE_URL para um Postgres local ou um branch Neon.
+// A lógica de cálculo vive em lib/calc e não depende deste schema.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Parâmetros de custo (§3.4). Singleton: existe sempre uma linha com id = 1.
+model Parametros {
+  id Int @id @default(1)
+
+  // --- Motorista ---
+  salarioMensal     Float @default(1345)
+  seguroMensal      Float @default(30)
+  percentEncargos   Float @default(0.235) // 23,5% sobre o salário
+  alimentacaoDia    Float @default(6.4)
+  diasAlimentacao   Float @default(19)
+  kmAnuais          Float @default(95000)
+  fatorAnualizacao  Float @default(14) // 14 salários/ano em Portugal (12 + Natal + férias)
+
+  // --- Veículo ---
+  valorAquisicao    Float @default(127000)
+  valorResidual     Float @default(88000)
+  vidaUtilAnos      Float @default(3)
+  iucAnual          Float @default(600)
+  taxaJuros         Float @default(0.02) // sobre o valor de aquisição
+  seguroAnual       Float @default(4000)
+  reparacoesAnuais  Float @default(1500)
+  revisaoAnual      Float @default(1200)
+  inspecaoAnual     Float @default(100)
+
+  // --- Combustível / AdBlue ---
+  precoCombRef      Float @default(1.834) // preço de referência (entra no cálculo)
+  precoCombReal     Float @default(1.834) // preço real médio pago (informativo)
+  consumoAdblue     Float @default(2.5)   // L / 100 km
+  precoAdblue       Float @default(0.3)    // € / L
+
+  // --- Outros ---
+  margemMinima      Float @default(1.25) // preço mínimo = custo × 1,25
+  valorHoraExtra    Float @default(8)
+  valorNoite        Float @default(70)  // € por noite fora (× nº de noites)
+  capacidadeCamiao  Float @default(14000)
+  capacidadeReboque Float @default(24000)
+
+  atualizadoEm DateTime @updatedAt
+}
+
+/// Pneus por eixo (custo por km = custo / km de vida).
+model Pneu {
+  id    Int    @id @default(autoincrement())
+  eixo  String // "1 Eixo", "2 Eixo", ...
+  custo Float
+  km    Float
+  ordem Int    @default(0)
+}
+
+/// Tabela de portagens (zona -> valor, classe 4, só de ida).
+model TabelaPortagem {
+  id    Int    @id @default(autoincrement())
+  zona  String @unique
+  valor Float
+}
+
+/// Curva de consumo por carga (lookup aproximado por escalão inferior).
+model TabelaConsumo {
+  id          Int   @id @default(autoincrement())
+  cargaKg     Float @unique
+  consumoL100 Float // litros / 100 km
+}
+
+/// Registo Diário (§3.1) — cada linha é uma paragem.
+model Paragem {
+  id          Int      @id @default(autoincrement())
+  idRota      String
+  data        DateTime @default(now())
+  tipoViagem  String // "Ida" | "Volta"
+  tipoVeiculo String // CAMIAO | CAMIAO+REBOQUE | LEVE | VAZIO | RETORNO
+  cliente     String
+
+  // Motorista que registou a paragem (null em dados importados/antigos).
+  motoristaId Int?
+  motorista   Utilizador? @relation(fields: [motoristaId], references: [id])
+
+  kmInicial Float
+  kmFinal   Float
+
+  kgCarregados    Float @default(0)
+  kgDescarregados Float @default(0)
+
+  litrosAbastecidos Float @default(0)
+  custoAbastecido   Float @default(0) // € realmente pagos no abastecimento
+
+  zonaPortagem  String @default("")
+  portagensExtra Float @default(0)
+  noitesFora    Float @default(0)
+  alimentacao   Float @default(0)
+  horasExtra    Float @default(0)
+
+  // Override opcional do preço de referência do combustível para esta paragem.
+  precoCombRefOverride Float?
+
+  // Receita paga pelo cliente por esta paragem (editável no escritório).
+  receitaPaga Float @default(0)
+
+  // Colunas Espanha — meramente informativas (poupança), nunca entram no custo.
+  litrosEspanha Float?
+  custoEspanha  Float?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([idRota])
+  @@index([data])
+  @@index([motoristaId])
+}
+
+/// Utilizadores: escritório (uma linha) e N motoristas, cada um com ID + PIN.
+model Utilizador {
+  id      Int    @id @default(autoincrement())
+  codigo  String @unique // ID de login (ex.: "joao", "m01"); escritório = "ESCRITORIO"
+  nome    String? // nome do motorista (null para escritório)
+  perfil  String // "ESCRITORIO" | "MOTORISTA"
+  pinHash String
+
+  paragens Paragem[]
+
+  criadoEm DateTime @default(now())
+}
