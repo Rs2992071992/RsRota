@@ -2,6 +2,11 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-06-10] | O botão "Sair" (form POST → /api/auth/logout) dava HTTP 405 em /login:
+  `NextResponse.redirect()` usa por defeito 307, que **preserva o método POST**, e o
+  browser fazia POST a /login (que só aceita GET). | Em redirects após POST (logout,
+  submits), usar status **303** (`NextResponse.redirect(url, 303)`) para forçar GET.
+
 - [2026-06-10] | Multi-motorista/multi-veículo: mover salário/veículo dos `Parametros`
   globais para `Utilizador`/`Veiculo` poderia ter quebrado os totais validados
   (HILP01 = 1487,73 €). | Não migrar de forma destrutiva: manter as colunas em
