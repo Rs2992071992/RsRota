@@ -13,22 +13,32 @@ export default async function RegistoPage({
   const sessao = getSessaoInfo();
   const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
 
-  const [portagens, params, rotasRecentes, veiculos] = await Promise.all([
-    prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
-    prisma.parametros.findUnique({ where: { id: 1 } }),
-    prisma.paragem.findMany({
-      where: filtroRotas,
-      select: { idRota: true },
-      distinct: ["idRota"],
-      orderBy: { data: "desc" },
-      take: 15,
-    }),
-    prisma.veiculo.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true, matricula: true, capacidadeCamiao: true, capacidadeReboque: true },
-    }),
-  ]);
+  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha] =
+    await Promise.all([
+      prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
+      prisma.parametros.findUnique({ where: { id: 1 } }),
+      prisma.paragem.findMany({
+        where: filtroRotas,
+        select: { idRota: true },
+        distinct: ["idRota"],
+        orderBy: { data: "desc" },
+        take: 15,
+      }),
+      prisma.veiculo.findMany({
+        where: { ativo: true },
+        orderBy: { nome: "asc" },
+        select: { id: true, nome: true, matricula: true, capacidadeCamiao: true, capacidadeReboque: true },
+      }),
+      // Clientes já usados (sugestões da lista predefinida) + fichas de contacto.
+      prisma.paragem.findMany({ select: { cliente: true }, distinct: ["cliente"] }),
+      prisma.cliente.findMany({ select: { nome: true } }),
+    ]);
+
+  const clientes = Array.from(
+    new Set([...clientesParagens.map((p) => p.cliente), ...clientesFicha.map((c) => c.nome)]),
+  )
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "pt"));
 
   // Pré-preenchimento vindo do "Continuar rota" (histórico).
   const inicial = {
@@ -45,6 +55,7 @@ export default async function RegistoPage({
       capacidadeReboque={params?.capacidadeReboque ?? 24000}
       valorNoite={params?.valorNoite ?? 70}
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
+      clientes={clientes}
       inicial={inicial}
     />
   );

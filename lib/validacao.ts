@@ -82,3 +82,16 @@ export const motoristaParamsSchema = z.object({
 });
 
 export type MotoristaParamsForm = z.infer<typeof motoristaParamsSchema>;
+
+/** Schema da ficha de contacto de um cliente (só dados de contacto). */
+const txtContacto = z.string().trim().max(500).nullable().optional();
+export const clienteContactoSchema = z.object({
+  nome: z.string().trim().min(1, "Cliente obrigatório"),
+  contato: txtContacto,
+  telefone: txtContacto,
+  email: txtContacto,
+  morada: txtContacto,
+  notas: txtContacto,
+});
+
+export type ClienteContactoForm = z.infer<typeof clienteContactoSchema>;

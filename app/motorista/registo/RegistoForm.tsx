@@ -19,6 +19,7 @@ interface Props {
   capacidadeReboque: number;
   valorNoite: number;
   rotasRecentes: string[];
+  clientes: string[];
   inicial?: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
 }
 
@@ -52,6 +53,7 @@ export default function RegistoForm({
   capacidadeReboque,
   valorNoite,
   rotasRecentes,
+  clientes,
   inicial,
 }: Props) {
   const estadoInicial: Campos = {
@@ -317,10 +319,16 @@ export default function RegistoForm({
         <div>
           <label className="label">Cliente / Local</label>
           <input
+            list="clientes"
             className="input"
             value={f.cliente}
             onChange={(e) => set("cliente", e.target.value)}
           />
+          <datalist id="clientes">
+            {clientes.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
           {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
         </div>
       </div>

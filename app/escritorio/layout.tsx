@@ -6,6 +6,7 @@ import { PRAZO_DIAS } from "@/lib/calc/pagamentos";
 const navItems = [
   { href: "/escritorio/dashboard", label: "Dashboard" },
   { href: "/escritorio/rotas", label: "Rotas" },
+  { href: "/escritorio/clientes", label: "Clientes" },
   { href: "/escritorio/cobrancas", label: "Cobranças" },
   { href: "/escritorio/motoristas", label: "Motoristas" },
   { href: "/escritorio/veiculos", label: "Veículos" },

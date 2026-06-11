@@ -171,6 +171,22 @@ model Paragem {
   @@index([veiculoId])
 }
 
+/// Ficha de contacto de um cliente. Ligada por `nome` ao campo `Paragem.cliente`
+/// (sem FK, para não normalizar/arriscar os dados existentes). Apenas guarda dados
+/// de contacto — NÃO entra em nenhum cálculo. Criada/editada no menu Clientes.
+model Cliente {
+  id       Int     @id @default(autoincrement())
+  nome     String  @unique // corresponde a Paragem.cliente
+  contato  String? // nome da pessoa de contacto
+  telefone String?
+  email    String?
+  morada   String?
+  notas    String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
 /// Utilizadores: escritório (uma linha) e N motoristas, cada um com ID + PIN.
 model Utilizador {
   id      Int    @id @default(autoincrement())
