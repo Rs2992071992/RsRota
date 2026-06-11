@@ -25,7 +25,6 @@ interface Props {
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 const estadoBase = {
-  idRota: "",
   data: hoje(),
   tipoViagem: "Ida",
   tipoVeiculo: "CAMIAO+REBOQUE",
@@ -57,13 +56,14 @@ export default function RegistoForm({
 }: Props) {
   const estadoInicial: Campos = {
     ...estadoBase,
-    idRota: inicial?.idRota || "",
     tipoVeiculo: inicial?.tipoVeiculo || estadoBase.tipoVeiculo,
     veiculoId: veiculos.length === 1 ? String(veiculos[0].id) : "",
     kmInicial: inicial?.kmInicial || "",
   };
 
   const [f, setF] = useState<Campos>(estadoInicial);
+  // "" = rota nova (ID gerado pelo servidor); preenchido = continuar essa rota.
+  const [idRotaAtiva, setIdRotaAtiva] = useState(inicial?.idRota || "");
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -96,7 +96,6 @@ export default function RegistoForm({
 
   function validar(): boolean {
     const e: Record<string, string> = {};
-    if (!f.idRota.trim()) e.idRota = "Obrigatório";
     if (veiculos.length > 0 && !f.veiculoId) e.veiculoId = "Escolha o veículo";
     if (!f.cliente.trim()) e.cliente = "Obrigatório";
     if (!f.data) e.data = "Obrigatório";
@@ -119,7 +118,8 @@ export default function RegistoForm({
     setAGravar(true);
     try {
       const payload = {
-        idRota: f.idRota.trim(),
+        // Vazio => rota nova (o servidor gera o ID); preenchido => continuar a rota ativa.
+        idRota: idRotaAtiva || undefined,
         data: f.data,
         tipoViagem: f.tipoViagem,
         tipoVeiculo: f.tipoVeiculo,
@@ -152,11 +152,20 @@ export default function RegistoForm({
         setMsg({ tipo: "erro", texto: data.erro || "Erro ao gravar." });
         return;
       }
-      setMsg({ tipo: "ok", texto: "Paragem registada! Pode adicionar outra na mesma rota." });
-      // Mantém ID Rota, tipo veículo e KM Final -> KM Inicial para a próxima paragem.
+      // O servidor devolve o idRota efetivo (gerado quando era rota nova).
+      const novoId = data.paragem?.idRota as string | undefined;
+      const eraNova = !idRotaAtiva;
+      if (novoId) setIdRotaAtiva(novoId);
+      setMsg({
+        tipo: "ok",
+        texto:
+          eraNova && novoId
+            ? `Rota ${novoId} criada — pode adicionar mais paragens.`
+            : "Paragem registada! Pode adicionar outra na mesma rota.",
+      });
+      // Mantém a rota ativa, tipo veículo e KM Final -> KM Inicial para a próxima paragem.
       setF({
         ...estadoBase,
-        idRota: f.idRota,
         data: f.data,
         tipoVeiculo: f.tipoVeiculo,
         veiculoId: f.veiculoId,
@@ -202,22 +211,47 @@ export default function RegistoForm({
       )}
 
       <div className="card space-y-3">
-        <div>
-          <label className="label">ID Rota</label>
-          <input
-            list="rotas"
-            className="input"
-            value={f.idRota}
-            onChange={(e) => set("idRota", e.target.value)}
-            placeholder="ex.: BOTO, GA1"
-          />
-          <datalist id="rotas">
-            {rotasRecentes.map((r) => (
-              <option key={r} value={r} />
-            ))}
-          </datalist>
-          {erros.idRota && <p className="mt-1 text-xs text-red-600">{erros.idRota}</p>}
-        </div>
+        {idRotaAtiva ? (
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 p-3">
+            <div>
+              <span className="label">Rota ativa</span>
+              <p className="font-semibold text-blue-900">{idRotaAtiva}</p>
+            </div>
+            <button
+              type="button"
+              className="text-sm font-medium text-blue-700 underline"
+              onClick={() => setIdRotaAtiva("")}
+            >
+              Nova rota
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div>
+              <span className="label">Nova rota</span>
+              <p className="text-xs text-gray-500">
+                O ID é gerado automaticamente a partir do seu nome e do cliente.
+              </p>
+            </div>
+            {rotasRecentes.length > 0 && (
+              <div>
+                <label className="label">Ou continuar uma rota recente</label>
+                <select
+                  className="input"
+                  value=""
+                  onChange={(e) => e.target.value && setIdRotaAtiva(e.target.value)}
+                >
+                  <option value="">— escolher rota —</option>
+                  {rotasRecentes.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>

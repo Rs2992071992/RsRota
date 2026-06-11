@@ -5,6 +5,23 @@ Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphin
 ## Fases (concluídas)
 - [x] Fase 1–7 — App completa, validada end-to-end (ver histórico abaixo)
 
+## 🆔 ID de rota gerado automaticamente (2026-06-11)
+
+O condutor já não inventa o `idRota`. Ao criar uma rota nova, o servidor gera
+`INICIAIS-Cliente` (3 letras do 1.º nome + 2 do apelido + cliente), com sufixo
+`2,3,…` se já existir. Rotas multi-dia: o condutor seleciona a rota recente na
+lista (mesmo `idRota` reutilizado, nunca regenerado).
+
+- [x] `lib/rota-id.ts` — `iniciais()` (deburr + fallback no codigo) + `gerarIdRota()`
+  (unicidade por regex `^base(\d+)?$`)
+- [x] `validacao.ts`: `idRota` passa a opcional (vazio => rota nova)
+- [x] `app/api/paragens/route.ts`: gera o ID quando ausente (carrega nome/codigo do user)
+- [x] `RegistoForm.tsx`: campo de texto -> seletor "rota ativa" (nova rota | continuar
+  rota recente); lê o `idRota` devolvido pelo servidor para encadear paragens
+- [x] tsc limpo, 47 testes verdes, `next build` OK
+- [ ] **Verificação manual (utilizador)**: criar rota nova (ex. cliente "Boto" ->
+  ID tipo `RICSI-Boto`), repetir (-> `RICSI-Boto2`), e continuar via lista recente
+
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 
 Clientes têm 90 dias (a contar da data da paragem) para pagar. Separar "valor a

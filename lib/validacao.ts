@@ -14,7 +14,8 @@ const numOpcional = z.number().nonnegative("Não pode ser negativo").nullable().
 /** Schema de uma paragem (entrada do motorista §3.1). */
 export const paragemSchema = z
   .object({
-    idRota: z.string().trim().min(1, "ID Rota obrigatório"),
+    // Opcional: vazio/ausente => rota nova (o servidor gera o ID); preenchido => continuar rota.
+    idRota: z.string().trim().optional(),
     data: z.string().min(1, "Data obrigatória"),
     tipoViagem: z.enum(TIPOS_VIAGEM),
     tipoVeiculo: z.enum(TIPOS_VEICULO),

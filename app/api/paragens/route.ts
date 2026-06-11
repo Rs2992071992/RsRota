@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSessao, getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
+import { iniciais, gerarIdRota } from "@/lib/rota-id";
 
 // POST /api/paragens — cria uma paragem (motorista ou escritório).
 export async function POST(req: Request) {
@@ -23,6 +24,18 @@ export async function POST(req: Request) {
   // Congela o snapshot de custos (motorista + veículo usados) no momento do registo.
   const motoristaId = sessao.perfil === "MOTORISTA" ? sessao.id : null;
   const veiculoId = d.veiculoId ?? null;
+
+  // ID da rota: se vier preenchido, é "continuar rota" -> reutiliza tal como está.
+  // Se vier vazio, é uma rota nova -> gera `INICIAIS-Cliente` (único) a partir do condutor.
+  let idRota = d.idRota?.trim() ?? "";
+  if (!idRota) {
+    const user = await prisma.utilizador.findUnique({
+      where: { id: sessao.id },
+      select: { nome: true, codigo: true },
+    });
+    idRota = await gerarIdRota(iniciais(user?.nome, user?.codigo ?? "ROTA"), d.cliente);
+  }
+
   const snapshot = await snapshotParaRegisto(motoristaId, veiculoId);
 
   const criada = await prisma.paragem.create({
@@ -31,7 +44,7 @@ export async function POST(req: Request) {
       motoristaId,
       veiculoId,
       snapshot: snapshot as unknown as Prisma.InputJsonValue,
-      idRota: d.idRota,
+      idRota,
       data: new Date(d.data),
       tipoViagem: d.tipoViagem,
       tipoVeiculo: d.tipoVeiculo,
