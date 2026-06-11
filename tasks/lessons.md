@@ -2,6 +2,16 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-06-11] | O "Rateio do custo por cliente" (perRoute.ts) atribuía a cada cliente
+  `coefReal × custoTotalRota` sem normalizar o coeficiente (peso/capacidade). Como os
+  coefs não somam 1, as partes somavam > 100 % (rota 1767 € com coefs 1,09+1,00 →
+  3697 € atribuídos), e as margens por cliente não batiam com o lucro da rota. | Num
+  rateio, as quotas TÊM de somar 1: `quota = coefReal / Σcoef`,
+  `custoAtribuido = quota × custoTotalRota`. Invariantes a testar sempre:
+  `Σ custoAtribuido = custoTotalRota` e `Σ margens = lucro`. Manter o coefReal bruto
+  só como indicador de sobrecarga. Trajetos a vazio: excluir SÓ por `tipoVeiculo==="VAZIO"`
+  (não por `peso>0`), senão perde-se um cliente real faturado com peso 0 mal registado.
+
 - [2026-06-10] | O botão "Sair" (form POST → /api/auth/logout) dava HTTP 405 em /login:
   `NextResponse.redirect()` usa por defeito 307, que **preserva o método POST**, e o
   browser fazia POST a /login (que só aceita GET). | Em redirects após POST (logout,
