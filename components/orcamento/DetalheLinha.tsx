@@ -65,7 +65,10 @@ export default function DetalheLinha({ detalhe, custoEstimado, preco }: Props) {
             rotulo={`Veículo (${fmtNum2(detalhe.custoVeiculoPorKm)} €/km × ${detalhe.km})`}
             valor={fmtEuro(detalhe.custoVeiculo)}
           />
-          <Linha rotulo="Portagens (tabela)" valor={fmtEuro(detalhe.portagemTabela)} />
+          <Linha
+            rotulo={`Portagens (${detalhe.portagemAuto ? "auto camião" : "tabela zona"})`}
+            valor={fmtEuro(detalhe.portagem)}
+          />
           {detalhe.portagensExtra > 0 && (
             <Linha rotulo="Portagens extra" valor={fmtEuro(detalhe.portagensExtra)} />
           )}

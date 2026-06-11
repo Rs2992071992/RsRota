@@ -9,6 +9,7 @@ import {
   type DetalheEstimativa,
 } from "@/lib/calc/orcamento";
 import DetalheLinha from "@/components/orcamento/DetalheLinha";
+import MoradaInput from "@/components/orcamento/MoradaInput";
 
 const TIPOS_VEICULO = ["CAMIAO", "CAMIAO+REBOQUE", "LEVE", "VAZIO"] as const;
 const ESTADOS = [
@@ -45,6 +46,8 @@ interface Props {
   clientes: ClienteOpt[];
   veiculos: { id: number; nome: string }[];
   motoristas: { id: number; nome: string | null; codigo: string }[];
+  /** Cliente pré-selecionado ao criar (ex.: vindo da ficha do cliente). */
+  clienteInicial?: string;
 }
 
 /** Linha + estado de UI (não persistido). */
@@ -73,14 +76,25 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
   };
 }
 
-export default function OrcamentoForm({ devis, clientes, veiculos, motoristas }: Props) {
+export default function OrcamentoForm({
+  devis,
+  clientes,
+  veiculos,
+  motoristas,
+  clienteInicial,
+}: Props) {
   const router = useRouter();
   const editar = !!devis;
 
-  const [cliente, setCliente] = useState(devis?.cliente ?? "");
-  const [clienteEmail, setClienteEmail] = useState(devis?.clienteEmail ?? "");
-  const [clienteContato, setClienteContato] = useState(devis?.clienteContato ?? "");
-  const [clienteMorada, setClienteMorada] = useState(devis?.clienteMorada ?? "");
+  // Em criação com cliente pré-selecionado, herda os contactos da ficha do cliente.
+  const cInit = !devis && clienteInicial ? clientes.find((c) => c.nome === clienteInicial) : undefined;
+
+  const [cliente, setCliente] = useState(devis?.cliente ?? clienteInicial ?? "");
+  const [clienteEmail, setClienteEmail] = useState(devis?.clienteEmail ?? cInit?.email ?? "");
+  const [clienteContato, setClienteContato] = useState(
+    devis?.clienteContato ?? cInit?.contato ?? "",
+  );
+  const [clienteMorada, setClienteMorada] = useState(devis?.clienteMorada ?? cInit?.morada ?? "");
   const [origemPadrao, setOrigemPadrao] = useState(devis?.origemPadrao ?? "");
   const [validade, setValidade] = useState(devis?.validade ?? "");
   const [estado, setEstado] = useState(devis?.estado ?? "RASCUNHO");
@@ -259,10 +273,9 @@ export default function OrcamentoForm({ devis, clientes, veiculos, motoristas }:
           </div>
           <div className="md:col-span-2">
             <label className="label">Morada de partida por defeito (armazém)</label>
-            <input
-              className="input"
+            <MoradaInput
               value={origemPadrao}
-              onChange={(e) => setOrigemPadrao(e.target.value)}
+              onChange={setOrigemPadrao}
               placeholder="Ex.: Rua X, Lisboa"
             />
           </div>
@@ -372,19 +385,17 @@ export default function OrcamentoForm({ devis, clientes, veiculos, motoristas }:
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="label">Origem</label>
-                <input
-                  className="input"
+                <MoradaInput
                   value={l.origem}
-                  onChange={(e) => patchLinha(i, { origem: e.target.value })}
+                  onChange={(v) => patchLinha(i, { origem: v })}
                   placeholder={origemPadrao || "Morada de partida"}
                 />
               </div>
               <div>
                 <label className="label">Destino</label>
-                <input
-                  className="input"
+                <MoradaInput
                   value={l.destino}
-                  onChange={(e) => patchLinha(i, { destino: e.target.value })}
+                  onChange={(v) => patchLinha(i, { destino: v })}
                   placeholder="Morada do cliente"
                 />
               </div>

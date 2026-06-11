@@ -4,7 +4,11 @@ import OrcamentoForm from "@/components/orcamento/OrcamentoForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NovoOrcamentoPage() {
+export default async function NovoOrcamentoPage({
+  searchParams,
+}: {
+  searchParams: { cliente?: string };
+}) {
   const [clientes, veiculos, motoristas] = await Promise.all([
     prisma.cliente.findMany({
       orderBy: { nome: "asc" },
@@ -30,7 +34,12 @@ export default async function NovoOrcamentoPage() {
         </Link>
         <h1 className="text-2xl font-bold">Novo orçamento</h1>
       </div>
-      <OrcamentoForm clientes={clientes} veiculos={veiculos} motoristas={motoristas} />
+      <OrcamentoForm
+        clientes={clientes}
+        veiculos={veiculos}
+        motoristas={motoristas}
+        clienteInicial={searchParams.cliente}
+      />
     </div>
   );
 }

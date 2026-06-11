@@ -25,6 +25,43 @@ async function fetchComTimeout(url: string, init?: RequestInit): Promise<Respons
   }
 }
 
+export interface SugestaoMorada {
+  label: string;
+  lon: number;
+  lat: number;
+}
+
+/**
+ * Sugestões de morada (autocomplete do OpenRouteService / Pelias) para o utilizador
+ * escolher enquanto escreve. Resiliente: devolve [] em caso de erro/sem chave.
+ */
+export async function sugerirMoradas(texto: string): Promise<SugestaoMorada[]> {
+  const apiKey = process.env.ORS_API_KEY;
+  if (!apiKey || texto.trim().length < 3) return [];
+  try {
+    const url =
+      `${ORS_BASE}/geocode/autocomplete?api_key=${encodeURIComponent(apiKey)}` +
+      `&text=${encodeURIComponent(texto)}&size=6`;
+    const res = await fetchComTimeout(url);
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      features?: {
+        properties?: { label?: string };
+        geometry?: { coordinates?: number[] };
+      }[];
+    };
+    return (data.features ?? [])
+      .map((f) => ({
+        label: f.properties?.label ?? "",
+        lon: f.geometry?.coordinates?.[0] ?? NaN,
+        lat: f.geometry?.coordinates?.[1] ?? NaN,
+      }))
+      .filter((s) => s.label && Number.isFinite(s.lon) && Number.isFinite(s.lat));
+  } catch {
+    return [];
+  }
+}
+
 /** Geocodifica uma morada → [lon, lat] do melhor resultado, ou null. */
 async function geocodificar(apiKey: string, morada: string): Promise<Coord | null> {
   const url =

@@ -50,7 +50,10 @@ export interface DetalheEstimativa {
   custoMotoristaPorKm: number;
   custoVeiculo: number;
   custoVeiculoPorKm: number;
-  portagemTabela: number;
+  /** Portagem efetivamente usada (override automático TollGuru, senão tabela por zona). */
+  portagem: number;
+  /** true se a portagem veio do cálculo automático (TollGuru); false se da tabela. */
+  portagemAuto: boolean;
   portagensExtra: number;
   margemMinima: number;
 }
@@ -73,11 +76,15 @@ export function kmComRegresso(kmIda: number, idaVolta: boolean): number {
  * (mesmo motor das paragens reais) com o snapshot fornecido, e SOMA a portagem da
  * tabela (que num orçamento é um custo real a faturar), ao contrário do custo de
  * paragem isolado. Preço sugerido = custo × margemMinima do snapshot.
+ *
+ * `portagemOverride` (ex.: do TollGuru) substitui a portagem da tabela por zona,
+ * evitando dupla contagem. Quando null/undefined usa-se a tabela (comportamento atual).
  */
 export function estimarLinha(
   input: EstimarLinhaInput,
   ctx: ContextoCalculo,
   snapshot: ParagemSnapshot,
+  portagemOverride?: number | null,
 ): EstimativaLinha {
   const calc = calcularParagem(
     {
@@ -100,7 +107,10 @@ export function estimarLinha(
     ctx,
   );
 
-  const custoEstimado = round2(calc.custoParagem + calc.portagemTabela);
+  const portagemAuto = portagemOverride != null;
+  const portagem = portagemAuto ? portagemOverride : calc.portagemTabela;
+
+  const custoEstimado = round2(calc.custoParagem + portagem);
   const precoSugerido = round2(custoEstimado * snapshot.margemMinima);
   return {
     custoEstimado,
@@ -118,7 +128,8 @@ export function estimarLinha(
       custoMotoristaPorKm: snapshot.custoMotoristaPorKm,
       custoVeiculo: round2(calc.custoVeiculo),
       custoVeiculoPorKm: snapshot.custoVeiculoPorKm,
-      portagemTabela: round2(calc.portagemTabela),
+      portagem: round2(portagem),
+      portagemAuto,
       portagensExtra: round2(calc.portagensExtra),
       margemMinima: snapshot.margemMinima,
     },

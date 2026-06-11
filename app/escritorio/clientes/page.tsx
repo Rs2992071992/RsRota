@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 import { carregarClientes, carregarCliente } from "@/lib/clientes-service";
 import { fmtEuro, fmtPct, fmtData } from "@/lib/format";
 import ContatoCliente from "@/components/ContatoCliente";
 import ClienteGrafico from "@/components/ClienteGrafico";
+import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +17,15 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
   const selecionado = searchParams.cliente || "";
   const q = (searchParams.q || "").trim().toLowerCase();
 
-  const [clientes, detalhe] = await Promise.all([
+  const [clientes, detalhe, orcamentos] = await Promise.all([
     carregarClientes(),
     selecionado ? carregarCliente(selecionado) : Promise.resolve(null),
+    selecionado
+      ? prisma.devis.findMany({
+          where: { cliente: selecionado },
+          orderBy: { criadoEm: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const lista = q ? clientes.filter((c) => c.nome.toLowerCase().includes(q)) : clientes;
@@ -98,6 +106,58 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
               </div>
 
               <ContatoCliente nome={detalhe.nome} contacto={detalhe.contacto} />
+
+              {/* Orçamentos do cliente */}
+              <div className="card p-0">
+                <div className="flex items-center justify-between border-b border-gray-100 p-3">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Orçamentos ({orcamentos.length})
+                  </h3>
+                  <Link
+                    href={`/escritorio/orcamentos/novo?cliente=${encodeURIComponent(detalhe.nome)}`}
+                    className="text-xs font-medium text-brand hover:underline"
+                  >
+                    + Novo orçamento
+                  </Link>
+                </div>
+                {orcamentos.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-400">Sem orçamentos para este cliente.</p>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="th">Número</th>
+                        <th className="th">Data</th>
+                        <th className="th">Válido até</th>
+                        <th className="th">Estado</th>
+                        <th className="th text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {orcamentos.map((o) => (
+                        <tr key={o.id} className="hover:bg-gray-50">
+                          <td className="td font-semibold">
+                            <Link
+                              href={`/escritorio/orcamentos/${o.id}`}
+                              className="text-brand hover:underline"
+                            >
+                              {o.numero}
+                            </Link>
+                          </td>
+                          <td className="td whitespace-nowrap">{fmtData(o.data)}</td>
+                          <td className="td whitespace-nowrap">
+                            {o.validade ? fmtData(o.validade) : "—"}
+                          </td>
+                          <td className="td">
+                            <EstadoOrcamentoBadge estado={o.estado} />
+                          </td>
+                          <td className="td text-right font-semibold">{fmtEuro(o.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
 
               {/* KPIs */}
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

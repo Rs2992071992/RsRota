@@ -48,6 +48,20 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
 - [ ] (Opcional) Personalizar o cabeçalho da empresa em `lib/pdf/DevisDocument.tsx`
   (constante `EMPRESA`)
 
+### Extras orçamentos (2026-06-11)
+- [x] Detalhe interno por linha (DetalheLinha) — decomposição do custo + margem
+  aplicada (alerta prejuízo/abaixo do mínimo); NÃO vai no PDF do cliente
+- [x] Autocomplete de moradas (ORS `geocode/autocomplete`) — `MoradaInput` +
+  `/api/devis/geocode`; origem/destino com sugestões para clicar
+- [x] Portagens automáticas de camião via TollGuru (`lib/portagens.ts`) — substitui a
+  tabela por zona quando disponível (override em `estimarLinha`), com fallback gracioso
+- [x] Vista de orçamentos por cliente na ficha de Clientes (+ "Novo orçamento" pré-preenchido)
+- [x] 67 testes verdes, tsc limpo, build OK
+- [ ] **Ação do utilizador**: criar chave grátis TollGuru → `TOLLGURU_API_KEY` no `.env`
+  local **e** na Vercel (sem ela, portagens continuam pela tabela por zona)
+- [ ] **Verificar em produção** o parsing da resposta TollGuru (campos costs/summary)
+  no 1.º cálculo real e afinar `lib/portagens.ts` se necessário
+
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 
 Clientes têm 90 dias (a contar da data da paragem) para pagar. Separar "valor a

@@ -74,9 +74,27 @@ describe("estimarLinha — reutiliza o motor de paragem + portagem da tabela", (
       d.custoAdblue +
       d.custoMotorista +
       d.custoVeiculo +
-      d.portagemTabela +
+      d.portagem +
       d.portagensExtra;
     expect(soma).toBeCloseTo(est.custoEstimado, 1);
+  });
+  it("sem override, a portagem vem da tabela por zona (Galiza = 72,70 €)", () => {
+    expect(est.detalhe.portagemAuto).toBe(false);
+    expect(est.detalhe.portagem).toBe(72.7);
+  });
+});
+
+describe("estimarLinha — portagem automática (override TollGuru)", () => {
+  const input = { km: 580, pesoKg: 28000, tipoVeiculo: "CAMIAO+REBOQUE", zonaPortagem: "Galiza" };
+  const semOverride = estimarLinha(input, ctx, snapshot);
+  const comOverride = estimarLinha(input, ctx, snapshot, 120);
+
+  it("usa o override em vez da tabela e marca portagemAuto", () => {
+    expect(comOverride.detalhe.portagemAuto).toBe(true);
+    expect(comOverride.detalhe.portagem).toBe(120);
+  });
+  it("o custo reflete a diferença de portagem (120 − 72,70)", () => {
+    expect(comOverride.custoEstimado - semOverride.custoEstimado).toBeCloseTo(120 - 72.7, 2);
   });
 });
 
