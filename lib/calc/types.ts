@@ -148,7 +148,10 @@ export interface ParagemCalc {
 /** Repartição do custo da rota por cliente. */
 export interface RateioCliente {
   cliente: string;
+  /** Coeficiente bruto somado (peso/capacidade); > 1 indica sobrecarga. Indicador, não soma 100 %. */
   coefReal: number;
+  /** Quota normalizada (0–1): fração do custo da rota atribuída ao cliente. As quotas somam 1. */
+  quota: number;
   custoAtribuido: number;
   receitaPaga: number;
 }

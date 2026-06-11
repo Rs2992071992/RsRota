@@ -107,9 +107,10 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       <div className="card">
         <h2 className="mb-1 font-semibold">Rateio do custo por cliente</h2>
         <p className="mb-3 text-xs text-gray-500">
-          Custo atribuído = coeficiente real × custo total da rota ({fmtEuro(rota.custoTotalRota)}). O
-          coeficiente é a fração da capacidade ocupada por cada cliente; acima de 1 indica sobrecarga
-          (carga superior à capacidade do veículo).
+          Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
+          quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
+          somar 100 %. Os trajetos a vazio são repartidos pelos clientes. O coef. real (peso/capacidade)
+          é só indicador: acima de 1 indica sobrecarga.
         </p>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -117,6 +118,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
               <tr>
                 <th className="th">Cliente</th>
                 <th className="th text-right">Coef. real</th>
+                <th className="th text-right">Quota</th>
                 <th className="th text-right">Custo atribuído</th>
                 <th className="th text-right">Receita</th>
                 <th className="th text-right">Margem</th>
@@ -129,6 +131,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                   <tr key={c.cliente}>
                     <td className="td font-medium">{c.cliente}</td>
                     <td className="td text-right">{fmtNum2(c.coefReal)}</td>
+                    <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
                     <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
                     <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
                     <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>

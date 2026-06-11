@@ -71,10 +71,50 @@ describe("calcularRota — rota HILP01 (reproduz o Excel)", () => {
     expect(r.lucro).toBeCloseTo(212.2669497, 3);
     expect(r.alerta).toBe("🟢 OK");
   });
-  it("rateio: sobrecarga (28000/24000) dá coef ≈ 1,1667 e custo atribuído proporcional", () => {
+  it("rateio: único cliente real paga 100 % (trajeto VAZIO excluído, sem linha fantasma)", () => {
     const hilplas = r.rateio.find((c) => c.cliente === "Hilplas Tecfil")!;
+    // Coef. real continua a refletir a sobrecarga (indicador).
     expect(hilplas.coefReal).toBeCloseTo(28000 / 24000, 6);
-    expect(hilplas.custoAtribuido).toBeCloseTo(1487.73305 * (28000 / 24000), 2);
+    // Mas a quota normaliza a 100 % (é o único cliente; o VAZIO não participa).
+    expect(hilplas.quota).toBeCloseTo(1, 6);
+    expect(hilplas.custoAtribuido).toBeCloseTo(1487.73305, 2);
+    // O trajeto a vazio não gera linha própria.
+    expect(r.rateio.find((c) => c.cliente === "Vazio")).toBeUndefined();
+  });
+});
+
+describe("calcularRota — rateio multi-cliente normaliza a 100 % (cenário Espanha)", () => {
+  // 4 clientes carregados + retorno a vazio. Verifica os invariantes do rateio.
+  const espanha: ParagemInput[] = [
+    { idRota: "ESP01", cliente: "Cliente A", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 1200 },
+    { idRota: "ESP01", cliente: "Cliente B", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 300, kmFinal: 450, kgCarregados: 6000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 600 },
+    { idRota: "ESP01", cliente: "Cliente C", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 450, kmFinal: 550, kgCarregados: 3000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 400 },
+    { idRota: "ESP01", cliente: "Cliente D", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 550, kmFinal: 650, kgCarregados: 3000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 400 },
+    { idRota: "ESP01", cliente: "Vazio", tipoViagem: "Volta", tipoVeiculo: "VAZIO", kmInicial: 650, kmFinal: 1300, kgCarregados: 0, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 0 },
+  ];
+  const r = calcularRota("ESP01", espanha, ctx);
+
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("Σ quotas = 100 %", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.quota, 0);
+    expect(soma).toBeCloseTo(1, 6);
+  });
+  it("Σ margens por cliente = lucro da rota", () => {
+    const somaMargens = r.rateio.reduce((a, c) => a + (c.receitaPaga - c.custoAtribuido), 0);
+    expect(somaMargens).toBeCloseTo(r.lucro, 6);
+  });
+  it("o retorno a vazio não aparece como cliente", () => {
+    expect(r.rateio.find((c) => c.cliente === "Vazio")).toBeUndefined();
+    expect(r.rateio).toHaveLength(4);
+  });
+  it("o cliente com mais carga paga mais (A > B > C = D)", () => {
+    const get = (n: string) => r.rateio.find((c) => c.cliente === n)!.custoAtribuido;
+    expect(get("Cliente A")).toBeGreaterThan(get("Cliente B"));
+    expect(get("Cliente B")).toBeGreaterThan(get("Cliente C"));
+    expect(get("Cliente C")).toBeCloseTo(get("Cliente D"), 6);
   });
 });
 

@@ -46,24 +46,40 @@ export function calcularRota(
   const lucro = receitaTotal - custoTotalRota;
   const alerta: RotaCalc["alerta"] = lucro < 0 ? "🔴 PREJUÍZO" : "🟢 OK";
 
-  // Rateio por cliente (auditável). custo atribuído de cada paragem =
-  // coefReal × custo total da rota; agregamos por cliente.
+  // Rateio por cliente (auditável). O custo total da rota é repartido de forma
+  // proporcional ao coeficiente de carga (peso/capacidade) de cada cliente,
+  // NORMALIZADO para somar 100 %. Assim Σ custoAtribuido = custoTotalRota e
+  // Σ margem = lucro. Trajetos a vazio (VAZIO ou camião sem carga) não recebem
+  // linha própria: o seu custo já está no total e dilui-se nos clientes reais.
   const porCliente = new Map<string, RateioCliente>();
+  let somaCoef = 0;
   for (let i = 0; i < paragens.length; i++) {
     const p = paragens[i];
+    // Só os trajetos a vazio (VAZIO) ficam de fora: são repositionamento, sem
+    // cliente a faturar. Qualquer outro tipo participa (mesmo com peso 0 mal
+    // registado), para nunca perder um cliente realmente faturado.
+    if (p.tipoVeiculo === "VAZIO") continue;
     const coef = coeficienteReal(p.tipoVeiculo, pesoTransportado(p), effs[i]);
-    const atribuido = coef * custoTotalRota;
     const chave = p.cliente || "(sem cliente)";
     const atual = porCliente.get(chave) ?? {
       cliente: chave,
       coefReal: 0,
+      quota: 0,
       custoAtribuido: 0,
       receitaPaga: 0,
     };
     atual.coefReal += coef;
-    atual.custoAtribuido += atribuido;
     atual.receitaPaga += p.receitaPaga || 0;
     porCliente.set(chave, atual);
+    somaCoef += coef;
+  }
+  // Normalização: quota = coefReal / Σcoef. Garde-fou contra divisão por zero
+  // (nenhum arrêt participante) — reparte igualmente entre os clientes presentes.
+  const clientes = Array.from(porCliente.values());
+  const denom = somaCoef > 0 ? somaCoef : clientes.length || 1;
+  for (const c of clientes) {
+    c.quota = somaCoef > 0 ? c.coefReal / denom : 1 / denom;
+    c.custoAtribuido = c.quota * custoTotalRota;
   }
 
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
@@ -90,7 +106,7 @@ export function calcularRota(
     receitaTotal,
     lucro,
     alerta,
-    rateio: Array.from(porCliente.values()),
+    rateio: clientes,
     kmTotais,
   };
 }
