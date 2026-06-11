@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getSessaoInfo } from "@/lib/session";
 import RegistoForm from "./RegistoForm";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +9,15 @@ export default async function RegistoPage({
 }: {
   searchParams: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
 }) {
+  // O motorista só vê para continuar as SUAS próprias rotas; o escritório vê todas.
+  const sessao = getSessaoInfo();
+  const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
+
   const [portagens, params, rotasRecentes, veiculos] = await Promise.all([
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.paragem.findMany({
+      where: filtroRotas,
       select: { idRota: true },
       distinct: ["idRota"],
       orderBy: { data: "desc" },
