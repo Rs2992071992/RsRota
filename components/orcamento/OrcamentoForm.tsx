@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmtEuro } from "@/lib/format";
-import { totaisDevis, type LinhaDevis } from "@/lib/calc/orcamento";
+import {
+  totaisDevis,
+  type LinhaDevis,
+  type DetalheEstimativa,
+} from "@/lib/calc/orcamento";
+import DetalheLinha from "@/components/orcamento/DetalheLinha";
 
 const TIPOS_VEICULO = ["CAMIAO", "CAMIAO+REBOQUE", "LEVE", "VAZIO"] as const;
 const ESTADOS = [
@@ -43,7 +48,12 @@ interface Props {
 }
 
 /** Linha + estado de UI (não persistido). */
-type LinhaUI = LinhaDevis & { kmManual: boolean; aCalcular: boolean; aviso?: string };
+type LinhaUI = LinhaDevis & {
+  kmManual: boolean;
+  aCalcular: boolean;
+  aviso?: string;
+  detalhe?: DetalheEstimativa;
+};
 
 function linhaVazia(origem: string, destino: string): LinhaUI {
   return {
@@ -137,6 +147,7 @@ export default function OrcamentoForm({ devis, clientes, veiculos, motoristas }:
         km: data.km ?? l.km,
         custoEstimado: data.custoEstimado ?? 0,
         preco: data.precoSugerido ?? 0,
+        detalhe: data.detalhe,
         aviso: data.aviso,
       });
     } catch {
@@ -468,6 +479,14 @@ export default function OrcamentoForm({ devis, clientes, veiculos, motoristas }:
                 />
               </div>
             </div>
+
+            {l.detalhe && (
+              <DetalheLinha
+                detalhe={l.detalhe}
+                custoEstimado={l.custoEstimado}
+                preco={l.preco}
+              />
+            )}
           </div>
         ))}
       </div>

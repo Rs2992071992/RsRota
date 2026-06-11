@@ -67,6 +67,17 @@ describe("estimarLinha — reutiliza o motor de paragem + portagem da tabela", (
     expect(est.custoEstimado).toBeGreaterThan(850);
     expect(est.precoSugerido).toBeGreaterThan(est.custoEstimado);
   });
+  it("o detalhe decompõe o custo (soma das parcelas ≈ custo estimado)", () => {
+    const d = est.detalhe;
+    const soma =
+      d.custoCombustivel +
+      d.custoAdblue +
+      d.custoMotorista +
+      d.custoVeiculo +
+      d.portagemTabela +
+      d.portagensExtra;
+    expect(soma).toBeCloseTo(est.custoEstimado, 1);
+  });
 });
 
 describe("totaisDevis", () => {

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     carregarContexto(),
     snapshotParaRegisto(d.motoristaId ?? null, d.veiculoId ?? null),
   ]);
-  const { custoEstimado, precoSugerido } = estimarLinha(
+  const { custoEstimado, precoSugerido, detalhe } = estimarLinha(
     { km, pesoKg: d.pesoKg, tipoVeiculo: d.tipoVeiculo, zonaPortagem: d.zonaPortagem },
     ctx,
     snapshot,
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     km,
     custoEstimado,
     precoSugerido,
+    detalhe, // decomposição interna (escritório); não vai para o PDF do cliente
     aviso: avisoDistancia,
   });
 }

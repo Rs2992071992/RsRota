@@ -36,9 +36,29 @@ export interface EstimarLinhaInput {
   portagensExtra?: number;
 }
 
+/** Decomposição do custo (uso INTERNO no escritório; nunca aparece no PDF do cliente). */
+export interface DetalheEstimativa {
+  km: number;
+  pesoKg: number;
+  consumoL100: number;
+  litrosGastos: number;
+  precoCombUsado: number;
+  custoCombustivel: number;
+  adblueLitros: number;
+  custoAdblue: number;
+  custoMotorista: number;
+  custoMotoristaPorKm: number;
+  custoVeiculo: number;
+  custoVeiculoPorKm: number;
+  portagemTabela: number;
+  portagensExtra: number;
+  margemMinima: number;
+}
+
 export interface EstimativaLinha {
   custoEstimado: number;
   precoSugerido: number;
+  detalhe: DetalheEstimativa;
 }
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -82,7 +102,27 @@ export function estimarLinha(
 
   const custoEstimado = round2(calc.custoParagem + calc.portagemTabela);
   const precoSugerido = round2(custoEstimado * snapshot.margemMinima);
-  return { custoEstimado, precoSugerido };
+  return {
+    custoEstimado,
+    precoSugerido,
+    detalhe: {
+      km: calc.kmFeitos,
+      pesoKg: calc.pesoTransportado,
+      consumoL100: calc.consumoL100,
+      litrosGastos: round2(calc.litrosGastos),
+      precoCombUsado: calc.precoCombUsado,
+      custoCombustivel: round2(calc.custoCombustivel),
+      adblueLitros: round2(calc.adblueLitros),
+      custoAdblue: round2(calc.custoAdblue),
+      custoMotorista: round2(calc.custoMotorista),
+      custoMotoristaPorKm: snapshot.custoMotoristaPorKm,
+      custoVeiculo: round2(calc.custoVeiculo),
+      custoVeiculoPorKm: snapshot.custoVeiculoPorKm,
+      portagemTabela: round2(calc.portagemTabela),
+      portagensExtra: round2(calc.portagensExtra),
+      margemMinima: snapshot.margemMinima,
+    },
+  };
 }
 
 export interface TotaisDevis {
