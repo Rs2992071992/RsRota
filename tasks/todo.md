@@ -22,6 +22,32 @@ lista (mesmo `idRota` reutilizado, nunca regenerado).
 - [ ] **Verificação manual (utilizador)**: criar rota nova (ex. cliente "Boto" ->
   ID tipo `RICSI-Boto`), repetir (-> `RICSI-Boto2`), e continuar via lista recente
 
+## 🧾 Orçamentos / devis + envio por email (2026-06-11)
+
+Secção comercial a montante: criar orçamentos no escritório, estimar o preço com o
+motor de custos existente (km via OpenRouteService, perfil pesado, ida e volta),
+gerar PDF e enviar ao cliente (fluxo "sem servidor": descarrega o PDF + abre o email
+pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
+
+- [x] Schema: modelo `Devis` (linhas em Json) — `prisma db push` no Neon (feito)
+- [x] `lib/distancia.ts` — OpenRouteService (geocode + directions driving-hgv), resiliente
+- [x] `lib/calc/orcamento.ts` (puro) — `estimarLinha`/`totaisDevis`/`kmComRegresso`/
+  `proximoNumeroDevis` + 11 testes (63 testes verdes no total)
+- [x] `validacao.ts`: schemas devis/linha/estimar
+- [x] APIs: `/api/devis` (POST/GET), `/api/devis/[id]` (PATCH/DELETE),
+  `/api/devis/[id]/pdf` (@react-pdf), `/api/devis/estimar`
+- [x] `lib/pdf/DevisDocument.tsx` (A4) + smoke test (`%PDF-` OK)
+- [x] UI: menu "Orçamentos", lista, editor (`OrcamentoForm`), `EnviarOrcamento`,
+  `EstadoOrcamentoBadge`, `ApagarOrcamento`
+- [x] tsc limpo, build OK, 63 testes verdes
+- [ ] **Ação do utilizador**: criar chave grátis OpenRouteService → `ORS_API_KEY` no
+  `.env` local **e** nas env vars da Vercel (sem ela, o km automático fica off; o km
+  manual continua a funcionar)
+- [ ] **Verificação manual**: criar orçamento (Lisboa→Porto, ida/volta), "Calcular"
+  → km ~626 + preço sugerido; "Descarregar PDF" e "Preparar email"
+- [ ] (Opcional) Personalizar o cabeçalho da empresa em `lib/pdf/DevisDocument.tsx`
+  (constante `EMPRESA`)
+
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 
 Clientes têm 90 dias (a contar da data da paragem) para pagar. Separar "valor a

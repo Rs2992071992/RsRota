@@ -2,6 +2,15 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-06-11] | `@react-pdf/renderer` em rota API do Next 14: o webpack do servidor
+  tenta empacotar a lib (pesada) e o TS reclama da assinatura de `renderToBuffer`
+  (espera `ReactElement<DocumentProps>`) e do `Buffer` vs `BodyInit`. | (1) Adicionar
+  `experimental.serverComponentsExternalPackages: ["@react-pdf/renderer"]` ao
+  next.config; (2) `export const runtime = "nodejs"` na rota; (3) `createElement(...)
+  as unknown as ReactElement<DocumentProps>`; (4) responder com `new Uint8Array(buffer)`
+  (não o Buffer cru). Smoke test isolado (`renderToBuffer` → header `%PDF-`) antes de
+  confiar no runtime serverless.
+
 - [2026-06-11] | O "Rateio do custo por cliente" (perRoute.ts) atribuía a cada cliente
   `coefReal × custoTotalRota` sem normalizar o coeficiente (peso/capacidade). Como os
   coefs não somam 1, as partes somavam > 100 % (rota 1767 € com coefs 1,09+1,00 →

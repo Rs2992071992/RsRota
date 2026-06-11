@@ -95,3 +95,53 @@ export const clienteContactoSchema = z.object({
 });
 
 export type ClienteContactoForm = z.infer<typeof clienteContactoSchema>;
+
+/** Estados possíveis de um orçamento. */
+export const ESTADOS_DEVIS = ["RASCUNHO", "ENVIADO", "ACEITE", "RECUSADO"] as const;
+
+/** Uma linha de orçamento (corresponde a LinhaDevis em lib/calc/orcamento.ts). */
+export const linhaDevisSchema = z.object({
+  descricao: z.string().trim().max(300).default(""),
+  origem: z.string().trim().max(300).default(""),
+  destino: z.string().trim().max(300).default(""),
+  kmAuto: z.number().nonnegative().nullable().default(null),
+  idaVolta: z.boolean().default(true),
+  km: numNaoNeg.default(0),
+  pesoKg: numNaoNeg.default(0),
+  tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  zonaPortagem: z.string().trim().max(120).nullable().default(null),
+  custoEstimado: numNaoNeg.default(0),
+  preco: numNaoNeg.default(0),
+});
+
+/** Schema de criação de um orçamento. O número e os totais são calculados no servidor. */
+export const devisSchema = z.object({
+  cliente: z.string().trim().min(1, "Cliente obrigatório"),
+  clienteEmail: txtContacto,
+  clienteMorada: txtContacto,
+  clienteContato: txtContacto,
+  validade: z.string().nullable().optional(),
+  estado: z.enum(ESTADOS_DEVIS).default("RASCUNHO"),
+  origemPadrao: txtContacto,
+  linhas: z.array(linhaDevisSchema).default([]),
+  observacoes: z.string().trim().max(2000).nullable().optional(),
+  ivaPercent: z.number().min(0).max(100).default(23),
+});
+
+export type DevisForm = z.infer<typeof devisSchema>;
+
+/** Entrada do endpoint de estimativa de uma linha (calcula km via mapas + custo). */
+export const estimarDevisSchema = z.object({
+  origem: z.string().trim().default(""),
+  destino: z.string().trim().default(""),
+  idaVolta: z.boolean().default(true),
+  pesoKg: numNaoNeg.default(0),
+  tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  zonaPortagem: z.string().trim().nullable().default(null),
+  motoristaId: z.number().int().positive().nullable().optional(),
+  veiculoId: z.number().int().positive().nullable().optional(),
+  /** Se preenchido, ignora o cálculo automático de distância e usa este km (ida). */
+  kmManual: z.number().nonnegative().nullable().optional(),
+});
+
+export type EstimarDevisForm = z.infer<typeof estimarDevisSchema>;

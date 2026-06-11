@@ -7,6 +7,7 @@ const navItems = [
   { href: "/escritorio/dashboard", label: "Dashboard" },
   { href: "/escritorio/rotas", label: "Rotas" },
   { href: "/escritorio/clientes", label: "Clientes" },
+  { href: "/escritorio/orcamentos", label: "Orçamentos" },
   { href: "/escritorio/cobrancas", label: "Cobranças" },
   { href: "/escritorio/motoristas", label: "Motoristas" },
   { href: "/escritorio/veiculos", label: "Veículos" },

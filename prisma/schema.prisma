@@ -187,6 +187,39 @@ model Cliente {
   atualizadoEm DateTime @updatedAt
 }
 
+/// Orçamento (devis) emitido ao cliente ANTES do transporte. Não entra em nenhum
+/// cálculo de rota/rentabilidade — é a camada comercial a montante. Os dados de
+/// contacto do cliente são "snapshot" no momento da criação (email/morada), para
+/// que um orçamento enviado fique fiel mesmo que a ficha Cliente mude depois.
+model Devis {
+  id             Int       @id @default(autoincrement())
+  numero         String    @unique // ORC-2026-0001
+  cliente        String // nome (corresponde a Cliente.nome / Paragem.cliente)
+  clienteEmail   String?
+  clienteMorada  String?
+  clienteContato String?
+  data           DateTime  @default(now())
+  validade       DateTime? // por defeito data + 30 dias
+  estado         String    @default("RASCUNHO") // RASCUNHO | ENVIADO | ACEITE | RECUSADO
+  origemPadrao   String? // morada de partida por defeito (base/armazém)
+
+  // Linhas do orçamento (Json) — ver LinhaDevis em lib/calc/orcamento.ts.
+  linhas      Json
+  observacoes String?
+
+  // Totais congelados (calculados a partir das linhas) para o PDF/histórico.
+  ivaPercent Float @default(23) // IVA Portugal (editável por orçamento)
+  subtotal   Float @default(0)
+  ivaValor   Float @default(0)
+  total      Float @default(0)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([cliente])
+  @@index([estado])
+}
+
 /// Utilizadores: escritório (uma linha) e N motoristas, cada um com ID + PIN.
 model Utilizador {
   id      Int    @id @default(autoincrement())
