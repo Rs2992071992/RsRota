@@ -14,6 +14,17 @@ Formato: [data] | o que correu mal | regra para evitar
   `node_modules/.bin/prisma.cmd` não existia apesar de `node_modules/prisma`
   estar instalado. | Invocar diretamente `node node_modules/prisma/build/index.js
   db push` como alternativa quando o `.bin` falhar.
+- [2026-07-14] | Deploy bloqueado na Vercel: "The deployment was blocked
+  because the commit author did not have contributing access... Hobby Plan
+  does not support collaboration for private repositories." O commit tinha
+  `user.email` = conta pessoal do Ricardo (ricardosilva2992@gmail.com /
+  GitHub `ricardosilva2992-a11y`), que não é colaboradora do projeto Vercel —
+  só `gocris78-cmyk` (dona do repo/projeto) é. | Neste repo, os commits têm de
+  ser assinados com `git config user.email "gocris78@gmail.com"` (conta
+  `gocris78-cmyk`) para a Vercel aceitar o deploy. Se o autor errado já foi
+  empurrado, não é preciso reescrever histórico: basta um novo commit
+  (`git commit --allow-empty` chega) com o autor correto e `git push` normal —
+  a Vercel builda o commit HEAD mais recente.
 
 - [2026-06-11] | `@react-pdf/renderer` em rota API do Next 14: o webpack do servidor
   tenta empacotar a lib (pesada) e o TS reclama da assinatura de `renderToBuffer`
