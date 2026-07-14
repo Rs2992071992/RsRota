@@ -2,6 +2,19 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-07-14] | `vitest` falhava no Windows com `Cannot find module
+  '@rollup/rollup-win32-x64-msvc'` (bug conhecido do npm com optionalDependencies
+  em plataformas diferentes de onde o lockfile foi gerado — mesma classe do
+  problema do esbuild já registado em 2026-06-10, mas para o binário nativo do
+  Rollup usado pelo Vite/Vitest). | `npm install @rollup/rollup-win32-x64-msvc
+  --no-save` resolve sem tocar em `package.json`/`package-lock.json`. Problema
+  de ambiente (Windows), não do código.
+- [2026-07-14] | `npx prisma`/`npm run db:push` falhavam com "'prisma' is not
+  recognized" neste ambiente Windows (git-bash e PowerShell), porque
+  `node_modules/.bin/prisma.cmd` não existia apesar de `node_modules/prisma`
+  estar instalado. | Invocar diretamente `node node_modules/prisma/build/index.js
+  db push` como alternativa quando o `.bin` falhar.
+
 - [2026-06-11] | `@react-pdf/renderer` em rota API do Next 14: o webpack do servidor
   tenta empacotar a lib (pesada) e o TS reclama da assinatura de `renderToBuffer`
   (espera `ReactElement<DocumentProps>`) e do `Buffer` vs `BodyInit`. | (1) Adicionar

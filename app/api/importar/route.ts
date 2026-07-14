@@ -60,6 +60,17 @@ export async function POST(req: Request) {
   const params = await prisma.parametros.findUnique({ where: { id: 1 } });
   const valorNoite = params?.valorNoite || 70;
 
+  // Aliases de cliente (nome variante -> nome canónico), para não fragmentar o
+  // histórico quando o mesmo cliente aparece escrito de forma diferente entre
+  // importações (ver /api/clientes/agrupar).
+  const aliases = await prisma.clienteAlias.findMany();
+  const aliasMap = new Map(aliases.map((a) => [a.alias, a.clienteNome]));
+  const resolverCliente = (raw: string): string => {
+    const nome = raw.trim();
+    if (!nome) return "(sem cliente)";
+    return aliasMap.get(nome) ?? nome;
+  };
+
   const buf = Buffer.from(await file.arrayBuffer());
   // Sem cellDates: lemos números crus (a coluna Peso tem formato de data no Excel,
   // que com cellDates seria erradamente convertido). As datas tratamos à mão.
@@ -128,7 +139,7 @@ export async function POST(req: Request) {
       data,
       tipoViagem: String(row[c.tipoViagem] ?? "Ida").trim() === "Volta" ? "Volta" : "Ida",
       tipoVeiculo: veiculoValido(row[c.tipoVeiculo]),
-      cliente: String(row[c.cliente] ?? "").trim() || "(sem cliente)",
+      cliente: resolverCliente(String(row[c.cliente] ?? "")),
       kmInicial: usaKmFeitos ? 0 : kmIn,
       kmFinal: usaKmFeitos ? kmFeitos : kmFim,
       // Peso transportado do Excel -> KG Carregados (max(carregados,descarregados) recupera-o).

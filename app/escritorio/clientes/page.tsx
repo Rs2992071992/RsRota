@@ -42,7 +42,12 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
-        <span className="text-sm text-gray-500">{clientes.length} cliente(s)</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">{clientes.length} cliente(s)</span>
+          <Link href="/escritorio/clientes/agrupar" className="text-sm font-medium text-brand hover:underline">
+            Agrupar clientes
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[260px_1fr]">

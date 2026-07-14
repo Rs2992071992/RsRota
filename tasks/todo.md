@@ -2,6 +2,52 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📧 Pedidos do email de Ricardo a Miguel (1/07/2026) (2026-07-14)
+
+Plano: `C:\Users\Ricardo\.claude\plans\ricardo-silva-ricardosilva2992-gmail-com-adaptive-octopus.md`.
+Dos 5 pedidos do email, 2 já estavam feitos (portagens automáticas via TollGuru
++ tabela zona, vista de orçamentos por cliente — commit `be252f4`). Implementados
+os restantes:
+
+- [x] `components/Calculadora.tsx` — calculadora simples flutuante, montada em
+  `app/motorista/layout.tsx` e `app/escritorio/layout.tsx` (disponível em todas
+  as páginas de ambas as áreas)
+- [x] Motorista: removida a linha "X × Y€ = Z€" do campo "Noites fora" em
+  `RegistoForm.tsx` — só mostra o número agora. Backoffice (`ParagemEditor.tsx`)
+  mantém o detalhe em euros (fora do âmbito do pedido). `custoNoites`/
+  `valorNoite` continuam a alimentar o motor de custo sem alteração.
+- [x] Coluna "Coef. carga" na tabela de Paragens em
+  `app/escritorio/rotas/[idRota]/page.tsx` — expõe `coeficienteCarga`
+  (já calculado em `lib/calc/perStop.ts`, fórmula validada contra a coluna M
+  do Excel do Ricardo). Motor de cálculo não mudou, só passou a ser mostrado.
+- [ ] **Ação do utilizador**: sincronizar `TabelaPortagem` (Parâmetros) com a
+  folha `Tabela_ConsPort` do Excel enviado (Galiza=72.7, Armazém norte=28.65,
+  MarTorres3=14.15, VilarFormoso=18.15, Zambujeira=35, AveirasStubal3=11.35,
+  MARsesimbra3=22.3, Tecges=8.7, SPortagem=0). UI já existe em
+  `/escritorio/parametros` — não precisa de código. ⚠️ Atenção: `portagemTabela`
+  não está congelado em snapshot, por isso mudar o valor de uma zona altera
+  retroativamente o custo/lucro das rotas antigas que a usaram.
+- [x] Sistema de alias de clientes: modelo `ClienteAlias` (schema.prisma,
+  `db push` já feito no Neon), `POST /api/clientes/agrupar` (funde variantes →
+  nome canónico numa transação: `Paragem`/`Devis`.updateMany + upsert de
+  aliases + reconciliação da ficha `Cliente`), `app/api/importar/route.ts`
+  passa a normalizar o nome do cliente pelo alias antes de criar as paragens,
+  `listarNomesClientes()` em `lib/clientes-service.ts`, UI nova em
+  `/escritorio/clientes/agrupar` (`AgruparClientes.tsx`) com link a partir de
+  `/escritorio/clientes`. Só toca no campo string `cliente`/`nome` — nunca em
+  custo/receita/snapshot/totais (confirmado: `perRoute.ts` agrupa por
+  `p.cliente`, juntar variantes na mesma rota só soma linhas no `rateio`).
+- [x] `npx tsc --noEmit` limpo, 67 testes Vitest verdes, `next build` OK
+  (29 rotas, incluindo as 2 novas: `/escritorio/clientes/agrupar` e
+  `/api/clientes/agrupar`)
+- [ ] **Verificação manual (utilizador)**: abrir a calculadora em
+  `/motorista/registo` e em `/escritorio/dashboard`; registar noites como
+  motorista (só vê o número); ver rota no escritório (coluna "Coef. carga"
+  bate com o Excel); ir a `/escritorio/clientes/agrupar`, selecionar 2 nomes
+  variantes e agrupar — confirmar que o cliente único em `/escritorio/clientes`
+  soma o histórico de ambos; reimportar um ficheiro com essa variante e
+  confirmar que cai automaticamente no nome canónico
+
 ## Fases (concluídas)
 - [x] Fase 1–7 — App completa, validada end-to-end (ver histórico abaixo)
 

@@ -84,3 +84,21 @@
 
 ## APPRENTISSAGES
 (Claude remplit cette section au fil du temps)
+
+## DEPLOY — App-logistica-Ricardo (Next.js/Vercel)
+
+Règle obligatoire pour ce dépôt : après CHAQUE modification de code, il faut
+l'envoyer sur Vercel. Le déploiement Vercel est automatique via GitHub — un
+`git push` sur `main` suffit, Vercel reconstruit et publie tout seul (pas de
+branche staging, pas d'étape de déploiement manuelle).
+
+Donc après chaque changement (une fois testé : `tsc --noEmit`, tests, build) :
+1. `git add <fichiers concernés>` (éviter `-A` si `git status` montre quelque
+   chose d'inattendu)
+2. `git commit -m "<message clair>"`
+3. `git push`
+4. Confirmer que le push a réussi et que la branche locale suit `origin/main`
+
+Ne jamais laisser des changements seulement en local — sans push, il n'y a
+pas de déploiement. Voir `tasks/lessons.md` pour les leçons spécifiques à ce
+dépôt (Prisma `db push`, Vitest/Rollup sur Windows, etc.).

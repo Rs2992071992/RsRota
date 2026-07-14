@@ -372,11 +372,6 @@ export default function RegistoForm({
               onChange={(e) => set("noitesFora", e.target.value)}
               placeholder="0"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              {num(f.noitesFora) > 0
-                ? `${num(f.noitesFora)} × ${fmtEuro(valorNoite)} = ${fmtEuro(custoNoites)}`
-                : `Valor por noite: ${fmtEuro(valorNoite)}`}
-            </p>
           </div>
           {campoNum("horasExtra", "Horas Extra")}
         </div>

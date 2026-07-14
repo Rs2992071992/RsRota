@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigirPerfil } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { PRAZO_DIAS } from "@/lib/calc/pagamentos";
+import Calculadora from "@/components/Calculadora";
 
 const navItems = [
   { href: "/escritorio/dashboard", label: "Dashboard" },
@@ -55,6 +56,7 @@ export default async function EscritorioLayout({ children }: { children: React.R
         </div>
       </header>
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>
+      <Calculadora />
     </div>
   );
 }

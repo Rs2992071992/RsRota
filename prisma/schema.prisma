@@ -187,6 +187,20 @@ model Cliente {
   atualizadoEm DateTime @updatedAt
 }
 
+/// Alias de nome de cliente: mapeia uma variante (tal como aparece nas
+/// importações/registos) para o nome canónico em `Cliente.nome`. Usado para
+/// agrupar histórico disperso por pequenas diferenças de escrita, e para
+/// normalizar automaticamente futuras importações (ver /api/clientes/agrupar
+/// e /api/importar).
+model ClienteAlias {
+  id          Int      @id @default(autoincrement())
+  alias       String   @unique
+  clienteNome String
+  criadoEm    DateTime @default(now())
+
+  @@index([clienteNome])
+}
+
 /// Orçamento (devis) emitido ao cliente ANTES do transporte. Não entra em nenhum
 /// cálculo de rota/rentabilidade — é a camada comercial a montante. Os dados de
 /// contacto do cliente são "snapshot" no momento da criação (email/morada), para

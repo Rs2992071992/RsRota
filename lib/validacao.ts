@@ -96,6 +96,14 @@ export const clienteContactoSchema = z.object({
 
 export type ClienteContactoForm = z.infer<typeof clienteContactoSchema>;
 
+/** Agrupar/fundir variantes de nome de cliente num nome canónico. */
+export const agruparClientesSchema = z.object({
+  nomesVariantes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome"),
+  nomeCanonico: z.string().trim().min(1, "Nome canónico obrigatório"),
+});
+
+export type AgruparClientesForm = z.infer<typeof agruparClientesSchema>;
+
 /** Estados possíveis de um orçamento. */
 export const ESTADOS_DEVIS = ["RASCUNHO", "ENVIADO", "ACEITE", "RECUSADO"] as const;
 

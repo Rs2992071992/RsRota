@@ -158,6 +158,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
               <th className="th">Veículo</th>
               <th className="th text-right">KM</th>
               <th className="th text-right">Peso</th>
+              <th className="th text-right">Coef. carga</th>
               <th className="th text-right">Comb.</th>
               <th className="th text-right">Motorista</th>
               <th className="th text-right">Veículo</th>
@@ -176,6 +177,11 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                 <td className="td">{p.tipoVeiculo}</td>
                 <td className="td text-right">{fmtNum(p.kmFeitos)}</td>
                 <td className="td text-right">{fmtNum(p.pesoTransportado)}</td>
+                <td className="td text-right">
+                  {p.coeficienteCarga === "Volume"
+                    ? "Volume"
+                    : `${(p.coeficienteCarga * 100).toFixed(2)}%`}
+                </td>
                 <td className="td text-right">{fmtEuro(p.custoCombustivel)}</td>
                 <td className="td text-right">{fmtEuro(p.custoMotorista)}</td>
                 <td className="td text-right">{fmtEuro(p.custoVeiculo)}</td>

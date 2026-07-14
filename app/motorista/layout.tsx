@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { exigirPerfil, getSessaoInfo } from "@/lib/session";
+import Calculadora from "@/components/Calculadora";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function MotoristaLayout({ children }: { children: React.Re
         </div>
       </header>
       <main className="mx-auto max-w-md p-4">{children}</main>
+      <Calculadora />
     </div>
   );
 }

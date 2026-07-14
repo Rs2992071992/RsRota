@@ -62,6 +62,41 @@ export interface DetalheCliente {
 
 const margemDe = (receita: number, lucro: number) => (receita > 0 ? lucro / receita : 0);
 
+export interface NomeClienteResumo {
+  nome: string;
+  nParagens: number;
+  nDevis: number;
+  temFicha: boolean;
+}
+
+/**
+ * Lista todos os nomes de cliente distintos que aparecem hoje na base de
+ * dados (Paragem.cliente, Devis.cliente, Cliente.nome), com contagens — usada
+ * para identificar variantes a agrupar em /escritorio/clientes/agrupar.
+ */
+export async function listarNomesClientes(): Promise<NomeClienteResumo[]> {
+  const [porParagem, porDevis, fichas] = await Promise.all([
+    prisma.paragem.groupBy({ by: ["cliente"], _count: { _all: true } }),
+    prisma.devis.groupBy({ by: ["cliente"], _count: { _all: true } }),
+    prisma.cliente.findMany({ select: { nome: true } }),
+  ]);
+
+  const mapa = new Map<string, NomeClienteResumo>();
+  const obter = (nome: string): NomeClienteResumo => {
+    let r = mapa.get(nome);
+    if (!r) {
+      r = { nome, nParagens: 0, nDevis: 0, temFicha: false };
+      mapa.set(nome, r);
+    }
+    return r;
+  };
+  for (const p of porParagem) obter(p.cliente).nParagens = p._count._all;
+  for (const d of porDevis) obter(d.cliente).nDevis = d._count._all;
+  for (const f of fichas) obter(f.nome).temFicha = true;
+
+  return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
 /** Lista de todos os clientes com totais (rentabilidade + tesouraria), ordenada por lucro desc. */
 export async function carregarClientes(): Promise<ResumoCliente[]> {
   const [rotas, paragens, contactos] = await Promise.all([
