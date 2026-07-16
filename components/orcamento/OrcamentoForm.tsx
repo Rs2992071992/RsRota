@@ -8,10 +8,11 @@ import {
   type LinhaDevis,
   type DetalheEstimativa,
 } from "@/lib/calc/orcamento";
+import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO } from "@/lib/validacao";
 import DetalheLinha from "@/components/orcamento/DetalheLinha";
 import MoradaInput from "@/components/orcamento/MoradaInput";
 
-const TIPOS_VEICULO = ["CAMIAO", "CAMIAO+REBOQUE", "LEVE", "VAZIO"] as const;
+const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 const ESTADOS = [
   ["RASCUNHO", "Rascunho"],
   ["ENVIADO", "Enviado"],
@@ -46,6 +47,8 @@ interface Props {
   clientes: ClienteOpt[];
   veiculos: { id: number; nome: string }[];
   motoristas: { id: number; nome: string | null; codigo: string }[];
+  pesoMedioPaleteA: number;
+  pesoMedioPaleteB: number;
   /** Cliente pré-selecionado ao criar (ex.: vindo da ficha do cliente). */
   clienteInicial?: string;
 }
@@ -54,6 +57,7 @@ interface Props {
 type LinhaUI = LinhaDevis & {
   kmManual: boolean;
   aCalcular: boolean;
+  pesoTocado?: boolean;
   aviso?: string;
   detalhe?: DetalheEstimativa;
 };
@@ -68,6 +72,7 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
     km: 0,
     pesoKg: 0,
     tipoVeiculo: "CAMIAO",
+    nPaletes: 0,
     zonaPortagem: null,
     custoEstimado: 0,
     preco: 0,
@@ -81,6 +86,8 @@ export default function OrcamentoForm({
   clientes,
   veiculos,
   motoristas,
+  pesoMedioPaleteA,
+  pesoMedioPaleteB,
   clienteInicial,
 }: Props) {
   const router = useRouter();
@@ -145,6 +152,7 @@ export default function OrcamentoForm({
           idaVolta: l.idaVolta,
           pesoKg: l.pesoKg,
           tipoVeiculo: l.tipoVeiculo,
+          nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
           motoristaId,
           veiculoId,
@@ -197,6 +205,7 @@ export default function OrcamentoForm({
           km: l.km,
           pesoKg: l.pesoKg,
           tipoVeiculo: l.tipoVeiculo,
+          nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
           custoEstimado: l.custoEstimado,
           preco: l.preco,
@@ -403,27 +412,55 @@ export default function OrcamentoForm({
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <div>
-                <label className="label">Peso (kg)</label>
-                <input
-                  className="input"
-                  type="number"
-                  value={l.pesoKg}
-                  onChange={(e) => patchLinha(i, { pesoKg: Number(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
                 <label className="label">Tipo de veículo</label>
                 <select
                   className="input"
                   value={l.tipoVeiculo}
-                  onChange={(e) => patchLinha(i, { tipoVeiculo: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
+                    patchLinha(i, { tipoVeiculo: v, nPaletes: eDePalete ? l.nPaletes : 0 });
+                  }}
                 >
                   {TIPOS_VEICULO.map((t) => (
                     <option key={t} value={t}>
-                      {t}
+                      {ROTULOS_TIPO_VEICULO[t] ?? t}
                     </option>
                   ))}
                 </select>
+              </div>
+              {(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) && (
+                <div>
+                  <label className="label">Nº de paletes</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={l.nPaletes}
+                    onChange={(e) => {
+                      const n = Number(e.target.value) || 0;
+                      const media = l.tipoVeiculo === "PALETE_120X80" ? pesoMedioPaleteA : pesoMedioPaleteB;
+                      patchLinha(i, {
+                        nPaletes: n,
+                        pesoKg: l.pesoTocado ? l.pesoKg : Math.round(n * media),
+                      });
+                    }}
+                  />
+                </div>
+              )}
+              <div>
+                <label className="label">
+                  Peso (kg){(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) ? " (sugerido, editável)" : ""}
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  value={l.pesoKg}
+                  onChange={(e) =>
+                    patchLinha(i, { pesoKg: Number(e.target.value) || 0, pesoTocado: true })
+                  }
+                />
               </div>
               <div>
                 <label className="label">Zona portagem</label>

@@ -53,6 +53,7 @@ export async function POST(req: Request) {
       kmFinal: d.kmFinal,
       kgCarregados: d.kgCarregados,
       kgDescarregados: d.kgDescarregados,
+      nPaletes: d.nPaletes,
       litrosAbastecidos: d.litrosAbastecidos,
       custoAbastecido: d.custoAbastecido,
       zonaPortagem: d.zonaPortagem,

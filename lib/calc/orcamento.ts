@@ -19,6 +19,8 @@ export interface LinhaDevis {
   km: number;
   pesoKg: number;
   tipoVeiculo: string;
+  /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
+  nPaletes: number;
   zonaPortagem: string | null;
   /** Custo estimado pelo motor (comb + adblue + motorista + veículo + portagens). */
   custoEstimado: number;
@@ -31,6 +33,7 @@ export interface EstimarLinhaInput {
   km: number;
   pesoKg: number;
   tipoVeiculo: string;
+  nPaletes?: number;
   zonaPortagem?: string | null;
   /** Portagens extra fixas (opcional; somam-se ao custo). */
   portagensExtra?: number;
@@ -40,6 +43,9 @@ export interface EstimarLinhaInput {
 export interface DetalheEstimativa {
   km: number;
   pesoKg: number;
+  nPaletes: number;
+  /** Coeficiente de carga: número ou "Volume" (LEVE). */
+  coeficienteCarga: number | "Volume";
   consumoL100: number;
   litrosGastos: number;
   precoCombUsado: number;
@@ -97,6 +103,7 @@ export function estimarLinha(
       kmFinal: input.km || 0,
       kgCarregados: input.pesoKg || 0,
       kgDescarregados: 0,
+      nPaletes: input.nPaletes || 0,
       zonaPortagem: input.zonaPortagem || "",
       portagensExtra: input.portagensExtra || 0,
       noitesFora: 0,
@@ -118,6 +125,8 @@ export function estimarLinha(
     detalhe: {
       km: calc.kmFeitos,
       pesoKg: calc.pesoTransportado,
+      nPaletes: calc.nPaletes,
+      coeficienteCarga: calc.coeficienteCarga,
       consumoL100: calc.consumoL100,
       litrosGastos: round2(calc.litrosGastos),
       precoCombUsado: calc.precoCombUsado,

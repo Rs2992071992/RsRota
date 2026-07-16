@@ -98,6 +98,19 @@ describe("estimarLinha — portagem automática (override TollGuru)", () => {
   });
 });
 
+describe("estimarLinha — paletes (ocupação por nº, não por peso)", () => {
+  const input = { km: 100, pesoKg: 1200, tipoVeiculo: "PALETE_120X80", nPaletes: 19, zonaPortagem: null };
+  const est = estimarLinha(input, ctx, snapshot);
+
+  it("detalhe.coeficienteCarga = nPaletes/38, detalhe.nPaletes = 19", () => {
+    expect(est.detalhe.nPaletes).toBe(19);
+    expect(est.detalhe.coeficienteCarga).toBeCloseTo(19 / 38, 6);
+  });
+  it("custo continua a usar o peso real (kg) para o consumo, não o nº de paletes", () => {
+    expect(est.detalhe.pesoKg).toBe(1200);
+  });
+});
+
 describe("totaisDevis", () => {
   it("soma preços + IVA, arredondado a 2 casas", () => {
     const t = totaisDevis([{ preco: 100 }, { preco: 50.5 }], 23);

@@ -118,6 +118,34 @@ describe("calcularRota — rateio multi-cliente normaliza a 100 % (cenário Espa
   });
 });
 
+describe("calcularRota — rateio misto peso + paletes normaliza a 100 %", () => {
+  const mista: ParagemInput[] = [
+    { idRota: "MIX01", cliente: "Cliente Peso", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 1000 },
+    { idRota: "MIX01", cliente: "Cliente Paletes A", tipoViagem: "Ida", tipoVeiculo: "PALETE_120X80", kmInicial: 300, kmFinal: 450, kgCarregados: 1200, kgDescarregados: 0, nPaletes: 19, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 500 },
+    { idRota: "MIX01", cliente: "Cliente Paletes B", tipoViagem: "Ida", tipoVeiculo: "PALETE_120X100", kmInicial: 450, kmFinal: 550, kgCarregados: 900, kgDescarregados: 0, nPaletes: 14, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 300 },
+  ];
+  const r = calcularRota("MIX01", mista, ctx);
+
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("Σ quotas = 100 %", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.quota, 0);
+    expect(soma).toBeCloseTo(1, 6);
+  });
+  it("Σ margens por cliente = lucro da rota", () => {
+    const somaMargens = r.rateio.reduce((a, c) => a + (c.receitaPaga - c.custoAtribuido), 0);
+    expect(somaMargens).toBeCloseTo(r.lucro, 6);
+  });
+  it("clientes de paletes usam nPaletes/capacidade, não peso/capacidade kg", () => {
+    const paletesA = r.rateio.find((c) => c.cliente === "Cliente Paletes A")!;
+    const paletesB = r.rateio.find((c) => c.cliente === "Cliente Paletes B")!;
+    expect(paletesA.coefReal).toBeCloseTo(19 / 38, 6);
+    expect(paletesB.coefReal).toBeCloseTo(14 / 28, 6);
+  });
+});
+
 describe("calcularRota — rota em prejuízo dispara alerta vermelho", () => {
   const r = calcularRota(
     "HILP01",

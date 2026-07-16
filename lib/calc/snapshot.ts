@@ -27,6 +27,8 @@ export type VeiculoParams = Pick<
   | "inspecaoAnual"
   | "capacidadeCamiao"
   | "capacidadeReboque"
+  | "capacidadePaleteA"
+  | "capacidadePaleteB"
 >;
 
 /**
@@ -56,6 +58,8 @@ export function calcularSnapshot(
     custoVeiculoPorKm: d.custoVeiculoPorKm,
     capacidadeCamiao: merged.capacidadeCamiao,
     capacidadeReboque: merged.capacidadeReboque,
+    capacidadePaleteA: merged.capacidadePaleteA,
+    capacidadePaleteB: merged.capacidadePaleteB,
     precoCombRef: base.precoCombRef,
     consumoAdblue: base.consumoAdblue,
     precoAdblue: base.precoAdblue,

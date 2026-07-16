@@ -24,6 +24,8 @@ export interface VeiculoBD {
   inspecaoAnual: number;
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
   nParagens: number;
   pneus: PneuForm[];
 }
@@ -51,6 +53,8 @@ const CAMPOS_CUSTO: [keyof VeiculoForm, string][] = [
   ["inspecaoAnual", "Inspeção anual (€)"],
   ["capacidadeCamiao", "Capacidade camião (kg)"],
   ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
+  ["capacidadePaleteA", "Capacidade paletes 120x80 (nº)"],
+  ["capacidadePaleteB", "Capacidade paletes 120x100 (nº)"],
 ];
 
 interface VeiculoForm {
@@ -67,6 +71,8 @@ interface VeiculoForm {
   inspecaoAnual: number;
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
   pneus: PneuForm[];
 }
 
@@ -85,6 +91,8 @@ function veiculoParaForm(v: VeiculoBD | Template): VeiculoForm {
     inspecaoAnual: v.inspecaoAnual,
     capacidadeCamiao: v.capacidadeCamiao,
     capacidadeReboque: v.capacidadeReboque,
+    capacidadePaleteA: v.capacidadePaleteA,
+    capacidadePaleteB: v.capacidadePaleteB,
     pneus: v.pneus.map((p) => ({ ...p })),
   };
 }
@@ -101,6 +109,8 @@ function custoVeiculoKm(f: VeiculoForm): number {
     precoCombRef: 0, precoCombReal: 0, consumoAdblue: 0, precoAdblue: 0,
     margemMinima: 0, valorHoraExtra: 0, valorNoite: 0,
     capacidadeCamiao: f.capacidadeCamiao, capacidadeReboque: f.capacidadeReboque,
+    capacidadePaleteA: f.capacidadePaleteA, capacidadePaleteB: f.capacidadePaleteB,
+    pesoMedioPaleteA: 0, pesoMedioPaleteB: 0,
   };
   return derivarCustos(fake, f.pneus as PneuItem[]).custoVeiculoPorKm;
 }

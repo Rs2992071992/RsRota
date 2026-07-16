@@ -64,6 +64,15 @@ const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = 
       ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
     ],
   },
+  {
+    titulo: "Paletes (tipo veículo = Palete 120×80 / 120×100)",
+    campos: [
+      ["capacidadePaleteA", "Capacidade paletes 120×80cm (nº por camião)"],
+      ["capacidadePaleteB", "Capacidade paletes 120×100cm (nº por camião)"],
+      ["pesoMedioPaleteA", "Peso médio palete 120×80cm (kg)"],
+      ["pesoMedioPaleteB", "Peso médio palete 120×100cm (kg)"],
+    ],
+  },
 ];
 
 export default function ParametrosForm({

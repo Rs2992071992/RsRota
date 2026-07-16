@@ -51,6 +51,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     kmFinal: p.kmFinal,
     kgCarregados: p.kgCarregados,
     kgDescarregados: p.kgDescarregados,
+    nPaletes: p.nPaletes,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
     noitesFora: p.noitesFora,

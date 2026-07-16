@@ -48,6 +48,16 @@ export default function DetalheLinha({ detalhe, custoEstimado, preco }: Props) {
         <div className="space-y-1 border-t border-gray-200 px-3 py-2 text-xs text-gray-700">
           <Linha rotulo={`Km (${detalhe.km}) · peso ${detalhe.pesoKg} kg`} valor="" />
           <Linha
+            rotulo={
+              detalhe.nPaletes > 0 ? `Ocupação (${detalhe.nPaletes} paletes)` : "Ocupação"
+            }
+            valor={
+              detalhe.coeficienteCarga === "Volume"
+                ? "Volume"
+                : `${(detalhe.coeficienteCarga * 100).toFixed(1)}%`
+            }
+          />
+          <Linha
             rotulo={`Combustível (${fmtNum2(detalhe.consumoL100)} L/100 → ${fmtNum2(
               detalhe.litrosGastos,
             )} L × ${fmtEuro(detalhe.precoCombUsado)})`}

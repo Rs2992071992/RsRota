@@ -99,6 +99,42 @@ describe("coeficienteReal — sem limite a 1 (sobrecarga reflete-se)", () => {
   });
 });
 
+describe("calcularParagem — paletes (ocupação por nº, não por peso)", () => {
+  it("PALETE_120X80: coeficiente = nPaletes/38, independente do peso leve", () => {
+    const p = paragemBase({
+      tipoVeiculo: "PALETE_120X80",
+      kmFinal: 100,
+      kgCarregados: 1800, // 30 paletes × 60kg (peso não deveria dominar a ocupação)
+      nPaletes: 30,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
+    expect(r.nPaletes).toBe(30);
+  });
+
+  it("PALETE_120X100: coeficiente = nPaletes/28, sobrecarga dá > 1", () => {
+    const p = paragemBase({ tipoVeiculo: "PALETE_120X100", kmFinal: 100, nPaletes: 35 });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(35 / 28, 6);
+  });
+});
+
+describe("coeficienteReal — paletes (4º parâmetro opcional, não quebra chamadas antigas)", () => {
+  it("PALETE_120X80: nPaletes/38", () => {
+    expect(coeficienteReal("PALETE_120X80", 0, PARAMS, 19)).toBeCloseTo(0.5, 6);
+  });
+  it("PALETE_120X100: nPaletes/28, sobrecarga > 1", () => {
+    expect(coeficienteReal("PALETE_120X100", 0, PARAMS, 35)).toBeCloseTo(35 / 28, 6);
+  });
+  it("PALETE com nPaletes 0 (não informado) -> 1, não cai no branch peso<=0 genérico", () => {
+    expect(coeficienteReal("PALETE_120X80", 0, PARAMS)).toBe(1);
+  });
+  it("peso baixo (palete leve) não é tratado como peso<=0 -> 1 genérico", () => {
+    // Mesmo com peso 0, uma palete carregada (nPaletes>0) deve refletir a ocupação real.
+    expect(coeficienteReal("PALETE_120X80", 0, PARAMS, 38)).toBeCloseTo(1, 6);
+  });
+});
+
 describe("colunas Espanha — informativas, poupança", () => {
   it("poupança = litros × (preço ref − preço Espanha)", () => {
     const p = paragemBase({ kmFinal: 100, litrosEspanha: 100, custoEspanha: 150 });

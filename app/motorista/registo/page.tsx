@@ -27,7 +27,15 @@ export default async function RegistoPage({
       prisma.veiculo.findMany({
         where: { ativo: true },
         orderBy: { nome: "asc" },
-        select: { id: true, nome: true, matricula: true, capacidadeCamiao: true, capacidadeReboque: true },
+        select: {
+          id: true,
+          nome: true,
+          matricula: true,
+          capacidadeCamiao: true,
+          capacidadeReboque: true,
+          capacidadePaleteA: true,
+          capacidadePaleteB: true,
+        },
       }),
       // Clientes já usados (sugestões da lista predefinida) + fichas de contacto.
       prisma.paragem.findMany({ select: { cliente: true }, distinct: ["cliente"] }),
@@ -53,6 +61,10 @@ export default async function RegistoPage({
       veiculos={veiculos}
       capacidadeCamiao={params?.capacidadeCamiao ?? 14000}
       capacidadeReboque={params?.capacidadeReboque ?? 24000}
+      capacidadePaleteA={params?.capacidadePaleteA ?? 38}
+      capacidadePaleteB={params?.capacidadePaleteB ?? 28}
+      pesoMedioPaleteA={params?.pesoMedioPaleteA ?? 60}
+      pesoMedioPaleteB={params?.pesoMedioPaleteB ?? 75}
       valorNoite={params?.valorNoite ?? 70}
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}

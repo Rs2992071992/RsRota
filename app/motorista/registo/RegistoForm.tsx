@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
+import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 import { fmtEuro } from "@/lib/format";
 
 export interface VeiculoOpcao {
@@ -10,13 +10,21 @@ export interface VeiculoOpcao {
   matricula: string | null;
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
 }
+
+const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 
 interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
+  pesoMedioPaleteA: number;
+  pesoMedioPaleteB: number;
   valorNoite: number;
   rotasRecentes: string[];
   clientes: string[];
@@ -35,6 +43,7 @@ const estadoBase = {
   kmFinal: "",
   kgCarregados: "",
   kgDescarregados: "",
+  nPaletes: "",
   zonaPortagem: "",
   portagensExtra: "",
   noitesFora: "",
@@ -51,6 +60,10 @@ export default function RegistoForm({
   veiculos,
   capacidadeCamiao,
   capacidadeReboque,
+  capacidadePaleteA,
+  capacidadePaleteB,
+  pesoMedioPaleteA,
+  pesoMedioPaleteB,
   valorNoite,
   rotasRecentes,
   clientes,
@@ -69,6 +82,9 @@ export default function RegistoForm({
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
+  // Enquanto o motorista não editar o peso à mão, o nº de paletes sugere-o
+  // automaticamente (nº × peso médio). Depois de tocado, deixa de reescrever.
+  const [pesoTocado, setPesoTocado] = useState(false);
 
   function set<K extends keyof Campos>(k: K, v: Campos[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
@@ -79,13 +95,45 @@ export default function RegistoForm({
   const veiculoSel = veiculos.find((v) => String(v.id) === f.veiculoId);
   const capCamiao = veiculoSel?.capacidadeCamiao ?? capacidadeCamiao;
   const capReboque = veiculoSel?.capacidadeReboque ?? capacidadeReboque;
+  const capPaleteA = veiculoSel?.capacidadePaleteA ?? capacidadePaleteA;
+  const capPaleteB = veiculoSel?.capacidadePaleteB ?? capacidadePaleteB;
   const capacidade = f.tipoVeiculo === "CAMIAO+REBOQUE" ? capReboque : capCamiao;
+  const ehPaleteA = f.tipoVeiculo === "PALETE_120X80";
+  const ehPaleteB = f.tipoVeiculo === "PALETE_120X100";
+  const ehPalete = ehPaleteA || ehPaleteB;
+  const capacidadePaletes = ehPaleteA ? capPaleteA : capPaleteB;
+  const pesoMedioPalete = ehPaleteA ? pesoMedioPaleteA : pesoMedioPaleteB;
   const custoNoites = num(f.noitesFora) * valorNoite;
+
+  function setTipoVeiculo(v: string) {
+    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
+    setF((prev) => ({ ...prev, tipoVeiculo: v, nPaletes: eDePalete ? prev.nPaletes : "" }));
+  }
+
+  function setKgCarregados(v: string) {
+    setPesoTocado(true);
+    set("kgCarregados", v);
+  }
+
+  function setNPaletes(v: string) {
+    setF((prev) => ({
+      ...prev,
+      nPaletes: v,
+      kgCarregados: pesoTocado ? prev.kgCarregados : String(Math.round(num(v) * pesoMedioPalete)),
+    }));
+  }
 
   // Avisos (não bloqueiam).
   const avisos = useMemo(() => {
     const a: string[] = [];
-    if (f.tipoVeiculo !== "LEVE" && f.tipoVeiculo !== "VAZIO" && peso > capacidade) {
+    if (ehPalete) {
+      const nPal = num(f.nPaletes);
+      if (nPal > capacidadePaletes) {
+        a.push(
+          `${nPal} paletes excede a capacidade do veículo (${capacidadePaletes} paletes).`,
+        );
+      }
+    } else if (f.tipoVeiculo !== "LEVE" && f.tipoVeiculo !== "VAZIO" && peso > capacidade) {
       a.push(
         `Peso ${peso.toLocaleString("pt-PT")} kg excede a capacidade do veículo (${capacidade.toLocaleString("pt-PT")} kg).`,
       );
@@ -94,7 +142,7 @@ export default function RegistoForm({
       a.push(`A zona de portagem "${f.zonaPortagem}" não existe na tabela.`);
     }
     return a;
-  }, [f.tipoVeiculo, f.zonaPortagem, peso, capacidade, zonas]);
+  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, peso, capacidade, capacidadePaletes, ehPalete, zonas]);
 
   function validar(): boolean {
     const e: Record<string, string> = {};
@@ -106,7 +154,7 @@ export default function RegistoForm({
     if (f.kmFinal !== "" && f.kmInicial !== "" && num(f.kmFinal) < num(f.kmInicial)) {
       e.kmFinal = "KM Final deve ser ≥ KM Inicial";
     }
-    for (const campo of ["kmInicial", "kmFinal", "kgCarregados", "kgDescarregados"] as const) {
+    for (const campo of ["kmInicial", "kmFinal", "kgCarregados", "kgDescarregados", "nPaletes"] as const) {
       if (f[campo] !== "" && num(f[campo]) < 0) e[campo] = "Não pode ser negativo";
     }
     setErros(e);
@@ -131,6 +179,7 @@ export default function RegistoForm({
         kmFinal: num(f.kmFinal),
         kgCarregados: num(f.kgCarregados),
         kgDescarregados: num(f.kgDescarregados),
+        nPaletes: num(f.nPaletes),
         // O combustível usado no cálculo vem dos parâmetros (escritório); o motorista
         // não o introduz. Mantemos só o combustível "por fora" (Espanha), informativo.
         litrosAbastecidos: 0,
@@ -173,6 +222,7 @@ export default function RegistoForm({
         veiculoId: f.veiculoId,
         kmInicial: f.kmFinal,
       });
+      setPesoTocado(false);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -287,11 +337,11 @@ export default function RegistoForm({
             <select
               className="input"
               value={f.tipoVeiculo}
-              onChange={(e) => set("tipoVeiculo", e.target.value)}
+              onChange={(e) => setTipoVeiculo(e.target.value)}
             >
               {TIPOS_VEICULO.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {ROTULOS_TIPO_VEICULO[t] ?? t}
                 </option>
               ))}
             </select>
@@ -336,7 +386,32 @@ export default function RegistoForm({
       <div className="card grid grid-cols-2 gap-3">
         {campoNum("kmInicial", "KM Inicial")}
         {campoNum("kmFinal", "KM Final")}
-        {campoNum("kgCarregados", "KG Carregados")}
+        {ehPalete && (
+          <div>
+            <label className="label">Nº de paletes</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min="0"
+              className="input"
+              value={f.nPaletes}
+              onChange={(e) => setNPaletes(e.target.value)}
+            />
+          </div>
+        )}
+        <div>
+          <label className="label">KG Carregados{ehPalete ? " (sugerido, editável)" : ""}</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="any"
+            className="input"
+            value={f.kgCarregados}
+            onChange={(e) => setKgCarregados(e.target.value)}
+          />
+          {erros.kgCarregados && <p className="mt-1 text-xs text-red-600">{erros.kgCarregados}</p>}
+        </div>
         {campoNum("kgDescarregados", "KG Descarregados")}
       </div>
 

@@ -6,7 +6,15 @@ export const TIPOS_VEICULO = [
   "CAMIAO+REBOQUE",
   "LEVE",
   "VAZIO",
+  "PALETE_120X80",
+  "PALETE_120X100",
 ] as const;
+
+/** Rótulos amigáveis para os tipos de palete (capacidade por camião). */
+export const ROTULOS_TIPO_VEICULO: Record<string, string> = {
+  PALETE_120X80: "Palete 120×80cm (38/camião)",
+  PALETE_120X100: "Palete 120×100cm (28/camião)",
+};
 
 const numNaoNeg = z.number().nonnegative("Não pode ser negativo");
 const numOpcional = z.number().nonnegative("Não pode ser negativo").nullable().optional();
@@ -25,6 +33,7 @@ export const paragemSchema = z
     kmFinal: numNaoNeg,
     kgCarregados: numNaoNeg.default(0),
     kgDescarregados: numNaoNeg.default(0),
+    nPaletes: numNaoNeg.default(0),
     litrosAbastecidos: numNaoNeg.default(0),
     custoAbastecido: numNaoNeg.default(0),
     zonaPortagem: z.string().trim().default(""),
@@ -64,6 +73,8 @@ export const veiculoSchema = z.object({
   inspecaoAnual: n,
   capacidadeCamiao: n.positive("Deve ser > 0"),
   capacidadeReboque: n.positive("Deve ser > 0"),
+  capacidadePaleteA: n.positive("Deve ser > 0"),
+  capacidadePaleteB: n.positive("Deve ser > 0"),
   pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
 });
 
@@ -117,6 +128,7 @@ export const linhaDevisSchema = z.object({
   km: numNaoNeg.default(0),
   pesoKg: numNaoNeg.default(0),
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().max(120).nullable().default(null),
   custoEstimado: numNaoNeg.default(0),
   preco: numNaoNeg.default(0),
@@ -145,6 +157,7 @@ export const estimarDevisSchema = z.object({
   idaVolta: z.boolean().default(true),
   pesoKg: numNaoNeg.default(0),
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().nullable().default(null),
   motoristaId: z.number().int().positive().nullable().optional(),
   veiculoId: z.number().int().positive().nullable().optional(),

@@ -2,6 +2,25 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-07-14] | Adicionar tarifação por paletes exigiu um novo parâmetro em
+  `coeficienteReal(tipoVeiculo, peso, cap)`, mas `tests/calc/perStop.test.ts`
+  já a chamava com exatamente 3 argumentos posicionais em 6 sítios — tornar o
+  parâmetro obrigatório seria um erro de compilação TypeScript, não só um
+  teste a falhar. | Ao estender a assinatura de uma função pura do motor de
+  cálculo já testada, acrescentar o novo parâmetro como **opcional com
+  default** (`nPaletes = 0`) em vez de obrigatório — mantém todas as chamadas
+  antigas válidas e evita ter de tocar em testes que não são sobre a
+  funcionalidade nova.
+- [2026-07-14] | `ParametrosCusto`/`VeiculoParams` são usados em vários
+  objetos-literais "fake" espalhados pelo código para pré-visualizações de
+  custo (`VeiculosManager.tsx`, `MotoristaParamsForm.tsx`) e em fixtures de
+  teste (`tests/calc/fixtures.ts`) — todos deixam de compilar assim que se
+  acrescenta um campo obrigatório ao tipo. | Ao adicionar campos a
+  `ParametrosCusto`, correr `tsc --noEmit` cedo (antes dos testes) para
+  apanhar todos os literais incompletos de uma vez; não confiar só na busca
+  por "quem usa este tipo", os objetos `fake`/dummy para pré-visualização são
+  fáceis de esquecer numa pesquisa semântica.
+
 - [2026-07-14] | `vitest` falhava no Windows com `Cannot find module
   '@rollup/rollup-win32-x64-msvc'` (bug conhecido do npm com optionalDependencies
   em plataformas diferentes de onde o lockfile foi gerado — mesma classe do

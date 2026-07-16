@@ -13,7 +13,7 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 
-  const [devis, clientes, veiculos, motoristas] = await Promise.all([
+  const [devis, clientes, veiculos, motoristas, parametros] = await Promise.all([
     prisma.devis.findUnique({ where: { id } }),
     prisma.cliente.findMany({
       orderBy: { nome: "asc" },
@@ -29,6 +29,7 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, codigo: true },
     }),
+    prisma.parametros.findUnique({ where: { id: 1 } }),
   ]);
 
   if (!devis) notFound();
@@ -75,6 +76,8 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
         clientes={clientes}
         veiculos={veiculos}
         motoristas={motoristas}
+        pesoMedioPaleteA={parametros?.pesoMedioPaleteA ?? 60}
+        pesoMedioPaleteB={parametros?.pesoMedioPaleteB ?? 75}
       />
     </div>
   );

@@ -2,6 +2,46 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🎨 Tarifação por paletes (2026-07-14)
+
+Plano: `C:\Users\Ricardo\.claude\plans\ricardo-silva-ricardosilva2992-gmail-com-adaptive-octopus.md`.
+Dois novos serviços de transporte por paletes (1.2×0.8×2.7m ~60kg, 38/camião;
+1.2×1×2.7m ~30-120kg, 28/camião) onde o peso não reflete a ocupação real do
+camião. Adicionados como novos valores de `tipoVeiculo`
+(`PALETE_120X80`/`PALETE_120X100`), com ocupação = nº paletes/capacidade
+desse tipo (em vez de peso/capacidade kg), aplicável tanto ao registo de
+rotas (rateio entre clientes) como aos orçamentos.
+
+- [x] Schema: `Parametros`/`Veiculo` +capacidadePaleteA/B (+pesoMedioPaleteA/B
+  só em `Parametros`), `Paragem` +`nPaletes` — `db push` feito no Neon
+- [x] Motor (`lib/calc/perStop.ts`): `coeficienteCarga`/`coeficienteReal()`
+  com branches para os 2 tipos de palete; `coeficienteReal()` ganhou um 4º
+  parâmetro `nPaletes` **opcional** (default 0) para não quebrar os testes
+  existentes; `lib/rotas-service.ts` (`paragemToInput`) atualizado — sem
+  isto as rotas já registadas não refletiam a ocupação por paletes
+- [x] `lib/calc/orcamento.ts`: `nPaletes` propagado a `estimarLinha`;
+  `DetalheEstimativa` mostra `coeficienteCarga`/`nPaletes` no painel interno
+  (`DetalheLinha.tsx`, nunca vai ao PDF)
+- [x] `lib/validacao.ts`: `TIPOS_VEICULO` +2 valores, `ROTULOS_TIPO_VEICULO`
+  para rótulos amigáveis nos selects
+- [x] UI: `RegistoForm.tsx` (motorista) e `ParagemEditor.tsx` (escritório)
+  ganharam campo "Nº de paletes" condicional, com sugestão automática do
+  peso (nº × peso médio) só enquanto o peso não for editado à mão (flag
+  "peso tocado"); `VeiculosManager.tsx` ganhou override por veículo;
+  `ParametrosForm.tsx` ganhou grupo "Paletes"; `OrcamentoForm.tsx` idem
+  (trocada a constante `TIPOS_VEICULO` duplicada pela partilhada)
+- [x] Testes novos: `coeficienteCarga`/`coeficienteReal` para os 2 tipos de
+  palete, cenário de rateio misto peso+paletes (invariantes Σquota=1,
+  Σcusto atribuído=custo total), `estimarLinha` com paletes — 79 testes
+  verdes (67 + 12 novos), `tsc --noEmit` limpo, `next build` OK
+- [ ] **Ação do utilizador**: configurar em `/escritorio/parametros` (grupo
+  "Paletes") os valores reais de capacidade/peso médio se diferentes dos
+  defaults (38/28 paletes, 60/75 kg médios)
+- [ ] **Verificação manual**: registar uma paragem com `PALETE 120×80`,
+  confirmar sugestão de peso e aviso de sobrecarga; ver "Coef. carga" na
+  rota do escritório; criar linha de orçamento com paletes e ver o painel
+  de detalhe
+
 ## 📧 Pedidos do email de Ricardo a Miguel (1/07/2026) (2026-07-14)
 
 Plano: `C:\Users\Ricardo\.claude\plans\ricardo-silva-ricardosilva2992-gmail-com-adaptive-octopus.md`.

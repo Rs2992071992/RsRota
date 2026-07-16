@@ -32,6 +32,10 @@ export const PARAMS: ParametrosCusto = {
   valorNoite: 70,
   capacidadeCamiao: 14000,
   capacidadeReboque: 24000,
+  capacidadePaleteA: 38,
+  capacidadePaleteB: 28,
+  pesoMedioPaleteA: 60,
+  pesoMedioPaleteB: 75,
 };
 
 export const PNEUS: PneuItem[] = [

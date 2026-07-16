@@ -40,6 +40,8 @@ function veiculoParams(v: Veiculo | null): VeiculoParams | null {
     inspecaoAnual: v.inspecaoAnual,
     capacidadeCamiao: v.capacidadeCamiao,
     capacidadeReboque: v.capacidadeReboque,
+    capacidadePaleteA: v.capacidadePaleteA,
+    capacidadePaleteB: v.capacidadePaleteB,
   };
 }
 

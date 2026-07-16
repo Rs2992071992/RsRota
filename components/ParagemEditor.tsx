@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
+import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
+
+const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 
 /** Campos editáveis de uma paragem (subconjunto do modelo Prisma). */
 export interface VeiculoOpcao {
@@ -23,6 +25,7 @@ export interface ParagemEditavel {
   kmFinal: number;
   kgCarregados: number;
   kgDescarregados: number;
+  nPaletes: number;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -38,6 +41,8 @@ interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
   valorNoite: number;
+  pesoMedioPaleteA: number;
+  pesoMedioPaleteB: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
   onClose: () => void;
@@ -48,6 +53,8 @@ export default function ParagemEditor({
   zonas,
   veiculos,
   valorNoite,
+  pesoMedioPaleteA,
+  pesoMedioPaleteB,
   mostrarReceita = false,
   onClose,
 }: Props) {
@@ -59,9 +66,29 @@ export default function ParagemEditor({
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
   const [erro, setErro] = useState("");
+  const [pesoTocado, setPesoTocado] = useState(false);
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
+  }
+
+  const ehPaleteA = f.tipoVeiculo === "PALETE_120X80";
+  const ehPaleteB = f.tipoVeiculo === "PALETE_120X100";
+  const ehPalete = ehPaleteA || ehPaleteB;
+  const pesoMedioPalete = ehPaleteA ? pesoMedioPaleteA : pesoMedioPaleteB;
+
+  function setTipoVeiculo(v: string) {
+    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
+    setF((prev) => ({ ...prev, tipoVeiculo: v, nPaletes: eDePalete ? prev.nPaletes : 0 }));
+  }
+
+  function setNPaletes(v: string) {
+    const n = v.trim() === "" ? 0 : Number(v);
+    setF((prev) => ({
+      ...prev,
+      nPaletes: n as never,
+      kgCarregados: (pesoTocado ? prev.kgCarregados : Math.round(n * pesoMedioPalete)) as never,
+    }));
   }
 
   async function guardar() {
@@ -83,6 +110,7 @@ export default function ParagemEditor({
         kmFinal: Number(f.kmFinal),
         kgCarregados: Number(f.kgCarregados),
         kgDescarregados: Number(f.kgDescarregados),
+        nPaletes: Number(f.nPaletes),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
         noitesFora: Number(f.noitesFora),
@@ -177,11 +205,11 @@ export default function ParagemEditor({
           </div>
           <div>
             <label className="label">Tipo Veículo</label>
-            <select className="input" value={f.tipoVeiculo} onChange={(e) => set("tipoVeiculo", e.target.value)}>
+            <select className="input" value={f.tipoVeiculo} onChange={(e) => setTipoVeiculo(e.target.value)}>
               {/* Inclui o valor atual mesmo que já não esteja na lista (ex.: dados antigos). */}
               {Array.from(new Set([f.tipoVeiculo, ...TIPOS_VEICULO])).map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {ROTULOS_TIPO_VEICULO[t] ?? t}
                 </option>
               ))}
             </select>
@@ -204,7 +232,32 @@ export default function ParagemEditor({
           </div>
           {campo("kmInicial", "KM Inicial")}
           {campo("kmFinal", "KM Final")}
-          {campo("kgCarregados", "KG Carregados")}
+          {ehPalete && (
+            <div>
+              <label className="label">Nº de paletes</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                className="input"
+                value={f.nPaletes}
+                onChange={(e) => setNPaletes(e.target.value)}
+              />
+            </div>
+          )}
+          <div>
+            <label className="label">KG Carregados{ehPalete ? " (sugerido, editável)" : ""}</label>
+            <input
+              type="number"
+              step="any"
+              className="input"
+              value={f.kgCarregados}
+              onChange={(e) => {
+                setPesoTocado(true);
+                set("kgCarregados", e.target.value as never);
+              }}
+            />
+          </div>
           {campo("kgDescarregados", "KG Descarregados")}
           <div className="col-span-2">
             <label className="label">Zona Portagem</label>

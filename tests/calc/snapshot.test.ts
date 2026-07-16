@@ -35,6 +35,8 @@ const VEICULO = {
   inspecaoAnual: PARAMS.inspecaoAnual,
   capacidadeCamiao: PARAMS.capacidadeCamiao,
   capacidadeReboque: PARAMS.capacidadeReboque,
+  capacidadePaleteA: PARAMS.capacidadePaleteA,
+  capacidadePaleteB: PARAMS.capacidadePaleteB,
 };
 
 function hilp01(over: Partial<ParagemInput> = {}): ParagemInput {

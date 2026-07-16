@@ -9,7 +9,7 @@ export default async function NovoOrcamentoPage({
 }: {
   searchParams: { cliente?: string };
 }) {
-  const [clientes, veiculos, motoristas] = await Promise.all([
+  const [clientes, veiculos, motoristas, parametros] = await Promise.all([
     prisma.cliente.findMany({
       orderBy: { nome: "asc" },
       select: { nome: true, email: true, morada: true, contato: true },
@@ -24,6 +24,7 @@ export default async function NovoOrcamentoPage({
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, codigo: true },
     }),
+    prisma.parametros.findUnique({ where: { id: 1 } }),
   ]);
 
   return (
@@ -38,6 +39,8 @@ export default async function NovoOrcamentoPage({
         clientes={clientes}
         veiculos={veiculos}
         motoristas={motoristas}
+        pesoMedioPaleteA={parametros?.pesoMedioPaleteA ?? 60}
+        pesoMedioPaleteB={parametros?.pesoMedioPaleteB ?? 75}
         clienteInicial={searchParams.cliente}
       />
     </div>

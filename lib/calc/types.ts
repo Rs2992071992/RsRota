@@ -34,6 +34,12 @@ export interface ParametrosCusto {
   valorNoite: number; // € por noite fora
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  // Paletes (tipoVeiculo = PALETE_120X80 | PALETE_120X100): ocupação por nº
+  // de paletes, não por peso. Peso médio só serve para sugerir o kg na UI.
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
+  pesoMedioPaleteA: number;
+  pesoMedioPaleteB: number;
 }
 
 export interface PneuItem {
@@ -82,6 +88,8 @@ export interface ParagemSnapshot {
   custoVeiculoPorKm: number;
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  capacidadePaleteA: number;
+  capacidadePaleteB: number;
   precoCombRef: number;
   consumoAdblue: number;
   precoAdblue: number;
@@ -104,6 +112,8 @@ export interface ParagemInput {
   kmFinal: number;
   kgCarregados: number;
   kgDescarregados: number;
+  /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
+  nPaletes?: number;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -123,6 +133,8 @@ export interface ParagemCalc {
   cliente: string;
   tipoVeiculo: string;
   pesoTransportado: number;
+  /** Nº de paletes (passthrough; só relevante para tipos de palete). */
+  nPaletes: number;
   kmFeitos: number;
   /** Coeficiente de carga: número ou "Volume" (LEVE). */
   coeficienteCarga: number | "Volume";

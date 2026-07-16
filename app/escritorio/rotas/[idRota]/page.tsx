@@ -27,6 +27,8 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
 
   const zonas = portagens.map((p) => p.zona);
   const valorNoite = parametros?.valorNoite ?? 70;
+  const pesoMedioPaleteA = parametros?.pesoMedioPaleteA ?? 60;
+  const pesoMedioPaleteB = parametros?.pesoMedioPaleteB ?? 75;
   const editavel = (id: number): ParagemEditavel | null => {
     const p = paragensRaw.find((x) => x.id === id);
     if (!p) return null;
@@ -42,6 +44,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       kmFinal: p.kmFinal,
       kgCarregados: p.kgCarregados,
       kgDescarregados: p.kgDescarregados,
+      nPaletes: p.nPaletes,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,
       noitesFora: p.noitesFora,
@@ -192,7 +195,14 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                 <td className="td text-right">{fmtEuro(p.id ? raw(paragensRaw, p.id) : 0)}</td>
                 <td className="td text-right">
                   {p.id && editavel(p.id) ? (
-                    <ParagemAcoes paragem={editavel(p.id)!} zonas={zonas} veiculos={veiculos} valorNoite={valorNoite} />
+                    <ParagemAcoes
+                      paragem={editavel(p.id)!}
+                      zonas={zonas}
+                      veiculos={veiculos}
+                      valorNoite={valorNoite}
+                      pesoMedioPaleteA={pesoMedioPaleteA}
+                      pesoMedioPaleteB={pesoMedioPaleteB}
+                    />
                   ) : (
                     "—"
                   )}

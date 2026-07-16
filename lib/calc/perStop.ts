@@ -17,7 +17,10 @@ export interface ContextoCalculo {
 }
 
 /** Apenas os campos de capacidade — aceita um snapshot ou os parâmetros globais. */
-type ComCapacidades = Pick<ParagemSnapshot, "capacidadeCamiao" | "capacidadeReboque">;
+type ComCapacidades = Pick<
+  ParagemSnapshot,
+  "capacidadeCamiao" | "capacidadeReboque" | "capacidadePaleteA" | "capacidadePaleteB"
+>;
 
 /**
  * Custos efetivos de uma paragem: usa o snapshot congelado quando existe, senão
@@ -31,6 +34,8 @@ export function efetivos(p: ParagemInput, ctx: ContextoCalculo): ParagemSnapshot
     custoVeiculoPorKm: ctx.derivados.custoVeiculoPorKm,
     capacidadeCamiao: ctx.params.capacidadeCamiao,
     capacidadeReboque: ctx.params.capacidadeReboque,
+    capacidadePaleteA: ctx.params.capacidadePaleteA,
+    capacidadePaleteB: ctx.params.capacidadePaleteB,
     precoCombRef: ctx.params.precoCombRef,
     consumoAdblue: ctx.params.consumoAdblue,
     precoAdblue: ctx.params.precoAdblue,
@@ -65,10 +70,19 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
 
   const kmFeitos = (p.kmFinal || 0) - (p.kmInicial || 0);
   const peso = pesoTransportado(p);
+  const nPaletes = p.nPaletes || 0;
 
-  // Coeficiente de carga: "Volume" para LEVE; senão peso / capacidade.
+  // Coeficiente de carga: "Volume" para LEVE; paletes -> nº paletes/capacidade
+  // desse tipo (uma palete leve ocupa o mesmo "slot" físico, o peso não
+  // reflete a ocupação real); senão peso / capacidade (kg).
   const coeficienteCarga: number | "Volume" =
-    p.tipoVeiculo === "LEVE" ? "Volume" : peso / capacidade(p.tipoVeiculo, eff);
+    p.tipoVeiculo === "LEVE"
+      ? "Volume"
+      : p.tipoVeiculo === "PALETE_120X80"
+        ? nPaletes / eff.capacidadePaleteA
+        : p.tipoVeiculo === "PALETE_120X100"
+          ? nPaletes / eff.capacidadePaleteB
+          : peso / capacidade(p.tipoVeiculo, eff);
 
   // Consumo (lookup aproximado) e combustível.
   const consumoL100 = consumoPorCarga(peso, tabelaConsumo);
@@ -111,6 +125,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     cliente: p.cliente,
     tipoVeiculo: p.tipoVeiculo,
     pesoTransportado: peso,
+    nPaletes,
     kmFeitos,
     coeficienteCarga,
     consumoL100,
@@ -132,18 +147,29 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
 
 /**
  * Coeficiente real de rateio (§4.2 — lógica corrigida):
+ * - PALETE_120X80/PALETE_120X100 -> nº paletes / capacidade desse tipo
  * - peso 0, VAZIO ou LEVE -> 1
  * - CAMIAO -> peso / capacidade camião
  * - CAMIAO+REBOQUE -> peso / capacidade reboque
  *
  * O coeficiente NÃO está limitado a 1: cargas acima da capacidade (sobrecarga)
  * dão coeficiente > 1, refletindo que a carga "pesa" mais do que um camião cheio.
+ *
+ * `nPaletes` é opcional (default 0) para não quebrar chamadas existentes que
+ * só passam peso — só é usado nos 2 tipos de palete.
  */
 export function coeficienteReal(
   tipoVeiculo: string,
   peso: number,
   cap: ComCapacidades,
+  nPaletes = 0,
 ): number {
+  if (tipoVeiculo === "PALETE_120X80") {
+    return nPaletes > 0 ? nPaletes / cap.capacidadePaleteA : 1;
+  }
+  if (tipoVeiculo === "PALETE_120X100") {
+    return nPaletes > 0 ? nPaletes / cap.capacidadePaleteB : 1;
+  }
   if (peso <= 0 || tipoVeiculo === "VAZIO" || tipoVeiculo === "LEVE") {
     return 1;
   }
