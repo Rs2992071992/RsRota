@@ -104,9 +104,9 @@ export default function Calculadora() {
         type="button"
         onClick={() => setAberta((v) => !v)}
         aria-label="Calculadora"
-        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-xl text-white shadow-lg hover:opacity-90"
+        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg hover:opacity-90"
       >
-        🧮
+        <IconeCalculadora className="h-6 w-6" />
       </button>
 
       {aberta && (
@@ -151,5 +151,32 @@ export default function Calculadora() {
         </div>
       )}
     </>
+  );
+}
+
+/** Ícone de calculadora (contorno), estilo consistente com o resto da UI. */
+function IconeCalculadora({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="4" y="2" width="16" height="20" rx="2.5" />
+      <rect x="6.5" y="4.5" width="8" height="5" rx="1" />
+      <rect x="15.5" y="4.7" width="2.6" height="4.6" rx="1.3" />
+      <line x1="15.7" y1="9" x2="17.9" y2="5" />
+      <rect x="6.7" y="13" width="2.6" height="2.6" rx="0.8" />
+      <rect x="10.7" y="13" width="2.6" height="2.6" rx="0.8" />
+      <rect x="14.7" y="13" width="2.6" height="2.6" rx="0.8" />
+      <rect x="6.7" y="17" width="2.6" height="2.6" rx="0.8" />
+      <rect x="10.7" y="17" width="2.6" height="2.6" rx="0.8" />
+      <rect x="14.7" y="17" width="2.6" height="2.6" rx="0.8" />
+    </svg>
   );
 }
