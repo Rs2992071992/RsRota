@@ -118,51 +118,6 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         </dl>
       </div>
 
-      {/* Rateio por cliente (auditável) */}
-      <div className="card">
-        <h2 className="mb-1 font-semibold">Rateio do custo por cliente</h2>
-        <p className="mb-3 text-xs text-gray-500">
-          Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
-          quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
-          somar 100 %. Os trajetos a vazio são repartidos pelos clientes. O coef. real (peso/capacidade)
-          é só indicador: acima de 1 indica sobrecarga.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="th">Cliente</th>
-                <th className="th text-right">Coef. real</th>
-                <th className="th text-right">Quota</th>
-                <th className="th text-right">Custo atribuído</th>
-                <th className="th text-right">Receita</th>
-                <th className="th text-right">Margem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rota.rateio.map((c) => {
-                const margem = c.receitaPaga - c.custoAtribuido;
-                return (
-                  <tr key={c.cliente}>
-                    <td className="td font-medium">{c.cliente}</td>
-                    <td className="td text-right">{fmtNum2(c.coefReal)}</td>
-                    <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
-                    <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
-                    <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
-                    <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>
-                      {fmtEuro(margem)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Cobranças — estado de pagamento (prazo 90 dias) */}
-      <Cobrancas paragens={paragensRaw} faturado={rota.receitaTotal} />
-
       {/* Paragens detalhadas */}
       <div className="card overflow-x-auto">
         <h2 className="mb-3 font-semibold">Paragens</h2>
@@ -225,6 +180,51 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
           </p>
         )}
       </div>
+
+      {/* Rateio por cliente (auditável) */}
+      <div className="card">
+        <h2 className="mb-1 font-semibold">Rateio do custo por cliente</h2>
+        <p className="mb-3 text-xs text-gray-500">
+          Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
+          quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
+          somar 100 %. Os trajetos a vazio são repartidos pelos clientes. O coef. real (peso/capacidade)
+          é só indicador: acima de 1 indica sobrecarga.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="th">Cliente</th>
+                <th className="th text-right">Coef. real</th>
+                <th className="th text-right">Quota</th>
+                <th className="th text-right">Custo atribuído</th>
+                <th className="th text-right">Receita</th>
+                <th className="th text-right">Margem</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rota.rateio.map((c) => {
+                const margem = c.receitaPaga - c.custoAtribuido;
+                return (
+                  <tr key={c.cliente}>
+                    <td className="td font-medium">{c.cliente}</td>
+                    <td className="td text-right">{fmtNum2(c.coefReal)}</td>
+                    <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
+                    <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
+                    <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
+                    <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>
+                      {fmtEuro(margem)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Cobranças — estado de pagamento (prazo 90 dias) */}
+      <Cobrancas paragens={paragensRaw} faturado={rota.receitaTotal} />
     </div>
   );
 }
