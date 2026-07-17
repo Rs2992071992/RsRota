@@ -35,11 +35,10 @@ export interface ParametrosCusto {
   capacidadeCamiao: number;
   capacidadeReboque: number;
   // Paletes (tipoVeiculo = PALETE_120X80 | PALETE_120X100): ocupação por nº
-  // de paletes, não por peso. Peso médio só serve para sugerir o kg na UI.
+  // de paletes, não por peso — o peso não entra no registo nem no cálculo
+  // (consumo tratado sempre como vazio, ver calcularParagem).
   capacidadePaleteA: number;
   capacidadePaleteB: number;
-  pesoMedioPaleteA: number;
-  pesoMedioPaleteB: number;
 }
 
 export interface PneuItem {

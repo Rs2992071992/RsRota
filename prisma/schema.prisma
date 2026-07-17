@@ -50,11 +50,10 @@ model Parametros {
 
   // --- Paletes (tipoVeiculo = PALETE_120X80 | PALETE_120X100) ---
   // Ocupação por nº de paletes, não por peso (uma palete leve ocupa o mesmo
-  // "slot" físico). Peso médio só serve para sugerir o campo kg no registo.
+  // "slot" físico) — o peso não entra no registo nem no cálculo para este
+  // tipo de carga; o consumo é tratado sempre como se o veículo fosse vazio.
   capacidadePaleteA Float @default(38) // paletes 1.2x0.8x2.7m por camião
   capacidadePaleteB Float @default(28) // paletes 1.2x1x2.7m por camião
-  pesoMedioPaleteA  Float @default(60)
-  pesoMedioPaleteB  Float @default(75)
 
   atualizadoEm DateTime @updatedAt
 }

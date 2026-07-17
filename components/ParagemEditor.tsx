@@ -41,8 +41,6 @@ interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
   valorNoite: number;
-  pesoMedioPaleteA: number;
-  pesoMedioPaleteB: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
   onClose: () => void;
@@ -53,8 +51,6 @@ export default function ParagemEditor({
   zonas,
   veiculos,
   valorNoite,
-  pesoMedioPaleteA,
-  pesoMedioPaleteB,
   mostrarReceita = false,
   onClose,
 }: Props) {
@@ -66,28 +62,24 @@ export default function ParagemEditor({
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
   const [erro, setErro] = useState("");
-  const [pesoTocado, setPesoTocado] = useState(false);
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
   }
 
-  const ehPaleteA = f.tipoVeiculo === "PALETE_120X80";
-  const ehPaleteB = f.tipoVeiculo === "PALETE_120X100";
-  const ehPalete = ehPaleteA || ehPaleteB;
-  const pesoMedioPalete = ehPaleteA ? pesoMedioPaleteA : pesoMedioPaleteB;
+  const ehPalete = f.tipoVeiculo === "PALETE_120X80" || f.tipoVeiculo === "PALETE_120X100";
 
+  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
+  // tratado sempre como vazio) — trocar de/para um tipo de palete limpa os
+  // campos que deixam de fazer sentido.
   function setTipoVeiculo(v: string) {
     const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
-    setF((prev) => ({ ...prev, tipoVeiculo: v, nPaletes: eDePalete ? prev.nPaletes : 0 }));
-  }
-
-  function setNPaletes(v: string) {
-    const n = v.trim() === "" ? 0 : Number(v);
     setF((prev) => ({
       ...prev,
-      nPaletes: n as never,
-      kgCarregados: (pesoTocado ? prev.kgCarregados : Math.round(n * pesoMedioPalete)) as never,
+      tipoVeiculo: v,
+      nPaletes: eDePalete ? prev.nPaletes : 0,
+      kgCarregados: eDePalete ? 0 : prev.kgCarregados,
+      kgDescarregados: eDePalete ? 0 : prev.kgDescarregados,
     }));
   }
 
@@ -232,7 +224,7 @@ export default function ParagemEditor({
           </div>
           {campo("kmInicial", "KM Inicial")}
           {campo("kmFinal", "KM Final")}
-          {ehPalete && (
+          {ehPalete ? (
             <div>
               <label className="label">Nº de paletes</label>
               <input
@@ -241,24 +233,15 @@ export default function ParagemEditor({
                 min="0"
                 className="input"
                 value={f.nPaletes}
-                onChange={(e) => setNPaletes(e.target.value)}
+                onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
               />
             </div>
+          ) : (
+            <>
+              {campo("kgCarregados", "KG Carregados")}
+              {campo("kgDescarregados", "KG Descarregados")}
+            </>
           )}
-          <div>
-            <label className="label">KG Carregados{ehPalete ? " (sugerido, editável)" : ""}</label>
-            <input
-              type="number"
-              step="any"
-              className="input"
-              value={f.kgCarregados}
-              onChange={(e) => {
-                setPesoTocado(true);
-                set("kgCarregados", e.target.value as never);
-              }}
-            />
-          </div>
-          {campo("kgDescarregados", "KG Descarregados")}
           <div className="col-span-2">
             <label className="label">Zona Portagem</label>
             <input

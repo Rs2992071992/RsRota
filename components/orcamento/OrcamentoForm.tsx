@@ -47,8 +47,6 @@ interface Props {
   clientes: ClienteOpt[];
   veiculos: { id: number; nome: string }[];
   motoristas: { id: number; nome: string | null; codigo: string }[];
-  pesoMedioPaleteA: number;
-  pesoMedioPaleteB: number;
   /** Cliente pré-selecionado ao criar (ex.: vindo da ficha do cliente). */
   clienteInicial?: string;
 }
@@ -57,7 +55,6 @@ interface Props {
 type LinhaUI = LinhaDevis & {
   kmManual: boolean;
   aCalcular: boolean;
-  pesoTocado?: boolean;
   aviso?: string;
   detalhe?: DetalheEstimativa;
 };
@@ -86,8 +83,6 @@ export default function OrcamentoForm({
   clientes,
   veiculos,
   motoristas,
-  pesoMedioPaleteA,
-  pesoMedioPaleteB,
   clienteInicial,
 }: Props) {
   const router = useRouter();
@@ -429,7 +424,7 @@ export default function OrcamentoForm({
                   ))}
                 </select>
               </div>
-              {(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) && (
+              {(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) ? (
                 <div>
                   <label className="label">Nº de paletes</label>
                   <input
@@ -438,30 +433,20 @@ export default function OrcamentoForm({
                     min={0}
                     step={1}
                     value={l.nPaletes}
-                    onChange={(e) => {
-                      const n = Number(e.target.value) || 0;
-                      const media = l.tipoVeiculo === "PALETE_120X80" ? pesoMedioPaleteA : pesoMedioPaleteB;
-                      patchLinha(i, {
-                        nPaletes: n,
-                        pesoKg: l.pesoTocado ? l.pesoKg : Math.round(n * media),
-                      });
-                    }}
+                    onChange={(e) => patchLinha(i, { nPaletes: Number(e.target.value) || 0 })}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="label">Peso (kg)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    value={l.pesoKg}
+                    onChange={(e) => patchLinha(i, { pesoKg: Number(e.target.value) || 0 })}
                   />
                 </div>
               )}
-              <div>
-                <label className="label">
-                  Peso (kg){(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) ? " (sugerido, editável)" : ""}
-                </label>
-                <input
-                  className="input"
-                  type="number"
-                  value={l.pesoKg}
-                  onChange={(e) =>
-                    patchLinha(i, { pesoKg: Number(e.target.value) || 0, pesoTocado: true })
-                  }
-                />
-              </div>
               <div>
                 <label className="label">Zona portagem</label>
                 <input

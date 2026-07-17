@@ -69,8 +69,6 @@ const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = 
     campos: [
       ["capacidadePaleteA", "Capacidade paletes 120×80cm (nº por camião)"],
       ["capacidadePaleteB", "Capacidade paletes 120×100cm (nº por camião)"],
-      ["pesoMedioPaleteA", "Peso médio palete 120×80cm (kg)"],
-      ["pesoMedioPaleteB", "Peso médio palete 120×100cm (kg)"],
     ],
   },
 ];

@@ -2,6 +2,20 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-07-17] | A 1ª versão da tarifação por paletes (2026-07-14) fazia o
+  consumo de combustível continuar a usar `consumoPorCarga(peso, tabela)`
+  para paletes, apenas assumindo que o peso sugerido (nº × peso médio)
+  calhava sempre no 1º escalão da tabela (0-10000kg = 25 L/100km, igual ao
+  vazio). Funcionava por coincidência, não por garantia — e o cliente
+  esclareceu depois que o peso nem devia entrar no registo deste tipo de
+  carga (só a base/ocupação importa). | Quando um requisito diz "trata X
+  como se fosse Y", implementar isso como um branch explícito no código
+  (`ehPalete ? 0 : peso`), nunca confiar em que os valores configurados
+  hoje calham por acaso no mesmo resultado — isso quebra silenciosamente se
+  alguém editar uma tabela/parâmetro no futuro. Também vale a pena
+  perguntar explicitamente "este campo ainda é preciso?" quando um
+  requisito novo torna um cálculo (peso médio/sugestão automática)
+  redundante, em vez de manter código morto "por via das dúvidas".
 - [2026-07-14] | Adicionar tarifação por paletes exigiu um novo parâmetro em
   `coeficienteReal(tipoVeiculo, peso, cap)`, mas `tests/calc/perStop.test.ts`
   já a chamava com exatamente 3 argumentos posicionais em 6 sítios — tornar o

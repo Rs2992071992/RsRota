@@ -2,6 +2,33 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔧 Correção da tarifação por paletes (2026-07-17)
+
+Depois de revisitar o requisito com o Ricardo, 2 correções à feature de
+2026-07-14 (ver secção abaixo):
+
+1. **Combustível das paletes = sempre como vazio**, agora garantido
+   explicitamente no motor (`lib/calc/perStop.ts`: `consumoPorCarga(ehPalete
+   ? 0 : peso, tabela)`), em vez de depender por coincidência de o peso das
+   paletes calhar sempre no 1º escalão da tabela de consumo. Teste novo
+   prova isto com peso residual acima do 1º escalão (12000kg), que sem a
+   correção teria dado um consumo diferente do vazio.
+2. **O peso deixou de entrar no registo de paletes** — o cliente esclareceu
+   que "nem vale a pena colocar o peso, só causa confusão" para este tipo de
+   carga (o que importa é só a base/ocupação, nº de paletes). Removida toda
+   a lógica de sugestão automática de peso (`pesoMedioPaleteA/B`) e os
+   campos de peso ficam escondidos no registo (motorista/escritório) e nos
+   orçamentos quando o tipo de veículo é uma palete. `pesoMedioPaleteA/B`
+   removidos do schema (`Parametros`), `ParametrosCusto` e de todos os
+   formulários — `db push --accept-data-loss` (só a linha de configuração
+   singleton, sem dados de negócio).
+3. Confirmado (sem alteração de código): cargas mistas na mesma rota — ex.
+   10.000kg do Cliente A + 15 paletes leves do Cliente B — já funcionam
+   registando 2 paragens separadas na mesma `idRota`, uma por cliente/etapa,
+   cada uma com o seu tipo de veículo; o rateio já soma e normaliza
+   corretamente (testado em "rateio misto peso + paletes").
+- [x] 80 testes verdes, `tsc --noEmit` limpo, `next build` OK
+
 ## 🎨 Tarifação por paletes (2026-07-14)
 
 Plano: `C:\Users\Ricardo\.claude\plans\ricardo-silva-ricardosilva2992-gmail-com-adaptive-octopus.md`.

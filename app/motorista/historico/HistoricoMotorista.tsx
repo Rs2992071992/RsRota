@@ -12,18 +12,9 @@ interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
   valorNoite: number;
-  pesoMedioPaleteA: number;
-  pesoMedioPaleteB: number;
 }
 
-export default function HistoricoMotorista({
-  paragens,
-  zonas,
-  veiculos,
-  valorNoite,
-  pesoMedioPaleteA,
-  pesoMedioPaleteB,
-}: Props) {
+export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoite }: Props) {
   const [aEditar, setAEditar] = useState<ParagemHist | null>(null);
 
   // Agrupa por ID Rota, mantendo a ordem (mais recente primeiro).
@@ -100,8 +91,6 @@ export default function HistoricoMotorista({
           zonas={zonas}
           veiculos={veiculos}
           valorNoite={valorNoite}
-          pesoMedioPaleteA={pesoMedioPaleteA}
-          pesoMedioPaleteB={pesoMedioPaleteB}
           onClose={() => setAEditar(null)}
         />
       )}

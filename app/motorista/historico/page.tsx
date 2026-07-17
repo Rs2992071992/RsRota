@@ -21,8 +21,6 @@ export default async function HistoricoPage() {
       select: { id: true, nome: true, matricula: true },
     }),
   ]);
-  const pesoMedioPaleteA = params?.pesoMedioPaleteA ?? 60;
-  const pesoMedioPaleteB = params?.pesoMedioPaleteB ?? 75;
 
   const paragens: ParagemHist[] = paragensRaw.map((p) => ({
     id: p.id,
@@ -53,8 +51,6 @@ export default async function HistoricoPage() {
       zonas={portagens.map((p) => p.zona)}
       veiculos={veiculos}
       valorNoite={params?.valorNoite ?? 70}
-      pesoMedioPaleteA={pesoMedioPaleteA}
-      pesoMedioPaleteB={pesoMedioPaleteB}
     />
   );
 }

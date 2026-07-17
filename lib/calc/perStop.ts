@@ -84,8 +84,13 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
           ? nPaletes / eff.capacidadePaleteB
           : peso / capacidade(p.tipoVeiculo, eff);
 
-  // Consumo (lookup aproximado) e combustível.
-  const consumoL100 = consumoPorCarga(peso, tabelaConsumo);
+  // Consumo (lookup aproximado) e combustível. Paletes: o que importa é a
+  // ocupação em espaço/base, não o peso (cargas leves) — o consumo é tratado
+  // sempre como se o veículo fosse vazio, independentemente do escalão de
+  // peso configurado na tabela (garante isto explicitamente, não depende de
+  // o peso das paletes calhar sempre no primeiro escalão da tabela).
+  const ehPalete = p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
+  const consumoL100 = consumoPorCarga(ehPalete ? 0 : peso, tabelaConsumo);
   const litrosGastos = (consumoL100 / 100) * kmFeitos;
   const precoCombUsado =
     p.precoCombRefOverride != null ? p.precoCombRefOverride : eff.precoCombRef;

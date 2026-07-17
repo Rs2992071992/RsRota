@@ -110,7 +110,6 @@ function custoVeiculoKm(f: VeiculoForm): number {
     margemMinima: 0, valorHoraExtra: 0, valorNoite: 0,
     capacidadeCamiao: f.capacidadeCamiao, capacidadeReboque: f.capacidadeReboque,
     capacidadePaleteA: f.capacidadePaleteA, capacidadePaleteB: f.capacidadePaleteB,
-    pesoMedioPaleteA: 0, pesoMedioPaleteB: 0,
   };
   return derivarCustos(fake, f.pneus as PneuItem[]).custoVeiculoPorKm;
 }

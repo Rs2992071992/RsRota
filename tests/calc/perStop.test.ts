@@ -99,14 +99,9 @@ describe("coeficienteReal — sem limite a 1 (sobrecarga reflete-se)", () => {
   });
 });
 
-describe("calcularParagem — paletes (ocupação por nº, não por peso)", () => {
-  it("PALETE_120X80: coeficiente = nPaletes/38, independente do peso leve", () => {
-    const p = paragemBase({
-      tipoVeiculo: "PALETE_120X80",
-      kmFinal: 100,
-      kgCarregados: 1800, // 30 paletes × 60kg (peso não deveria dominar a ocupação)
-      nPaletes: 30,
-    });
+describe("calcularParagem — paletes (ocupação por nº, peso não entra no registo)", () => {
+  it("PALETE_120X80: coeficiente = nPaletes/38, sem peso informado (kgCarregados=0)", () => {
+    const p = paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30 });
     const r = calcularParagem(p, ctx);
     expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
     expect(r.nPaletes).toBe(30);
@@ -116,6 +111,26 @@ describe("calcularParagem — paletes (ocupação por nº, não por peso)", () =
     const p = paragemBase({ tipoVeiculo: "PALETE_120X100", kmFinal: 100, nPaletes: 35 });
     const r = calcularParagem(p, ctx);
     expect(r.coeficienteCarga).toBeCloseTo(35 / 28, 6);
+  });
+
+  it("consumo de combustível = sempre como vazio, mesmo se algum peso ficar registado", () => {
+    const vazio = calcularParagem(paragemBase({ tipoVeiculo: "VAZIO", kmFinal: 100 }), ctx);
+    const semPeso = calcularParagem(
+      paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30 }),
+      ctx,
+    );
+    // Mesmo com peso residual acima do 1º escalão da tabela de consumo (ex.:
+    // dado antigo ou erro de input — 12000kg cairia no escalão de 10000kg,
+    // 28 L/100km, se o peso fosse considerado), o consumo das paletes tem de
+    // se manter igual ao vazio — é uma regra explícita do motor, não uma
+    // coincidência da tabela.
+    const comPesoResidual = calcularParagem(
+      paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30, kgCarregados: 12000 }),
+      ctx,
+    );
+    expect(semPeso.consumoL100).toBe(vazio.consumoL100);
+    expect(comPesoResidual.consumoL100).toBe(vazio.consumoL100);
+    expect(comPesoResidual.custoCombustivel).toBeCloseTo(vazio.custoCombustivel, 6);
   });
 });
 

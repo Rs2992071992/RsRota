@@ -23,8 +23,6 @@ interface Props {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
-  pesoMedioPaleteA: number;
-  pesoMedioPaleteB: number;
   valorNoite: number;
   rotasRecentes: string[];
   clientes: string[];
@@ -62,8 +60,6 @@ export default function RegistoForm({
   capacidadeReboque,
   capacidadePaleteA,
   capacidadePaleteB,
-  pesoMedioPaleteA,
-  pesoMedioPaleteB,
   valorNoite,
   rotasRecentes,
   clientes,
@@ -82,9 +78,6 @@ export default function RegistoForm({
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
-  // Enquanto o motorista não editar o peso à mão, o nº de paletes sugere-o
-  // automaticamente (nº × peso médio). Depois de tocado, deixa de reescrever.
-  const [pesoTocado, setPesoTocado] = useState(false);
 
   function set<K extends keyof Campos>(k: K, v: Campos[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
@@ -102,24 +95,19 @@ export default function RegistoForm({
   const ehPaleteB = f.tipoVeiculo === "PALETE_120X100";
   const ehPalete = ehPaleteA || ehPaleteB;
   const capacidadePaletes = ehPaleteA ? capPaleteA : capPaleteB;
-  const pesoMedioPalete = ehPaleteA ? pesoMedioPaleteA : pesoMedioPaleteB;
   const custoNoites = num(f.noitesFora) * valorNoite;
 
+  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
+  // tratado sempre como vazio) — trocar de/para um tipo de palete limpa os
+  // campos que deixam de fazer sentido.
   function setTipoVeiculo(v: string) {
     const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
-    setF((prev) => ({ ...prev, tipoVeiculo: v, nPaletes: eDePalete ? prev.nPaletes : "" }));
-  }
-
-  function setKgCarregados(v: string) {
-    setPesoTocado(true);
-    set("kgCarregados", v);
-  }
-
-  function setNPaletes(v: string) {
     setF((prev) => ({
       ...prev,
-      nPaletes: v,
-      kgCarregados: pesoTocado ? prev.kgCarregados : String(Math.round(num(v) * pesoMedioPalete)),
+      tipoVeiculo: v,
+      nPaletes: eDePalete ? prev.nPaletes : "",
+      kgCarregados: eDePalete ? "" : prev.kgCarregados,
+      kgDescarregados: eDePalete ? "" : prev.kgDescarregados,
     }));
   }
 
@@ -222,7 +210,6 @@ export default function RegistoForm({
         veiculoId: f.veiculoId,
         kmInicial: f.kmFinal,
       });
-      setPesoTocado(false);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -386,7 +373,7 @@ export default function RegistoForm({
       <div className="card grid grid-cols-2 gap-3">
         {campoNum("kmInicial", "KM Inicial")}
         {campoNum("kmFinal", "KM Final")}
-        {ehPalete && (
+        {ehPalete ? (
           <div>
             <label className="label">Nº de paletes</label>
             <input
@@ -396,23 +383,15 @@ export default function RegistoForm({
               min="0"
               className="input"
               value={f.nPaletes}
-              onChange={(e) => setNPaletes(e.target.value)}
+              onChange={(e) => set("nPaletes", e.target.value)}
             />
           </div>
+        ) : (
+          <>
+            {campoNum("kgCarregados", "KG Carregados")}
+            {campoNum("kgDescarregados", "KG Descarregados")}
+          </>
         )}
-        <div>
-          <label className="label">KG Carregados{ehPalete ? " (sugerido, editável)" : ""}</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            className="input"
-            value={f.kgCarregados}
-            onChange={(e) => setKgCarregados(e.target.value)}
-          />
-          {erros.kgCarregados && <p className="mt-1 text-xs text-red-600">{erros.kgCarregados}</p>}
-        </div>
-        {campoNum("kgDescarregados", "KG Descarregados")}
       </div>
 
       <div className="card space-y-3">
