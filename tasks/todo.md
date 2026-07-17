@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔧 Manutenções por veículo (2026-07-18)
+
+Plano: `C:\Users\Ricardo\.claude\plans\dynamic-watching-koala.md`. Botão
+"Manutenções" no cartão de cada veículo em `/escritorio/veiculos`, abre modal
+com descrição/data/valor/dias por reparação; valor e dias ficam opcionais
+(podem ser preenchidos mais tarde). Totais (dias parado, custo total)
+recalculados ao vivo a partir das linhas.
+
+- [x] Schema: novo modelo `Manutencao` (`veiculoId`, `descricao`, `data`,
+  `valor?`, `dias?`) — `db push` feito no Neon
+- [x] Cada manutenção é uma linha independente com CRUD próprio (POST/PATCH/
+  DELETE por id), **não** o padrão "apagar tudo + recriar" usado nos Pneus —
+  decisão deliberada para evitar a classe de bug de duplicados corrigida nos
+  parâmetros (ver lições)
+- [x] APIs: `POST /api/veiculos/[id]/manutencoes`,
+  `PATCH`/`DELETE /api/manutencoes/[id]`
+- [x] UI: `VeiculosManager.tsx` — resumo no cartão + `ManutencoesModal`
+  (tabela editável, guarda por campo no `onBlur`, "+ Nova manutenção" cria já
+  no servidor)
+- [x] 80 testes verdes, `tsc --noEmit` limpo, `next build` OK, smoke test via
+  curl contra a BD real (criar → PATCH valor/dias → confirmar totais na
+  página → apagar, sem deixar resíduo)
+- [ ] **Verificação manual (utilizador)**: abrir `/escritorio/veiculos`,
+  clicar "Manutenções" num veículo, adicionar linhas e confirmar os totais
+
 ## 📋 Melhorias à lista/detalhe de Rotas (2026-07-19)
 
 - [x] `/escritorio/rotas`: por defeito (sem clicar em nenhum cabeçalho / após

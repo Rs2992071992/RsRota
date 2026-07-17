@@ -4,9 +4,17 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { derivarCustos } from "@/lib/calc/params";
 import type { ParametrosCusto, PneuItem } from "@/lib/calc/types";
-import { fmtEuro, fmtNum2 } from "@/lib/format";
+import { fmtEuro, fmtNum, fmtNum2 } from "@/lib/format";
 
 type PneuForm = { eixo: string; custo: number; km: number };
+
+export interface ManutencaoBD {
+  id: number;
+  descricao: string;
+  data: string;
+  valor: number | null;
+  dias: number | null;
+}
 
 export interface VeiculoBD {
   id: number;
@@ -28,9 +36,10 @@ export interface VeiculoBD {
   capacidadePaleteB: number;
   nParagens: number;
   pneus: PneuForm[];
+  manutencoes: ManutencaoBD[];
 }
 
-type Template = Omit<VeiculoBD, "id" | "ativo" | "nParagens"> & { matricula: string };
+type Template = Omit<VeiculoBD, "id" | "ativo" | "nParagens" | "manutencoes"> & { matricula: string };
 
 interface Props {
   veiculos: VeiculoBD[];
@@ -118,6 +127,8 @@ export default function VeiculosManager({ veiculos, template }: Props) {
   const router = useRouter();
   // null = nada aberto; "novo" = criar; número = editar veículo com esse id.
   const [edicao, setEdicao] = useState<number | "novo" | null>(null);
+  // id do veículo cujas manutenções estão a ser vistas (null = nada aberto).
+  const [manutencoesId, setManutencoesId] = useState<number | null>(null);
 
   return (
     <div className="space-y-5">
@@ -134,26 +145,44 @@ export default function VeiculosManager({ veiculos, template }: Props) {
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {veiculos.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setEdicao(v.id)}
-              className="card text-left transition hover:border-brand/40"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">{v.nome}</span>
-                {!v.ativo && <span className="text-xs text-gray-400">inativo</span>}
+          {veiculos.map((v) => {
+            const totalDias = v.manutencoes.reduce((s, m) => s + (m.dias ?? 0), 0);
+            const totalCusto = v.manutencoes.reduce((s, m) => s + (m.valor ?? 0), 0);
+            return (
+              <div key={v.id} className="card transition hover:border-brand/40">
+                <button onClick={() => setEdicao(v.id)} className="block w-full text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{v.nome}</span>
+                    {!v.ativo && <span className="text-xs text-gray-400">inativo</span>}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {v.matricula || "sem matrícula"} · {v.nParagens} paragem(ns)
+                  </p>
+                  <p className="mt-2 text-sm">
+                    Custo veículo / km:{" "}
+                    <span className="font-bold">{fmtNum2(custoVeiculoKm(veiculoParaForm(v)))} €</span>{" "}
+                    <span className="text-xs text-gray-400">(ref. {REF_KM_ANUAIS.toLocaleString("pt-PT")} km/ano)</span>
+                  </p>
+                </button>
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2">
+                  <span className="text-xs text-gray-500">
+                    {v.manutencoes.length === 0
+                      ? "Sem manutenções registadas"
+                      : `${v.manutencoes.length} manutenção(ões) · ${fmtEuro(totalCusto)} · ${fmtNum(totalDias)} dia(s) parado`}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setManutencoesId(v.id);
+                    }}
+                    className="btn-secondary text-xs"
+                  >
+                    Manutenções
+                  </button>
+                </div>
               </div>
-              <p className="text-sm text-gray-500">
-                {v.matricula || "sem matrícula"} · {v.nParagens} paragem(ns)
-              </p>
-              <p className="mt-2 text-sm">
-                Custo veículo / km:{" "}
-                <span className="font-bold">{fmtNum2(custoVeiculoKm(veiculoParaForm(v)))} €</span>{" "}
-                <span className="text-xs text-gray-400">(ref. {REF_KM_ANUAIS.toLocaleString("pt-PT")} km/ano)</span>
-              </p>
-            </button>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -169,6 +198,191 @@ export default function VeiculosManager({ veiculos, template }: Props) {
           }}
         />
       )}
+
+      {manutencoesId !== null && (
+        <ManutencoesModal
+          veiculo={veiculos.find((v) => v.id === manutencoesId)!}
+          onClose={() => setManutencoesId(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
+    </div>
+  );
+}
+
+function ManutencoesModal({
+  veiculo,
+  onClose,
+  onChanged,
+}: {
+  veiculo: VeiculoBD;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [linhas, setLinhas] = useState<ManutencaoBD[]>(veiculo.manutencoes);
+  const [aAdicionar, setAAdicionar] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const totalDias = linhas.reduce((s, m) => s + (m.dias ?? 0), 0);
+  const totalCusto = linhas.reduce((s, m) => s + (m.valor ?? 0), 0);
+
+  function updLocal(id: number, campo: keyof ManutencaoBD, valor: string | number | null) {
+    setLinhas((ls) => ls.map((l) => (l.id === id ? { ...l, [campo]: valor } : l)));
+  }
+
+  async function guardarCampo(id: number, campo: "descricao" | "data" | "valor" | "dias", valor: string | number | null) {
+    setErro("");
+    try {
+      const res = await fetch(`/api/manutencoes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [campo]: valor }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao guardar.");
+        return;
+      }
+      onChanged();
+    } catch {
+      setErro("Erro de ligação.");
+    }
+  }
+
+  async function adicionar() {
+    setErro("");
+    setAAdicionar(true);
+    try {
+      const res = await fetch(`/api/veiculos/${veiculo.id}/manutencoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descricao: "", data: new Date().toISOString().slice(0, 10) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao adicionar.");
+        return;
+      }
+      const { manutencao } = await res.json();
+      setLinhas((ls) => [
+        { id: manutencao.id, descricao: manutencao.descricao, data: manutencao.data, valor: manutencao.valor, dias: manutencao.dias },
+        ...ls,
+      ]);
+      onChanged();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAAdicionar(false);
+    }
+  }
+
+  async function apagar(id: number) {
+    if (!confirm("Apagar esta manutenção?")) return;
+    setErro("");
+    try {
+      const res = await fetch(`/api/manutencoes/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao apagar.");
+        return;
+      }
+      setLinhas((ls) => ls.filter((l) => l.id !== id));
+      onChanged();
+    } catch {
+      setErro("Erro de ligação.");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+      <div className="my-8 w-full max-w-3xl rounded-xl bg-white p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-semibold">Manutenções — {veiculo.nome}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">✕</button>
+        </div>
+
+        {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
+
+        <div className="mb-4 grid grid-cols-2 gap-4 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm">
+          <div>
+            <p className="text-xs text-gray-500">Total dias parado</p>
+            <p className="font-bold">{fmtNum(totalDias)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Custo total reparações</p>
+            <p className="font-bold">{fmtEuro(totalCusto)}</p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="th">Descrição</th>
+                <th className="th">Data</th>
+                <th className="th">Valor (€)</th>
+                <th className="th">Dias parado</th>
+                <th className="th" />
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map((l) => (
+                <tr key={l.id}>
+                  <td className="td">
+                    <input
+                      className="input"
+                      value={l.descricao}
+                      onChange={(e) => updLocal(l.id, "descricao", e.target.value)}
+                      onBlur={(e) => guardarCampo(l.id, "descricao", e.target.value)}
+                    />
+                  </td>
+                  <td className="td">
+                    <input
+                      type="date"
+                      className="input"
+                      value={l.data.slice(0, 10)}
+                      onChange={(e) => updLocal(l.id, "data", e.target.value)}
+                      onBlur={(e) => guardarCampo(l.id, "data", e.target.value)}
+                    />
+                  </td>
+                  <td className="td">
+                    <input
+                      type="number"
+                      step="any"
+                      className="input"
+                      value={l.valor ?? ""}
+                      placeholder="—"
+                      onChange={(e) => updLocal(l.id, "valor", e.target.value === "" ? null : Number(e.target.value))}
+                      onBlur={(e) => guardarCampo(l.id, "valor", e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </td>
+                  <td className="td">
+                    <input
+                      type="number"
+                      step="any"
+                      className="input"
+                      value={l.dias ?? ""}
+                      placeholder="—"
+                      onChange={(e) => updLocal(l.id, "dias", e.target.value === "" ? null : Number(e.target.value))}
+                      onBlur={(e) => guardarCampo(l.id, "dias", e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </td>
+                  <td className="td">
+                    <button onClick={() => apagar(l.id)} className="text-red-500 hover:text-red-700">✕</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <button onClick={adicionar} disabled={aAdicionar} className="btn-secondary mt-2 text-sm">
+          {aAdicionar ? "A adicionar…" : "+ Nova manutenção"}
+        </button>
+
+        <div className="mt-5 flex justify-end">
+          <button onClick={onClose} className="btn">Fechar</button>
+        </div>
+      </div>
     </div>
   );
 }

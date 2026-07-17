@@ -95,11 +95,30 @@ model Veiculo {
   capacidadePaleteA Float @default(38)
   capacidadePaleteB Float @default(28)
 
-  pneus    Pneu[]
-  paragens Paragem[]
+  pneus        Pneu[]
+  paragens     Paragem[]
+  manutencoes  Manutencao[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
+}
+
+/// Registo de manutenções/reparações de um veículo. `valor` e `dias` ficam
+/// nullable porque a descrição/data são registadas primeiro e o custo/tempo
+/// parado só se sabe mais tarde, quando a reparação está feita/orçada.
+model Manutencao {
+  id        Int      @id @default(autoincrement())
+  descricao String
+  data      DateTime
+  valor     Float?
+  dias      Float?
+
+  veiculoId Int
+  veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([veiculoId])
 }
 
 /// Tabela de portagens (zona -> valor, classe 4, só de ida).

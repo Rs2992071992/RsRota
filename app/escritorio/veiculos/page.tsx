@@ -9,6 +9,7 @@ export default async function VeiculosPage() {
       orderBy: { criadoEm: "asc" },
       include: {
         pneus: { orderBy: { ordem: "asc" } },
+        manutencoes: { orderBy: { data: "desc" } },
         _count: { select: { paragens: true } },
       },
     }),
@@ -56,6 +57,13 @@ export default async function VeiculosPage() {
     capacidadePaleteB: v.capacidadePaleteB,
     nParagens: v._count.paragens,
     pneus: v.pneus.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
+    manutencoes: v.manutencoes.map((m) => ({
+      id: m.id,
+      descricao: m.descricao,
+      data: m.data.toISOString(),
+      valor: m.valor,
+      dias: m.dias,
+    })),
   }));
 
   return <VeiculosManager veiculos={lista} template={template} />;

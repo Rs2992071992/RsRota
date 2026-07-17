@@ -79,6 +79,19 @@ export const veiculoSchema = z.object({
 
 export type VeiculoForm = z.infer<typeof veiculoSchema>;
 
+/** Schema de uma manutenção/reparação de veículo. `valor`/`dias` ficam por
+ * preencher até se saber o custo/tempo parado real. */
+export const manutencaoSchema = z.object({
+  descricao: z.string().trim().max(300).default(""),
+  data: z.string().min(1, "Data obrigatória"),
+  valor: z.number().nonnegative().nullable().optional(),
+  dias: z.number().nonnegative().nullable().optional(),
+});
+
+export const manutencaoUpdateSchema = manutencaoSchema.partial();
+
+export type ManutencaoForm = z.infer<typeof manutencaoSchema>;
+
 /** Schema dos parâmetros salariais próprios de um motorista. */
 export const motoristaParamsSchema = z.object({
   nome: z.string().trim().nullable().optional(),
