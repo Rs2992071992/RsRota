@@ -67,6 +67,9 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
   const totalCusto = rotas.reduce((a, r) => a + r.custoTotalRota, 0);
   const totalReceita = rotas.reduce((a, r) => a + r.receitaTotal, 0);
   const totalLucro = totalReceita - totalCusto;
+  const totalKgCarregados = rotas.reduce((a, r) => a + r.totalKgCarregados, 0);
+  const totalKgDescarregados = rotas.reduce((a, r) => a + r.totalKgDescarregados, 0);
+  const totalPaletes = rotas.reduce((a, r) => a + r.totalPaletes, 0);
 
   return (
     <div className="space-y-5">
@@ -138,6 +141,22 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
           <p className={`text-lg font-bold ${totalLucro < 0 ? "text-red-600" : "text-green-600"}`}>
             {fmtEuro(totalLucro)}
           </p>
+        </div>
+      </div>
+
+      {/* Totais de carga (kg + paletes) */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card">
+          <p className="text-xs text-gray-500">Total KG Carregados</p>
+          <p className="text-lg font-bold">{fmtNum(totalKgCarregados)} kg</p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-gray-500">Total KG Descarregados</p>
+          <p className="text-lg font-bold">{fmtNum(totalKgDescarregados)} kg</p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-gray-500">Total paletes transportadas</p>
+          <p className="text-lg font-bold">{fmtNum(totalPaletes)}</p>
         </div>
       </div>
 

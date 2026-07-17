@@ -195,4 +195,8 @@ export interface RotaCalc {
   rateio: RateioCliente[];
   // Métricas úteis
   kmTotais: number;
+  totalKgCarregados: number;
+  totalKgDescarregados: number;
+  /** Soma de nPaletes só das paragens de tipo palete (PALETE_120X80 | PALETE_120X100). */
+  totalPaletes: number;
 }

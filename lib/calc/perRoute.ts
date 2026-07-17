@@ -83,6 +83,13 @@ export function calcularRota(
   }
 
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
+  const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
+  const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
+  const totalPaletes = paragens.reduce(
+    (a, p) =>
+      a + (p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100" ? p.nPaletes || 0 : 0),
+    0,
+  );
 
   // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
   const tempos = paragens
@@ -108,6 +115,9 @@ export function calcularRota(
     alerta,
     rateio: clientes,
     kmTotais,
+    totalKgCarregados,
+    totalKgDescarregados,
+    totalPaletes,
   };
 }
 
