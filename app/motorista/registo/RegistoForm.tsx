@@ -100,6 +100,9 @@ export default function RegistoForm({
   // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
   // tratado sempre como vazio) — trocar de/para um tipo de palete limpa os
   // campos que deixam de fazer sentido.
+  // VAZIO: não há cliente a faturar (repositionamento), preenche "Vazio"
+  // automaticamente para o motorista não ter de escrever nada; ao sair de
+  // VAZIO, limpa esse valor para escrever o cliente real.
   function setTipoVeiculo(v: string) {
     const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
     setF((prev) => ({
@@ -108,6 +111,8 @@ export default function RegistoForm({
       nPaletes: eDePalete ? prev.nPaletes : "",
       kgCarregados: eDePalete ? "" : prev.kgCarregados,
       kgDescarregados: eDePalete ? "" : prev.kgDescarregados,
+      cliente:
+        v === "VAZIO" ? "Vazio" : prev.tipoVeiculo === "VAZIO" && prev.cliente === "Vazio" ? "" : prev.cliente,
     }));
   }
 
@@ -209,6 +214,7 @@ export default function RegistoForm({
         tipoVeiculo: f.tipoVeiculo,
         veiculoId: f.veiculoId,
         kmInicial: f.kmFinal,
+        cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
@@ -353,21 +359,30 @@ export default function RegistoForm({
           </div>
         </div>
 
-        <div>
-          <label className="label">Cliente / Local</label>
-          <input
-            list="clientes"
-            className="input"
-            value={f.cliente}
-            onChange={(e) => set("cliente", e.target.value)}
-          />
-          <datalist id="clientes">
-            {clientes.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-          {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
-        </div>
+        {f.tipoVeiculo === "VAZIO" ? (
+          <div>
+            <label className="label">Cliente / Local</label>
+            <p className="input flex items-center bg-gray-50 text-gray-500">
+              Vazio — sem cliente a faturar
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label className="label">Cliente / Local</label>
+            <input
+              list="clientes"
+              className="input"
+              value={f.cliente}
+              onChange={(e) => set("cliente", e.target.value)}
+            />
+            <datalist id="clientes">
+              {clientes.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
+          </div>
+        )}
       </div>
 
       <div className="card grid grid-cols-2 gap-3">
