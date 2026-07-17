@@ -72,17 +72,15 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   const peso = pesoTransportado(p);
   const nPaletes = p.nPaletes || 0;
 
-  // Coeficiente de carga: "Volume" para LEVE; paletes -> nº paletes/capacidade
-  // desse tipo (uma palete leve ocupa o mesmo "slot" físico, o peso não
-  // reflete a ocupação real); senão peso / capacidade (kg).
-  const coeficienteCarga: number | "Volume" =
-    p.tipoVeiculo === "LEVE"
-      ? "Volume"
-      : p.tipoVeiculo === "PALETE_120X80"
-        ? nPaletes / eff.capacidadePaleteA
-        : p.tipoVeiculo === "PALETE_120X100"
-          ? nPaletes / eff.capacidadePaleteB
-          : peso / capacidade(p.tipoVeiculo, eff);
+  // Coeficiente de carga: paletes -> nº paletes/capacidade desse tipo (uma
+  // palete leve ocupa o mesmo "slot" físico, o peso não reflete a ocupação
+  // real); senão peso / capacidade (kg).
+  const coeficienteCarga: number =
+    p.tipoVeiculo === "PALETE_120X80"
+      ? nPaletes / eff.capacidadePaleteA
+      : p.tipoVeiculo === "PALETE_120X100"
+        ? nPaletes / eff.capacidadePaleteB
+        : peso / capacidade(p.tipoVeiculo, eff);
 
   // Consumo (lookup aproximado) e combustível. Paletes: o que importa é a
   // ocupação em espaço/base, não o peso (cargas leves) — o consumo é tratado
@@ -153,7 +151,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
 /**
  * Coeficiente real de rateio (§4.2 — lógica corrigida):
  * - PALETE_120X80/PALETE_120X100 -> nº paletes / capacidade desse tipo
- * - peso 0, VAZIO ou LEVE -> 1
+ * - peso 0 ou VAZIO -> 1
  * - CAMIAO -> peso / capacidade camião
  * - CAMIAO+REBOQUE -> peso / capacidade reboque
  *
@@ -175,7 +173,7 @@ export function coeficienteReal(
   if (tipoVeiculo === "PALETE_120X100") {
     return nPaletes > 0 ? nPaletes / cap.capacidadePaleteB : 1;
   }
-  if (peso <= 0 || tipoVeiculo === "VAZIO" || tipoVeiculo === "LEVE") {
+  if (peso <= 0 || tipoVeiculo === "VAZIO") {
     return 1;
   }
   if (tipoVeiculo === "CAMIAO") {

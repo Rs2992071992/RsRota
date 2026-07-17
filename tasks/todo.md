@@ -2,6 +2,21 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🗑️ Remoção do tipo de veículo "LEVE" (2026-07-17)
+
+Confirmado com o Ricardo que não faz sentido no negócio — removido por
+completo (0 paragens/orçamentos históricos usavam-no, confirmado por query
+antes de remover). Deixou de existir em `TIPOS_VEICULO`
+(`lib/validacao.ts`), no motor de cálculo (`coeficienteCarga`/
+`coeficienteReal` em `lib/calc/perStop.ts`), no mapeamento de portagens
+TollGuru (`lib/portagens.ts`) e no aviso de excesso de capacidade
+(`RegistoForm.tsx`). Como consequência, o "coeficiente de carga" deixou de
+precisar do caso especial `"Volume"` (só existia para LEVE) — simplificado
+de volta para `number` puro em `ParagemCalc`/`DetalheEstimativa` e nos 3
+sítios que o mostravam (`rotas/[idRota]/page.tsx`, `DetalheLinha.tsx`,
+`api/exportar/route.ts`).
+- [x] 80 testes verdes, `tsc --noEmit` limpo, `next build` OK
+
 ## 🔧 Correção da tarifação por paletes (2026-07-17)
 
 Depois de revisitar o requisito com o Ricardo, 2 correções à feature de

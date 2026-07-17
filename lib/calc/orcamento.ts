@@ -44,8 +44,8 @@ export interface DetalheEstimativa {
   km: number;
   pesoKg: number;
   nPaletes: number;
-  /** Coeficiente de carga: número ou "Volume" (LEVE). */
-  coeficienteCarga: number | "Volume";
+  /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
+  coeficienteCarga: number;
   consumoL100: number;
   litrosGastos: number;
   precoCombUsado: number;

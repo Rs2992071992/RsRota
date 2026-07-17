@@ -27,8 +27,6 @@ function tipoTollguru(tipoVeiculo: string): string {
       return "5AxlesTruck"; // regresso a vazio de um articulado
     case "CAMIAO":
       return "2AxlesTruck"; // camião rígido
-    case "LEVE":
-      return "2AxlesTruck";
     default:
       return "2AxlesTruck";
   }

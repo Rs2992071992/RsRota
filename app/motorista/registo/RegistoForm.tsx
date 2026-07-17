@@ -121,7 +121,7 @@ export default function RegistoForm({
           `${nPal} paletes excede a capacidade do veículo (${capacidadePaletes} paletes).`,
         );
       }
-    } else if (f.tipoVeiculo !== "LEVE" && f.tipoVeiculo !== "VAZIO" && peso > capacidade) {
+    } else if (f.tipoVeiculo !== "VAZIO" && peso > capacidade) {
       a.push(
         `Peso ${peso.toLocaleString("pt-PT")} kg excede a capacidade do veículo (${capacidade.toLocaleString("pt-PT")} kg).`,
       );

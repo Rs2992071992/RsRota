@@ -51,11 +51,7 @@ export default function DetalheLinha({ detalhe, custoEstimado, preco }: Props) {
             rotulo={
               detalhe.nPaletes > 0 ? `Ocupação (${detalhe.nPaletes} paletes)` : "Ocupação"
             }
-            valor={
-              detalhe.coeficienteCarga === "Volume"
-                ? "Volume"
-                : `${(detalhe.coeficienteCarga * 100).toFixed(1)}%`
-            }
+            valor={`${(detalhe.coeficienteCarga * 100).toFixed(1)}%`}
           />
           <Linha
             rotulo={`Combustível (${fmtNum2(detalhe.consumoL100)} L/100 → ${fmtNum2(

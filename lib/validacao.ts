@@ -4,7 +4,6 @@ export const TIPOS_VIAGEM = ["Ida", "Volta"] as const;
 export const TIPOS_VEICULO = [
   "CAMIAO",
   "CAMIAO+REBOQUE",
-  "LEVE",
   "VAZIO",
   "PALETE_120X80",
   "PALETE_120X100",

@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       "KM Feitos": round(p.kmFeitos),
       "Peso (kg)": round(p.pesoTransportado),
       "Nº Paletes": round(p.nPaletes),
-      "Coef. Carga": p.coeficienteCarga === "Volume" ? "Volume" : round(p.coeficienteCarga * 100),
+      "Coef. Carga": round(p.coeficienteCarga * 100),
       "Consumo L/100": round(p.consumoL100),
       "Litros Gastos": round(p.litrosGastos),
       "Custo Combustível": round(p.custoCombustivel),

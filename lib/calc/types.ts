@@ -1,7 +1,12 @@
 // Tipos do motor de cálculo. Puro TypeScript, sem dependências de framework/DB.
 
 export type TipoViagem = "Ida" | "Volta";
-export type TipoVeiculo = "CAMIAO" | "CAMIAO+REBOQUE" | "LEVE" | "VAZIO";
+export type TipoVeiculo =
+  | "CAMIAO"
+  | "CAMIAO+REBOQUE"
+  | "VAZIO"
+  | "PALETE_120X80"
+  | "PALETE_120X100";
 
 /** Parâmetros de custo editáveis (§3.4), em forma plana. */
 export interface ParametrosCusto {
@@ -135,8 +140,8 @@ export interface ParagemCalc {
   /** Nº de paletes (passthrough; só relevante para tipos de palete). */
   nPaletes: number;
   kmFeitos: number;
-  /** Coeficiente de carga: número ou "Volume" (LEVE). */
-  coeficienteCarga: number | "Volume";
+  /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
+  coeficienteCarga: number;
   consumoL100: number;
   litrosGastos: number;
   precoCombUsado: number;

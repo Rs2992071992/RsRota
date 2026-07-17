@@ -83,9 +83,8 @@ describe("calcularParagem — paragem VAZIO de volta (Excel row 5)", () => {
 });
 
 describe("coeficienteReal — sem limite a 1 (sobrecarga reflete-se)", () => {
-  it("VAZIO/LEVE -> 1", () => {
+  it("VAZIO -> 1", () => {
     expect(coeficienteReal("VAZIO", 10000, PARAMS)).toBe(1);
-    expect(coeficienteReal("LEVE", 10000, PARAMS)).toBe(1);
   });
   it("peso 0 -> 1", () => expect(coeficienteReal("CAMIAO", 0, PARAMS)).toBe(1));
   it("CAMIAO usa capacidade 14.000 e pode passar de 1", () => {
