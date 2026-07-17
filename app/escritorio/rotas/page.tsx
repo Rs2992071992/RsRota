@@ -40,14 +40,18 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
 
   const [rotas, opcoes] = await Promise.all([carregarRotas(filtros), opcoesFiltro()]);
 
-  // Ordenação dinâmica por clique no cabeçalho. Sem `sort`, mantém-se a ordem
-  // por defeito do serviço (lucro crescente — as rotas problemáticas primeiro).
-  const sort = (searchParams.sort as SortKey) || undefined;
-  const dir = searchParams.dir === "desc" ? "desc" : "asc";
-  if (sort && sortValue[sort]) {
-    const f = sortValue[sort];
-    rotas.sort((a, b) => (dir === "asc" ? f(a) - f(b) : f(b) - f(a)));
-  }
+  // Ordenação dinâmica por clique no cabeçalho. Sem `sort` (estado inicial /
+  // "Limpar"), mostra a rota mais recente primeiro (data decrescente); ao
+  // clicar num cabeçalho, o 1º clique é sempre ascendente (como seria de
+  // esperar para custo/receita/lucro), tal como antes.
+  const semSort = !searchParams.sort;
+  const sort: SortKey = (searchParams.sort as SortKey) && sortValue[searchParams.sort as SortKey]
+    ? (searchParams.sort as SortKey)
+    : "data";
+  const dir =
+    searchParams.dir === "asc" ? "asc" : searchParams.dir === "desc" ? "desc" : semSort ? "desc" : "asc";
+  const f = sortValue[sort];
+  rotas.sort((a, b) => (dir === "asc" ? f(a) - f(b) : f(b) - f(a)));
 
   // Constrói o href de ordenação preservando os filtros atuais e alternando dir.
   const sortHref = (key: SortKey) => {

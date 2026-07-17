@@ -27,6 +27,8 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
 
   const zonas = portagens.map((p) => p.zona);
   const valorNoite = parametros?.valorNoite ?? 70;
+  const totalKgCarregados = paragensRaw.reduce((a, p) => a + p.kgCarregados, 0);
+  const totalKgDescarregados = paragensRaw.reduce((a, p) => a + p.kgDescarregados, 0);
   const editavel = (id: number): ParagemEditavel | null => {
     const p = paragensRaw.find((x) => x.id === id);
     if (!p) return null;
@@ -85,6 +87,18 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
           <p className={`text-lg font-bold ${rota.lucro < 0 ? "text-red-600" : "text-green-600"}`}>
             {fmtEuro(rota.lucro)}
           </p>
+        </div>
+      </div>
+
+      {/* Carga total da rota (soma de todas as paragens) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card">
+          <p className="text-xs text-gray-500">Total KG Carregados</p>
+          <p className="text-lg font-bold">{fmtNum(totalKgCarregados)} kg</p>
+        </div>
+        <div className="card">
+          <p className="text-xs text-gray-500">Total KG Descarregados</p>
+          <p className="text-lg font-bold">{fmtNum(totalKgDescarregados)} kg</p>
         </div>
       </div>
 

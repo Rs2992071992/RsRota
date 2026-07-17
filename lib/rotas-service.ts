@@ -103,7 +103,14 @@ export async function carregarRota(idRota: string): Promise<{
   paragensRaw: ParagemComRelacoes[];
 }> {
   const [paragensRaw, ctx, baseSnap] = await Promise.all([
-    prisma.paragem.findMany({ where: { idRota }, orderBy: { data: "asc" }, include: includeRelacoes }),
+    // Ordenado por KM (sequência real da rota: cliente A km 100-200, cliente
+    // B km 200-300, ...), não por data — várias paragens podem partilhar a
+    // mesma data e a ordem de introdução não é necessariamente a da estrada.
+    prisma.paragem.findMany({
+      where: { idRota },
+      orderBy: [{ kmInicial: "asc" }, { id: "asc" }],
+      include: includeRelacoes,
+    }),
     carregarContexto(),
     carregarBaseSnapshot(),
   ]);

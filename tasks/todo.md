@@ -2,6 +2,22 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📋 Melhorias à lista/detalhe de Rotas (2026-07-19)
+
+- [x] `/escritorio/rotas`: por defeito (sem clicar em nenhum cabeçalho / após
+  "Limpar") mostra a rota mais recente primeiro (data decrescente). Clicar
+  num cabeçalho continua a funcionar como antes (1º clique ascendente).
+- [x] `/escritorio/rotas/[idRota]`: novos cartões "Total KG Carregados" /
+  "Total KG Descarregados" (soma de todas as paragens da rota).
+- [x] `/escritorio/rotas/[idRota]`: a tabela "Paragens" (e a de "Rateio por
+  cliente", que deriva da mesma ordem) passa a seguir a sequência real da
+  rota — ordenada por `kmInicial` em vez de por data (`carregarRota()` em
+  `lib/rotas-service.ts`). Só afeta a página de detalhe de uma rota; a
+  listagem/exportação continuam ordenadas por data (não pedido, evita
+  efeitos colaterais nas agregações por cliente/exportação Excel).
+- [x] 80 testes verdes (motor de cálculo não mudou), `tsc --noEmit` limpo,
+  `next build` OK
+
 ## 🗑️ Remoção do tipo de veículo "LEVE" (2026-07-17)
 
 Confirmado com o Ricardo que não faz sentido no negócio — removido por
