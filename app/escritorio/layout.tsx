@@ -1,19 +1,30 @@
 import Link from "next/link";
+import {
+  LayoutDashboard,
+  Route,
+  Users,
+  FileText,
+  Euro,
+  IdCard,
+  Truck,
+  Settings,
+  Upload,
+} from "lucide-react";
 import { exigirPerfil } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { PRAZO_DIAS } from "@/lib/calc/pagamentos";
 import Calculadora from "@/components/Calculadora";
 
 const navItems = [
-  { href: "/escritorio/dashboard", label: "Dashboard" },
-  { href: "/escritorio/rotas", label: "Rotas" },
-  { href: "/escritorio/clientes", label: "Clientes" },
-  { href: "/escritorio/orcamentos", label: "Orçamentos" },
-  { href: "/escritorio/cobrancas", label: "Cobranças" },
-  { href: "/escritorio/motoristas", label: "Motoristas" },
-  { href: "/escritorio/veiculos", label: "Veículos" },
-  { href: "/escritorio/parametros", label: "Parâmetros" },
-  { href: "/escritorio/importar", label: "Importar" },
+  { href: "/escritorio/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/escritorio/rotas", label: "Rotas", icon: Route },
+  { href: "/escritorio/clientes", label: "Clientes", icon: Users },
+  { href: "/escritorio/orcamentos", label: "Orçamentos", icon: FileText },
+  { href: "/escritorio/cobrancas", label: "Cobranças", icon: Euro },
+  { href: "/escritorio/motoristas", label: "Motoristas", icon: IdCard },
+  { href: "/escritorio/veiculos", label: "Veículos", icon: Truck },
+  { href: "/escritorio/parametros", label: "Parâmetros", icon: Settings },
+  { href: "/escritorio/importar", label: "Importar", icon: Upload },
 ];
 
 /** Conta paragens vencidas: não pagas, com valor, e cuja data + 90 dias já passou. */
@@ -38,11 +49,12 @@ export default async function EscritorioLayout({ children }: { children: React.R
                 <Link
                   key={it.href}
                   href={it.href}
-                  className="relative rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                  className="relative flex flex-col items-center gap-0.5 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
                 >
-                  {it.label}
+                  <it.icon size={18} strokeWidth={1.75} />
+                  <span>{it.label}</span>
                   {it.href === "/escritorio/cobrancas" && vencidos > 0 && (
-                    <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-red-600 px-1 py-0.5 text-[10px] font-bold leading-none text-white">
                       {vencidos}
                     </span>
                   )}
