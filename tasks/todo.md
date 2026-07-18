@@ -2,6 +2,37 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📊 Ficha de veículo como página + estatísticas (2026-07-18)
+
+Plano: `C:\Users\Ricardo\.claude\plans\dynamic-watching-koala.md`. Clicar num
+veículo em `/escritorio/veiculos` deixou de abrir modal — passa a navegar
+para `/escritorio/veiculos/[id]`, uma página normal com estatísticas (cargas
+efetuadas = paragens com kg carregados > 0, clientes atendidos, kg
+transportados por mês do ano corrente em gráfico) + o formulário de edição
+(antes no modal) + acesso a Manutenções.
+
+- [x] `lib/veiculos-service.ts` — `carregarEstatisticasVeiculo(veiculoId)`,
+  agregação direta sobre `Paragem` (não precisa do motor de cálculo, ao
+  contrário do custo por cliente que é rateado por rota)
+- [x] `lib/veiculo-form.ts` + `components/VeiculoCamposForm.tsx` — tipos e
+  UI de campos/pneus extraídos de `VeiculosManager.tsx` para serem
+  partilhados entre o modal "Novo veículo" e a página de edição (evita
+  duplicar ~150 linhas)
+- [x] `components/VeiculoGrafico.tsx` — gráfico mensal de kg (Recharts,
+  mesmo padrão do `ClienteGrafico.tsx`), 12 meses fixos (Jan–Dez, 0 nos
+  meses sem carga)
+- [x] `app/escritorio/veiculos/ManutencoesModal.tsx` — extraído de
+  `VeiculosManager.tsx`, props desacopladas de `VeiculoBD` (só
+  `veiculoId`/`veiculoNome`/`manutencoesIniciais`)
+- [x] `app/escritorio/veiculos/[id]/page.tsx` + `VeiculoDetalheEditor.tsx`
+  — página nova (padrão de `rotas/[idRota]/page.tsx`: Server Component +
+  `notFound()`), `VeiculosManager.tsx` simplificado (cartão volta a ser um
+  `<Link>` simples, sem `stopPropagation`)
+- [x] 80 testes verdes, `tsc --noEmit` limpo, `next build` OK
+- [x] Smoke test: `/escritorio/veiculos/[id]` responde 200 (veículo real) e
+  404 (`notFound`, id inexistente); números da página (35 cargas, 73
+  clientes, 173 546 kg) confirmados contra query Prisma direta
+
 ## 🔧 Manutenções por veículo (2026-07-18)
 
 Plano: `C:\Users\Ricardo\.claude\plans\dynamic-watching-koala.md`. Botão
