@@ -93,7 +93,7 @@ export default function Calculadora() {
     "1",
     "2",
     "3",
-    { label: "=", fn: igual, classe: "bg-brand text-white row-span-1" },
+    { label: "=", fn: igual, classe: "bg-red-600 text-white hover:bg-red-700" },
     { label: "0", fn: () => digito("0"), classe: "col-span-2" },
     { label: ".", fn: ponto },
   ];
@@ -141,7 +141,9 @@ export default function Calculadora() {
                   key={i}
                   type="button"
                   onClick={t.fn}
-                  className={`rounded-md bg-gray-50 py-2 text-sm font-semibold hover:bg-gray-200 ${t.classe ?? ""}`}
+                  className={`rounded-md py-2 text-sm font-semibold ${
+                    t.classe?.includes("bg-") ? t.classe : `bg-gray-50 hover:bg-gray-200 ${t.classe ?? ""}`
+                  }`}
                 >
                   {t.label}
                 </button>
