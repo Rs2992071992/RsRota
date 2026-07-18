@@ -53,7 +53,7 @@ export default async function VeiculoDetalhePage({ params }: { params: { id: str
       </div>
 
       <div className="card">
-        <h3 className="mb-2 text-sm font-semibold text-gray-700">Kg carregados por mês (ano corrente)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-gray-700">Kg transportados por mês (ano corrente)</h3>
         <VeiculoGrafico serie={stats.serieMensalAnoAtual} />
       </div>
 
