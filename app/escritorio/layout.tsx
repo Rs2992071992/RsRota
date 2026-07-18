@@ -51,8 +51,8 @@ export default async function EscritorioLayout({ children }: { children: React.R
                   href={it.href}
                   className="relative flex flex-col items-center gap-0.5 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
                 >
-                  <it.icon size={18} strokeWidth={1.75} />
                   <span>{it.label}</span>
+                  <it.icon size={18} strokeWidth={1.75} />
                   {it.href === "/escritorio/cobrancas" && vencidos > 0 && (
                     <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-red-600 px-1 py-0.5 text-[10px] font-bold leading-none text-white">
                       {vencidos}
