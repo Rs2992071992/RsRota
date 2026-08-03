@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSessao } from "@/lib/session";
-import { veiculoSchema } from "@/lib/validacao";
+import { tipoPaleteUpdateSchema } from "@/lib/validacao";
 import { ehErroFkRestricao } from "@/lib/prisma-errors";
 
-// PATCH /api/veiculos/[id] — atualiza um veículo + substitui os seus pneus.
+// PATCH /api/tipos-palete/[id] — atualiza um tipo de palete (só escritório).
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   if (getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
@@ -13,30 +13,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 
   const body = await req.json().catch(() => null);
-  const parsed = veiculoSchema.safeParse(body);
+  const parsed = tipoPaleteUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 },
     );
   }
-  const { pneus, ...dados } = parsed.data;
 
-  const existe = await prisma.veiculo.findUnique({ where: { id } });
-  if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
+  const existe = await prisma.tipoPalete.findUnique({ where: { id } });
+  if (!existe) return NextResponse.json({ erro: "Tipo de palete não encontrado." }, { status: 404 });
 
-  await prisma.$transaction([
-    prisma.veiculo.update({ where: { id }, data: dados }),
-    prisma.pneu.deleteMany({ where: { veiculoId: id } }),
-    prisma.pneu.createMany({
-      data: pneus.map((p, i) => ({ veiculoId: id, eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })),
-    }),
-  ]);
-  return NextResponse.json({ ok: true });
+  const tipoPalete = await prisma.tipoPalete.update({ where: { id }, data: parsed.data });
+  return NextResponse.json({ ok: true, tipoPalete });
 }
 
-// DELETE /api/veiculos/[id] — apaga um veículo. As paragens ficam com veiculoId
-// null (o snapshot congelado preserva os custos históricos).
+// DELETE /api/tipos-palete/[id] — apaga um tipo de palete (só escritório).
+// Se tiver pedidos associados, sugere desativar em vez de apagar.
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   if (getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
@@ -44,15 +37,15 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 
-  const existe = await prisma.veiculo.findUnique({ where: { id } });
-  if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
+  const existe = await prisma.tipoPalete.findUnique({ where: { id } });
+  if (!existe) return NextResponse.json({ erro: "Tipo de palete não encontrado." }, { status: 404 });
 
   try {
-    await prisma.veiculo.delete({ where: { id } });
+    await prisma.tipoPalete.delete({ where: { id } });
   } catch (e) {
     if (ehErroFkRestricao(e)) {
       return NextResponse.json(
-        { erro: "Não é possível apagar: há carregamentos associados a este veículo." },
+        { erro: "Este tipo de palete tem pedidos associados. Desative-o em vez de apagar." },
         { status: 409 },
       );
     }

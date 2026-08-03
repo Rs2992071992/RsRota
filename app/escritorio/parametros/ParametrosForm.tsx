@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { derivarCustos } from "@/lib/calc/params";
 import type { ParametrosCusto, PneuItem } from "@/lib/calc/types";
 import { fmtEuro, fmtNum2 } from "@/lib/format";
+import TiposPaleteEditor, { type TipoPaleteBD } from "./TiposPaleteEditor";
 
 type ParamsBD = ParametrosCusto & { id: number; atualizadoEm: Date };
 type Pneu = { eixo: string; custo: number; km: number };
@@ -16,6 +17,7 @@ interface Props {
   pneusIniciais: Pneu[];
   portagensIniciais: Portagem[];
   consumoIniciais: Consumo[];
+  tiposPaleteIniciais: TipoPaleteBD[];
 }
 
 const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = [
@@ -78,6 +80,7 @@ export default function ParametrosForm({
   pneusIniciais,
   portagensIniciais,
   consumoIniciais,
+  tiposPaleteIniciais,
 }: Props) {
   const router = useRouter();
   const [params, setParams] = useState<ParametrosCusto>(extrair(paramsIniciais));
@@ -180,6 +183,8 @@ export default function ParametrosForm({
           </div>
         ))}
       </div>
+
+      <TiposPaleteEditor tiposIniciais={tiposPaleteIniciais} />
 
       {/* Pneus */}
       <div className="card">

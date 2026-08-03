@@ -95,9 +95,16 @@ model Veiculo {
   capacidadePaleteA Float @default(38)
   capacidadePaleteB Float @default(28)
 
-  pneus        Pneu[]
-  paragens     Paragem[]
-  manutencoes  Manutencao[]
+  // --- Caixa de carga (mm) — opcional; só preenchido para veículos usados
+  // no empacotamento de paletes (ver Carregamento/PedidoPalete). null =
+  // veículo não configurado para esta funcionalidade.
+  caixaComprimentoMm Float?
+  caixaLarguraMm     Float?
+
+  pneus         Pneu[]
+  paragens      Paragem[]
+  manutencoes   Manutencao[]
+  carregamentos Carregamento[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -213,6 +220,8 @@ model Cliente {
   morada   String?
   notas    String?
 
+  pedidosPalete PedidoPalete[]
+
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 }
@@ -284,4 +293,94 @@ model Utilizador {
   paragens Paragem[]
 
   criadoEm DateTime @default(now())
+}
+
+/// Catálogo de tipos de palete (dimensões em mm), editável em Parâmetros.
+/// Tabela (não lista fixa no código) porque novos formatos podem ser
+/// necessários no futuro sem alteração de código. `ativo=false` esconde o
+/// tipo de novos pedidos sem apagar histórico (pedidos já criados mantêm o FK).
+model TipoPalete {
+  id            Int     @id @default(autoincrement())
+  nome          String  @unique // ex.: "1300x1100"
+  comprimentoMm Float
+  larguraMm     Float
+  ativo         Boolean @default(true)
+  ordem         Int     @default(0)
+
+  pedidos PedidoPalete[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+/// Catálogo de reboques (atrelados) — equipamento independente e reutilizável,
+/// NÃO pertence a um Veiculo fixo: é escolhido por carregamento (ver
+/// Carregamento.reboque), já que o mesmo veículo pode usar reboques
+/// diferentes consoante a volta. `ativo=false` retira de serviço preservando
+/// o histórico dos carregamentos que já o usaram.
+model Reboque {
+  id            Int     @id @default(autoincrement())
+  nome          String
+  matricula     String?
+  comprimentoMm Float
+  larguraMm     Float
+  ativo         Boolean @default(true)
+
+  carregamentos Carregamento[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+/// Sessão de carregamento: agrega os pedidos telefónicos recebidos para UM
+/// veículo. Puramente operacional (tracking de espaço/paletes) — NÃO entra em
+/// Orçamentos/Cobranças/faturação. Um reboque pode ser anexado a ESTE
+/// carregamento específico, escolhido no momento entre os do catálogo.
+model Carregamento {
+  id     Int      @id @default(autoincrement())
+  data   DateTime @default(now())
+  estado String   @default("ABERTO") // ABERTO | FECHADO
+  notas  String?
+
+  veiculoId Int
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Restrict)
+
+  reboqueId Int?
+  reboque   Reboque? @relation(fields: [reboqueId], references: [id], onDelete: SetNull)
+
+  pedidos PedidoPalete[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([veiculoId])
+  @@index([reboqueId])
+  @@index([data])
+}
+
+/// Uma linha de pedido dentro de um carregamento: um cliente pediu N paletes
+/// de um tipo. O mesmo cliente pode ter várias linhas (chamadas separadas ao
+/// longo do dia). `ordem` fixa a ordem de chegada, usada pelo motor de
+/// empacotamento (lib/calc/paletePacking.ts) para simular "quem liga primeiro
+/// ocupa primeiro o espaço". Guarda-se mesmo que não caiba fisicamente (o
+/// compromisso ao telefone já foi feito) — a UI só assinala o excesso.
+model PedidoPalete {
+  id         Int @id @default(autoincrement())
+  quantidade Int
+  ordem      Int @default(0)
+
+  carregamentoId Int
+  carregamento   Carregamento @relation(fields: [carregamentoId], references: [id], onDelete: Cascade)
+
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  tipoPaleteId Int
+  tipoPalete   TipoPalete @relation(fields: [tipoPaleteId], references: [id], onDelete: Restrict)
+
+  criadoEm DateTime @default(now())
+
+  @@index([carregamentoId])
+  @@index([clienteId])
+  @@index([tipoPaleteId])
 }

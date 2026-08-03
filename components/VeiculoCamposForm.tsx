@@ -19,6 +19,10 @@ export default function VeiculoCamposForm({
     setF((p) => ({ ...p, [k]: v === "" ? 0 : Number(v) }));
   }
 
+  function setNumNullable(k: "caixaComprimentoMm" | "caixaLarguraMm", v: string) {
+    setF((p) => ({ ...p, [k]: v === "" ? null : Number(v) }));
+  }
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -42,6 +46,28 @@ export default function VeiculoCamposForm({
             />
           </div>
         ))}
+        <div>
+          <label className="label">Caixa — comprimento (mm)</label>
+          <input
+            type="number"
+            step="any"
+            className="input"
+            placeholder="—"
+            value={f.caixaComprimentoMm ?? ""}
+            onChange={(e) => setNumNullable("caixaComprimentoMm", e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="label">Caixa — largura (mm)</label>
+          <input
+            type="number"
+            step="any"
+            className="input"
+            placeholder="—"
+            value={f.caixaLarguraMm ?? ""}
+            onChange={(e) => setNumNullable("caixaLarguraMm", e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="mt-4">

@@ -10,6 +10,7 @@ import {
   Euro,
   IdCard,
   Truck,
+  Boxes,
   Settings,
   Upload,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/escritorio/cobrancas", label: "Cobranças", icon: Euro },
   { href: "/escritorio/motoristas", label: "Motoristas", icon: IdCard },
   { href: "/escritorio/veiculos", label: "Veículos", icon: Truck },
+  { href: "/escritorio/cargas", label: "Cargas", icon: Boxes },
   { href: "/escritorio/parametros", label: "Parâmetros", icon: Settings },
   { href: "/escritorio/importar", label: "Importar", icon: Upload },
 ];

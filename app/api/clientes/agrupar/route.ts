@@ -66,6 +66,18 @@ export async function POST(req: Request) {
         notas: canonico.notas ?? fichasVariantes.find((f) => f.notas)?.notas ?? null,
       };
       await tx.cliente.update({ where: { nome: nomeCanonico }, data: fundido });
+
+      // Repontar pedidos de paletes das variantes para o cliente canónico
+      // antes de apagar — PedidoPalete.clienteId é uma FK real a Cliente.id
+      // (ao contrário de Paragem/Devis, que ligam por nome em string), pelo
+      // que o deleteMany abaixo falharia (P2003) se alguma variante tivesse
+      // pedidos associados.
+      const idsVariantes = fichasVariantes.map((f) => f.id);
+      await tx.pedidoPalete.updateMany({
+        where: { clienteId: { in: idsVariantes } },
+        data: { clienteId: canonico.id },
+      });
+
       await tx.cliente.deleteMany({ where: { nome: { in: variantes } } });
     }
 

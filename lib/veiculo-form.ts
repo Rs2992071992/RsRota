@@ -25,6 +25,8 @@ export interface VeiculoLike {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  caixaComprimentoMm?: number | null;
+  caixaLarguraMm?: number | null;
   pneus: PneuForm[];
 }
 
@@ -44,6 +46,9 @@ export interface VeiculoForm {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  /** Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas). */
+  caixaComprimentoMm: number | null;
+  caixaLarguraMm: number | null;
   pneus: PneuForm[];
 }
 
@@ -84,6 +89,8 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
     capacidadeReboque: v.capacidadeReboque,
     capacidadePaleteA: v.capacidadePaleteA,
     capacidadePaleteB: v.capacidadePaleteB,
+    caixaComprimentoMm: v.caixaComprimentoMm ?? null,
+    caixaLarguraMm: v.caixaLarguraMm ?? null,
     pneus: v.pneus.map((p) => ({ ...p })),
   };
 }

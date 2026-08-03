@@ -74,6 +74,9 @@ export const veiculoSchema = z.object({
   capacidadeReboque: n.positive("Deve ser > 0"),
   capacidadePaleteA: n.positive("Deve ser > 0"),
   capacidadePaleteB: n.positive("Deve ser > 0"),
+  // Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas).
+  caixaComprimentoMm: n.positive("Deve ser > 0").nullable().optional(),
+  caixaLarguraMm: n.positive("Deve ser > 0").nullable().optional(),
   pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
 });
 
@@ -178,3 +181,67 @@ export const estimarDevisSchema = z.object({
 });
 
 export type EstimarDevisForm = z.infer<typeof estimarDevisSchema>;
+
+// --- Cargas / empacotamento de paletes -----------------------------------
+
+/** Catálogo de tipos de palete (mm), editável em Parâmetros. */
+export const tipoPaleteSchema = z.object({
+  nome: z.string().trim().min(1, "Nome obrigatório"),
+  comprimentoMm: n.positive("Deve ser > 0"),
+  larguraMm: n.positive("Deve ser > 0"),
+  ativo: z.boolean().optional(),
+  ordem: z.number().int().optional(),
+});
+
+export const tipoPaleteUpdateSchema = tipoPaleteSchema.partial();
+
+export type TipoPaleteForm = z.infer<typeof tipoPaleteSchema>;
+
+/** Catálogo de reboques (mm) — independente do veículo, escolhido por carregamento. */
+export const reboqueSchema = z.object({
+  nome: z.string().trim().min(1, "Nome obrigatório"),
+  matricula: z.string().trim().nullable().optional(),
+  comprimentoMm: n.positive("Deve ser > 0"),
+  larguraMm: n.positive("Deve ser > 0"),
+  ativo: z.boolean().optional(),
+});
+
+export const reboqueUpdateSchema = reboqueSchema.partial();
+
+export type ReboqueForm = z.infer<typeof reboqueSchema>;
+
+export const ESTADOS_CARREGAMENTO = ["ABERTO", "FECHADO"] as const;
+
+/** Criação de um carregamento (sessão de carga) para um veículo. */
+export const carregamentoSchema = z.object({
+  veiculoId: z.number().int().positive("Veículo obrigatório"),
+  data: z.string().nullable().optional(),
+  notas: z.string().trim().max(1000).nullable().optional(),
+});
+
+export type CarregamentoForm = z.infer<typeof carregamentoSchema>;
+
+/** Atualização de um carregamento: anexar/trocar/remover reboque, fechar/reabrir, notas. */
+export const carregamentoUpdateSchema = z.object({
+  estado: z.enum(ESTADOS_CARREGAMENTO).optional(),
+  reboqueId: z.number().int().positive().nullable().optional(),
+  notas: z.string().trim().max(1000).nullable().optional(),
+});
+
+export type CarregamentoUpdateForm = z.infer<typeof carregamentoUpdateSchema>;
+
+/** Linha de pedido: cliente + tipo de palete + quantidade. Guarda-se mesmo
+ * que não caiba fisicamente (o compromisso ao cliente já foi feito). */
+export const pedidoPaleteSchema = z.object({
+  clienteId: z.number().int().positive("Cliente obrigatório"),
+  tipoPaleteId: z.number().int().positive("Tipo de palete obrigatório"),
+  quantidade: z.number().int().positive("Quantidade deve ser > 0"),
+});
+
+export type PedidoPaleteForm = z.infer<typeof pedidoPaleteSchema>;
+
+export const pedidoPaleteUpdateSchema = z.object({
+  quantidade: z.number().int().positive("Quantidade deve ser > 0"),
+});
+
+export type PedidoPaleteUpdateForm = z.infer<typeof pedidoPaleteUpdateSchema>;

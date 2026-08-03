@@ -2,6 +2,37 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-04] | No modelo `Carregamento`/`PedidoPalete`/`TipoPalete` (feature
+  Cargas), o catch `e instanceof Prisma.PrismaClientKnownRequestError &&
+  e.code === "P2003"` para apagar um registo com `onDelete: Restrict` **não
+  disparava em Postgres** — a violação `RESTRICT` nativa do Postgres lança
+  SQLSTATE `23001` (restrict_violation), que o Prisma embrulha como
+  `PrismaClientUnknownRequestError` genérico, não como o P2003 "conhecido"
+  (isso só acontece quando é o próprio motor do Prisma a emular a
+  restrição). Resultado: 500 em vez do erro amigável 409, só detetado ao
+  testar a apagar contra a BD real (não pelos testes unitários/tsc/build). |
+  Criado `lib/prisma-errors.ts::ehErroFkRestricao()` que aceita tanto P2003
+  como `PrismaClientUnknownRequestError` com `23001`/`23503`/`restrict_violation`
+  na mensagem — usar este helper (não `e.code === "P2003"` sozinho) em
+  qualquer `catch` à volta de um `delete()` que dependa de `onDelete:
+  Restrict` no schema. Testar sempre um `DELETE` destes contra a BD real
+  (curl/browser), não só `tsc`/`vitest` — o bug só aparece em runtime com
+  Postgres.
+- [2026-08-04] | Ao adicionar a primeira FK real para `Cliente.id`
+  (`PedidoPalete.clienteId`), o endpoint já existente `POST
+  /api/clientes/agrupar` (que funde variantes de nome e depois faz
+  `tx.cliente.deleteMany(...)`) passou a poder rebentar com P2003 se alguma
+  variante tivesse pedidos de paletes associados — até então todas as
+  ligações a `Cliente` eram por string (`Paragem.cliente`/`Devis.cliente`),
+  nunca por FK, por isso o delete nunca tinha este risco. | Sempre que uma
+  feature nova acrescenta a PRIMEIRA foreign key real a uma tabela que já
+  tinha código a apagar linhas dela livremente, procurar esse código
+  existente e repontar as referências (aqui:
+  `tx.pedidoPalete.updateMany({clienteId: idsVariantes} -> canonico.id)`)
+  antes do delete, dentro da mesma transação. Validado com teste manual
+  real: fundir um cliente com pedido associado continuou a funcionar depois
+  do fix.
+
 - [2026-07-17] | A 1ª versão da tarifação por paletes (2026-07-14) fazia o
   consumo de combustível continuar a usar `consumoPorCarga(peso, tabela)`
   para paletes, apenas assumindo que o peso sugerido (nº × peso médio)

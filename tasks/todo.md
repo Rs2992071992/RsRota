@@ -2,6 +2,65 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📦 Cargas — empacotamento de paletes por veículo/reboque (2026-08-04)
+
+Plano: `C:\Users\Ricardo\.claude\plans\eventual-fluttering-crane.md`. Nova
+funcionalidade operacional (independente de Orçamentos/Cobranças): o
+utilizador cria um "carregamento" para um veículo e vai adicionando pedidos
+(cliente + tipo de palete + quantidade) à medida que os clientes telefonam;
+o motor de empacotamento (simulação geométrica por "prateleiras", testando
+as 2 orientações de cada palete) diz quanto espaço já está ocupado e sugere
+anexar um reboque do catálogo quando não há mais espaço.
+
+- [x] Schema: `Veiculo` +`caixaComprimentoMm`/`caixaLarguraMm` (mm, nullable
+  — opt-in); modelos novos `TipoPalete` (catálogo editável, não lista fixa),
+  `Reboque` (catálogo independente, anexado por carregamento, não fixo ao
+  veículo), `Carregamento` (sessão de carga: veículo + reboque opcional +
+  estado ABERTO/FECHADO), `PedidoPalete` (linha: cliente + tipo + qtd +
+  ordem de chegada) — `db push` feito no Neon
+- [x] `lib/calc/paletePacking.ts` (puro, sem DB) — empacotamento **online por
+  ordem de chegada** (nunca reordena por tamanho): prateleiras que testam as
+  2 orientações da palete, heurística "mais paletes lado a lado" ao abrir
+  prateleira nova (testado à mão contra o exemplo do próprio Ricardo — a
+  heurística ingénua "menor profundidade" só dava 6 das 10 paletes
+  1300x1100 quando cabem 10). `estimarQuantosCabem()` reaproveita
+  `empacotar()` com unidades sintéticas apensas, sem duplicar o algoritmo.
+  13 testes novos (93 no total)
+- [x] `lib/carregamento-service.ts` — `carregarCarregamento()` monta as
+  caixas (veículo + reboque se anexado), corre o packing, e sugere reboques
+  do catálogo ordenados por quantas das paletes em falta cada um resolveria
+- [x] APIs: `tipos-palete`, `reboques`, `carregamentos` (+`/pedidos`,
+  `/pedidos/[pedidoId]`) — CRUD `ESCRITORIO`-only, mesmo padrão Zod +
+  Prisma do resto do projeto. Um pedido é **sempre gravado**, mesmo sem
+  espaço (o compromisso ao telefone já foi feito) — a UI só assinala
+  overflow + sugestões de reboque
+- [x] Fix obrigatório em `app/api/clientes/agrupar/route.ts`: repontar
+  `PedidoPalete.clienteId` das variantes fundidas para o cliente canónico
+  antes do `deleteMany` (ver lições 2026-08-04 — primeira FK real a
+  `Cliente.id` do projeto)
+- [x] Fix de bug real (só apanhado ao testar contra a BD real, não por
+  tsc/vitest): catch de `P2003` ao apagar veículo/tipo de palete não
+  disparava em Postgres (lança `23001` embrulhado como
+  `PrismaClientUnknownRequestError`) — `lib/prisma-errors.ts::ehErroFkRestricao()`
+- [x] UI: `/escritorio/cargas` (lista + detalhe com planta SVG por caixa,
+  cor por cliente + legenda + texto, nunca só cor), `/escritorio/reboques`
+  (catálogo leve), Tipos de Palete dentro de Parâmetros (tabela editável),
+  novo item de menu "Cargas"
+- [x] 93 testes verdes, `tsc --noEmit` limpo, `next build` OK (52 rotas)
+- [x] **Teste manual end-to-end contra a BD real** (não só unitário):
+  recriado o exemplo exato do Ricardo — AO-33-PJ 7500×2480mm, Cliente A
+  10×1300x1100 (cabem as 10, sem aviso), Cliente B 6×1200x800 (dispara
+  aviso, 4 sem espaço, sugestão do reboque 8150×2480mm resolve tudo),
+  Cliente C 14×1150x1150 (11 colocadas / 3 sem espaço) — números batem
+  exatamente com os testes unitários. Testado também: apagar
+  veículo/tipo-palete em uso bloqueado (409 amigável), apagar reboque em
+  uso liberta o carregamento (SetNull), remover um pedido liberta espaço,
+  fundir clientes com pedidos associados continua a funcionar. Dados de
+  teste limpos da BD no fim (os 6 tipos de palete reais do Ricardo ficaram)
+- [ ] **Ação do utilizador**: em `/escritorio/veiculos`, preencher a caixa
+  (mm) dos veículos reais que vão ser usados em Cargas; em
+  `/escritorio/reboques`, registar os reboques reais (com as suas medidas)
+
 ## 📊 Ficha de veículo como página + estatísticas (2026-07-18)
 
 Plano: `C:\Users\Ricardo\.claude\plans\dynamic-watching-koala.md`. Clicar num
