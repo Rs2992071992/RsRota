@@ -65,12 +65,54 @@ export default function CarregamentoDetalheEditor({
   // depois de cada router.refresh() — não guardamos cópia local editável.
   const detalhe = detalheInicial;
 
-  const [clienteId, setClienteId] = useState<number | "">(clientes[0]?.id ?? "");
+  // Cópia local (não só a prop): permite mostrar de imediato um cliente
+  // criado agora mesmo, sem esperar pelo router.refresh().
+  const [clientesLocal, setClientesLocal] = useState<ClienteOpcao[]>(clientes);
+  const [clienteId, setClienteId] = useState<number | "">(clientesLocal[0]?.id ?? "");
   const [tipoPaleteId, setTipoPaleteId] = useState<number | "">(tiposPaleteAtivos[0]?.id ?? "");
   const [quantidade, setQuantidade] = useState(1);
   const [reboqueEscolhido, setReboqueEscolhido] = useState<number | "">("");
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState("");
+  const [novoClienteNome, setNovoClienteNome] = useState("");
+  const [aCriarCliente, setACriarCliente] = useState(false);
+  const [mostrarNovoCliente, setMostrarNovoCliente] = useState(clientesLocal.length === 0);
+
+  async function criarCliente() {
+    const nome = novoClienteNome.trim();
+    if (!nome) {
+      setErro("Indique o nome do cliente.");
+      return;
+    }
+    setErro("");
+    setACriarCliente(true);
+    try {
+      const res = await fetch("/api/clientes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao criar cliente.");
+        return;
+      }
+      const { cliente } = await res.json();
+      setClientesLocal((cs) =>
+        cs.some((c) => c.id === cliente.id)
+          ? cs
+          : [...cs, { id: cliente.id, nome: cliente.nome }].sort((a, b) => a.nome.localeCompare(b.nome)),
+      );
+      setClienteId(cliente.id);
+      setNovoClienteNome("");
+      setMostrarNovoCliente(false);
+      router.refresh();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setACriarCliente(false);
+    }
+  }
 
   const naoColocadosAgrupados = agruparNaoColocados(detalhe.packing.naoColocados);
   const reboquesParaAnexar = reboquesAtivos.filter((r) => r.id !== detalhe.reboque?.id);
@@ -247,26 +289,62 @@ export default function CarregamentoDetalheEditor({
       {/* Adicionar pedido */}
       <div className="card">
         <h3 className="mb-3 font-semibold">Adicionar pedido</h3>
-        {clientes.length === 0 || tiposPaleteAtivos.length === 0 ? (
+        {tiposPaleteAtivos.length === 0 ? (
           <p className="text-sm text-gray-500">
-            É preciso ter pelo menos um cliente (em Clientes) e um tipo de palete ativo (em
-            Parâmetros) para adicionar pedidos.
+            É preciso ter pelo menos um tipo de palete ativo (em Parâmetros) para adicionar pedidos.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <div>
+            <div className="sm:col-span-2">
               <label className="label">Cliente</label>
-              <select
-                className="input"
-                value={clienteId}
-                onChange={(e) => setClienteId(Number(e.target.value))}
-              >
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+              {mostrarNovoCliente ? (
+                <div className="flex gap-2">
+                  <input
+                    className="input"
+                    placeholder="Nome do novo cliente"
+                    value={novoClienteNome}
+                    onChange={(e) => setNovoClienteNome(e.target.value)}
+                  />
+                  <button
+                    onClick={criarCliente}
+                    disabled={aCriarCliente}
+                    className="btn-secondary whitespace-nowrap text-sm"
+                  >
+                    {aCriarCliente ? "A criar…" : "Criar"}
+                  </button>
+                  {clientesLocal.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setMostrarNovoCliente(false);
+                        setNovoClienteNome("");
+                      }}
+                      className="text-sm text-gray-400 hover:text-gray-700"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <select
+                    className="input"
+                    value={clienteId}
+                    onChange={(e) => setClienteId(Number(e.target.value))}
+                  >
+                    {clientesLocal.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setMostrarNovoCliente(true)}
+                    className="btn-secondary whitespace-nowrap text-sm"
+                  >
+                    + Novo
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <label className="label">Tipo de palete</label>
