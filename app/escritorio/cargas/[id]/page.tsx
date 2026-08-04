@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { carregarCarregamento } from "@/lib/carregamento-service";
+import { listarNomesClientes } from "@/lib/clientes-service";
 import CarregamentoDetalheEditor from "./CarregamentoDetalheEditor";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +11,10 @@ export default async function CarregamentoDetalhePage({ params }: { params: { id
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 
-  const [detalhe, clientes, reboquesAtivos, tiposPaleteAtivos] = await Promise.all([
+  const [detalhe, clientes, nomesClientes, reboquesAtivos, tiposPaleteAtivos] = await Promise.all([
     carregarCarregamento(id),
     prisma.cliente.findMany({ orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
+    listarNomesClientes(),
     prisma.reboque.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
     prisma.tipoPalete.findMany({
       where: { ativo: true },
@@ -30,6 +32,7 @@ export default async function CarregamentoDetalhePage({ params }: { params: { id
       <CarregamentoDetalheEditor
         detalheInicial={{ ...detalhe, data: detalhe.data.toISOString() }}
         clientes={clientes}
+        nomesClientesConhecidos={nomesClientes.map((n) => n.nome)}
         reboquesAtivos={reboquesAtivos}
         tiposPaleteAtivos={tiposPaleteAtivos}
       />

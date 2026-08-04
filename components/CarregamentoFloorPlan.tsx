@@ -56,17 +56,20 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
               ocupado
             </span>
           </div>
+          {/* Desenhado na horizontal: o eixo do comprimento (o mais comprido)
+              fica em X, a largura em Y — mais natural para ler um camião
+              visto de cima do que a orientação vertical (comprimento em Y). */}
           <svg
-            viewBox={`0 0 ${cx.caixa.larguraMm} ${cx.caixa.comprimentoMm}`}
+            viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
             className="w-full rounded border border-gray-200 bg-gray-50"
-            style={{ maxHeight: 420 }}
+            style={{ maxHeight: 260 }}
             preserveAspectRatio="xMinYMin meet"
           >
             <rect
               x={0}
               y={0}
-              width={cx.caixa.larguraMm}
-              height={cx.caixa.comprimentoMm}
+              width={cx.caixa.comprimentoMm}
+              height={cx.caixa.larguraMm}
               fill="none"
               stroke="#e1e0d9"
               strokeWidth={8}
@@ -75,10 +78,10 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
               p.itens.map((item) => (
                 <g key={`${item.pedidoId}-${item.x}-${item.y}`}>
                   <rect
-                    x={item.x}
-                    y={item.y}
-                    width={item.larguraOcupada}
-                    height={item.comprimentoOcupado}
+                    x={item.y}
+                    y={item.x}
+                    width={item.comprimentoOcupado}
+                    height={item.larguraOcupada}
                     fill={corDoCliente(item.clienteId)}
                     stroke="#fff"
                     strokeWidth={4}
@@ -86,8 +89,8 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
                     <title>{`${item.clienteNome} — ${item.tipoPaleteNome}`}</title>
                   </rect>
                   <text
-                    x={item.x + item.larguraOcupada / 2}
-                    y={item.y + item.comprimentoOcupado / 2}
+                    x={item.y + item.comprimentoOcupado / 2}
+                    y={item.x + item.larguraOcupada / 2}
                     fill="#fff"
                     fontSize={Math.max(Math.min(item.larguraOcupada, item.comprimentoOcupado) / 6, 24)}
                     textAnchor="middle"
