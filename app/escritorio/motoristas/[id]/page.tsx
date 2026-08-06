@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { fmtData, fmtNum } from "@/lib/format";
+import { fmtData, fmtEuro, fmtNum } from "@/lib/format";
+import { carregarEstatisticasMotorista } from "@/lib/motoristas-service";
 import MotoristaParamsForm from "./MotoristaParamsForm";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +14,13 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
   const motorista = await prisma.utilizador.findUnique({ where: { id } });
   if (!motorista || motorista.perfil !== "MOTORISTA") notFound();
 
-  const paragens = await prisma.paragem.findMany({
-    where: { motoristaId: id },
-    orderBy: [{ data: "desc" }, { id: "desc" }],
-  });
+  const [paragens, stats] = await Promise.all([
+    prisma.paragem.findMany({
+      where: { motoristaId: id },
+      orderBy: [{ data: "desc" }, { id: "desc" }],
+    }),
+    carregarEstatisticasMotorista(id),
+  ]);
 
   // Agrupa por ID Rota mantendo a ordem (mais recente primeiro).
   const rotas = new Map<string, typeof paragens>();
@@ -36,6 +40,14 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
           {motorista.nome || motorista.codigo}{" "}
           <span className="text-base font-normal text-gray-400">({motorista.codigo})</span>
         </h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Kpi rotulo="Km (este ano)" valor={`${fmtNum(stats.kmAnoAtual)} km`} />
+        <Kpi rotulo="Kg transportados (este ano)" valor={`${fmtNum(stats.kgAnoAtual)} kg`} />
+        <Kpi rotulo="Horas extra (este ano)" valor={fmtNum(stats.horasExtraAnoAtual)} />
+        <Kpi rotulo="Noites fora (este ano)" valor={fmtNum(stats.noitesForaAnoAtual)} />
+        <Kpi rotulo="Custo motorista (este ano)" valor={fmtEuro(stats.custoTotalAnoAtual)} />
       </div>
 
       <MotoristaParamsForm
@@ -83,6 +95,15 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="card">
+      <p className="text-xs text-gray-500">{rotulo}</p>
+      <p className="text-lg font-bold">{valor}</p>
     </div>
   );
 }
