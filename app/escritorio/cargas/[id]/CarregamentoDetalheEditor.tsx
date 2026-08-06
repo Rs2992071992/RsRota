@@ -78,12 +78,18 @@ export default function CarregamentoDetalheEditor({
   const [reboqueEscolhido, setReboqueEscolhido] = useState<number | "">("");
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState("");
+  const [aRenomearCliente, setARenomearCliente] = useState(false);
+  const [novoNomeCliente, setNovoNomeCliente] = useState("");
+  const [aGuardarNome, setAGuardarNome] = useState(false);
 
   // Sugestões no combobox: fichas já criadas + todos os nomes conhecidos
   // (rotas/orçamentos), para não obrigar a "criar ficha" antes de poder usar
   // um cliente que já existe no resto da app.
   const sugestoesNomes = [...new Set([...clientesLocal.map((c) => c.nome), ...nomesClientesConhecidos])].sort(
     (a, b) => a.localeCompare(b),
+  );
+  const clienteExistente = sugestoesNomes.some(
+    (n) => n.toLowerCase() === clienteNome.trim().toLowerCase(),
   );
 
   const naoColocadosAgrupados = agruparNaoColocados(detalhe.packing.naoColocados);
@@ -107,6 +113,48 @@ export default function CarregamentoDetalheEditor({
     const { cliente } = await res.json();
     setClientesLocal((cs) => [...cs, { id: cliente.id, nome: cliente.nome }]);
     return cliente.id;
+  }
+
+  /** Renomeia um cliente em toda a app (rotas, orçamentos, pedidos de paletes,
+   * ficha) — reaproveita /api/clientes/agrupar (funde o nome atual, como
+   * única "variante", no novo nome canónico), em vez de um rename cru que
+   * deixaria o histórico antigo desligado da ficha. */
+  async function renomearCliente() {
+    const nomeAtual = clienteNome.trim();
+    const novoNome = novoNomeCliente.trim();
+    if (!nomeAtual || !novoNome) {
+      setErro("Indique o novo nome.");
+      return;
+    }
+    if (nomeAtual.toLowerCase() === novoNome.toLowerCase()) {
+      setARenomearCliente(false);
+      return;
+    }
+    setErro("");
+    setAGuardarNome(true);
+    try {
+      const res = await fetch("/api/clientes/agrupar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nomesVariantes: [nomeAtual], nomeCanonico: novoNome }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao renomear.");
+        return;
+      }
+      // O id da ficha pode ter mudado (fusão) — removemos a entrada antiga e
+      // deixamos o próximo resolverClienteId() ir buscar/criar a atual.
+      setClientesLocal((cs) => cs.filter((c) => c.nome.toLowerCase() !== nomeAtual.toLowerCase()));
+      setClienteNome(novoNome);
+      setARenomearCliente(false);
+      setNovoNomeCliente("");
+      router.refresh();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAGuardarNome(false);
+    }
   }
 
   async function adicionarPedido() {
@@ -294,22 +342,65 @@ export default function CarregamentoDetalheEditor({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div className="sm:col-span-2">
               <label className="label">Cliente</label>
-              <input
-                className="input"
-                list="clientes-sugestoes"
-                placeholder="Nome do cliente"
-                value={clienteNome}
-                onChange={(e) => setClienteNome(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  list="clientes-sugestoes"
+                  placeholder="Nome do cliente"
+                  value={clienteNome}
+                  onChange={(e) => setClienteNome(e.target.value)}
+                />
+                {clienteExistente && !aRenomearCliente && (
+                  <button
+                    onClick={() => {
+                      setNovoNomeCliente(clienteNome.trim());
+                      setARenomearCliente(true);
+                    }}
+                    title="Editar nome deste cliente"
+                    className="btn-secondary whitespace-nowrap text-sm"
+                  >
+                    ✎ Editar nome
+                  </button>
+                )}
+              </div>
               <datalist id="clientes-sugestoes">
                 {sugestoesNomes.map((nome) => (
                   <option key={nome} value={nome} />
                 ))}
               </datalist>
-              <p className="mt-1 text-xs text-gray-400">
-                Sugere nomes já usados em Clientes/Rotas/Orçamentos — se escrever um nome novo, cria a
-                ficha automaticamente.
-              </p>
+              {aRenomearCliente ? (
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2">
+                  <span className="whitespace-nowrap text-xs text-amber-800">
+                    Renomear &quot;{clienteNome.trim()}&quot; para:
+                  </span>
+                  <input
+                    className="input"
+                    value={novoNomeCliente}
+                    onChange={(e) => setNovoNomeCliente(e.target.value)}
+                  />
+                  <button
+                    onClick={renomearCliente}
+                    disabled={aGuardarNome}
+                    className="btn-secondary whitespace-nowrap text-sm"
+                  >
+                    {aGuardarNome ? "A guardar…" : "Guardar"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setARenomearCliente(false);
+                      setNovoNomeCliente("");
+                    }}
+                    className="whitespace-nowrap text-sm text-gray-400 hover:text-gray-700"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-gray-400">
+                  Sugere nomes já usados em Clientes/Rotas/Orçamentos — se escrever um nome novo, cria a
+                  ficha automaticamente. Atualiza também rotas e orçamentos antigos com esse nome.
+                </p>
+              )}
             </div>
             <div>
               <label className="label">Tipo de palete</label>
