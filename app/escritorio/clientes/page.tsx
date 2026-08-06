@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { carregarClientes, carregarCliente } from "@/lib/clientes-service";
 import { fmtEuro, fmtPct, fmtData } from "@/lib/format";
 import ContatoCliente from "@/components/ContatoCliente";
+import EditarNomeCliente from "@/components/EditarNomeCliente";
 import ClienteGrafico from "@/components/ClienteGrafico";
 import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
 
@@ -100,7 +101,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">{detalhe.nome}</h2>
+                <EditarNomeCliente nome={detalhe.nome} />
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                     detalhe.lucro < 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
