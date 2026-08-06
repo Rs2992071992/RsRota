@@ -116,6 +116,17 @@ export interface ParagemInput {
   kmFinal: number;
   kgCarregados: number;
   kgDescarregados: number;
+  /**
+   * Peso realmente a bordo durante ESTE troço, calculado ao nível da rota
+   * (agrupando paragens da mesma rota/direção/dia — ver
+   * `pesosEmTransito` em lib/calc/perRoute.ts) em vez do peso próprio desta
+   * paragem isolada. Numa rota com vários clientes o camião vai mais pesado
+   * nos primeiros troços (ainda leva a carga dos clientes seguintes) e mais
+   * leve nos últimos. Se ausente, o consumo usa o peso próprio da paragem
+   * (comportamento inalterado — é sempre o caso para orçamentos, que nunca
+   * agrupam paragens).
+   */
+  pesoEmTransito?: number;
   /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
   nPaletes?: number;
   zonaPortagem: string;

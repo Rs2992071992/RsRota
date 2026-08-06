@@ -1,9 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { derivarCustos } from "@/lib/calc/params";
-import { calcularRota } from "@/lib/calc/perRoute";
+import { calcularRota, pesosEmTransito } from "@/lib/calc/perRoute";
 import type { ContextoCalculo } from "@/lib/calc/perStop";
 import type { ParagemInput } from "@/lib/calc/types";
 import { PARAMS, PNEUS, TABELA_CONSUMO, TABELA_PORTAGENS } from "./fixtures";
+
+function paragemBase(over: Partial<ParagemInput> = {}): ParagemInput {
+  return {
+    idRota: "T",
+    data: "2026-01-01",
+    cliente: "C",
+    tipoViagem: "Ida",
+    tipoVeiculo: "CAMIAO+REBOQUE",
+    kmInicial: 0,
+    kmFinal: 0,
+    kgCarregados: 0,
+    kgDescarregados: 0,
+    zonaPortagem: "",
+    portagensExtra: 0,
+    noitesFora: 0,
+    alimentacao: 0,
+    horasExtra: 0,
+    receitaPaga: 0,
+    ...over,
+  };
+}
 
 const ctx: ContextoCalculo = {
   params: PARAMS,
@@ -155,5 +176,105 @@ describe("calcularRota — rota em prejuízo dispara alerta vermelho", () => {
   it("receita 1000 < custo 1487 -> 🔴 PREJUÍZO", () => {
     expect(r.lucro).toBeLessThan(0);
     expect(r.alerta).toBe("🔴 PREJUÍZO");
+  });
+});
+
+describe("pesosEmTransito", () => {
+  it("grupo de 1 paragem -> undefined (sem correção, comportamento de hoje)", () => {
+    const [p] = pesosEmTransito([paragemBase({ kgCarregados: 28000 })]);
+    expect(p).toBeUndefined();
+  });
+
+  it("entrega progressiva (só kgDescarregados) -> peso vai descendo", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 5000 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 3000 }),
+      paragemBase({ cliente: "C", kmInicial: 200, kmFinal: 300, kgDescarregados: 2000 }),
+    ]);
+    expect(r).toEqual([10000, 5000, 2000]);
+  });
+
+  it("recolha progressiva (só kgCarregados) -> peso vai subindo", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", tipoViagem: "Volta", kmInicial: 0, kmFinal: 100, kgCarregados: 2000 }),
+      paragemBase({ cliente: "B", tipoViagem: "Volta", kmInicial: 100, kmFinal: 200, kgCarregados: 3000 }),
+      paragemBase({ cliente: "C", tipoViagem: "Volta", kmInicial: 200, kmFinal: 300, kgCarregados: 5000 }),
+    ]);
+    expect(r).toEqual([0, 2000, 5000]);
+  });
+
+  it("grupo misto (recolha a meio de uma entrega, como um backhaul real)", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgCarregados: 100, kgDescarregados: 1000 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 500 }),
+    ]);
+    expect(r).toEqual([1500, 600]);
+  });
+
+  it("paragens VAZIO ficam de fora do agrupamento (undefined, não interferem nas outras)", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 1000 }),
+      paragemBase({ cliente: "Vazio", tipoVeiculo: "VAZIO", kmInicial: 50, kmFinal: 150 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 500 }),
+    ]);
+    expect(r).toEqual([1500, undefined, 500]);
+  });
+
+  it("tipoViagem ou dia diferentes -> grupos separados (rota multi-dia com idRota reutilizado)", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", data: "2026-01-01", kmInicial: 0, kmFinal: 100, kgDescarregados: 1000 }),
+      paragemBase({ cliente: "B", data: "2026-01-01", kmInicial: 100, kmFinal: 200, kgDescarregados: 500 }),
+      paragemBase({ cliente: "C", data: "2026-01-02", kmInicial: 0, kmFinal: 100, kgDescarregados: 700 }),
+      paragemBase({ cliente: "D", data: "2026-01-02", kmInicial: 100, kmFinal: 200, kgDescarregados: 300 }),
+    ]);
+    // Dia 1 (A,B): total 1500 a descer. Dia 2 (C,D): total 1000 a descer,
+    // independente do dia 1 — nunca se juntam num só grupo de 4.
+    expect(r).toEqual([1500, 500, 1000, 300]);
+  });
+
+  it("ordena por kmInicial, não pela ordem de entrada no array", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 3000 }),
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 5000 }),
+    ]);
+    // índice 0 é "B" (2º na sequência física) -> 3000; índice 1 é "A" (1º) -> 8000.
+    expect(r).toEqual([3000, 8000]);
+  });
+});
+
+describe("calcularRota — peso em trânsito muda o consumo por troço (entrega progressiva)", () => {
+  // 3 clientes na mesma rota/dia, camião a descarregar progressivamente:
+  // 25000kg no total, entregues 15000+7000+3000 em 3 troços sucessivos.
+  const multi: ParagemInput[] = [
+    paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 200, kgDescarregados: 15000, receitaPaga: 1000 }),
+    paragemBase({ cliente: "B", kmInicial: 200, kmFinal: 350, kgDescarregados: 7000, receitaPaga: 600 }),
+    paragemBase({ cliente: "C", kmInicial: 350, kmFinal: 450, kgDescarregados: 3000, receitaPaga: 300 }),
+  ];
+  const r = calcularRota("MULTI01", multi, ctx);
+
+  it("consumo por troço reflete o peso real a bordo (38, 28, 25 L/100km), não o peso próprio (31, 25, 25)", () => {
+    expect(r.paragens[0].consumoL100).toBe(38); // 25000kg a bordo no troço 1 (peso próprio seria 15000 -> 31)
+    expect(r.paragens[1].consumoL100).toBe(28); // 10000kg a bordo no troço 2 (peso próprio seria 7000 -> 25)
+    expect(r.paragens[2].consumoL100).toBe(25); // 3000kg no último troço = igual ao peso próprio (nada mudou)
+  });
+
+  it("litros/custo de combustível do troço 1 usam o consumo de 38 L/100km sobre 200km", () => {
+    expect(r.paragens[0].litrosGastos).toBeCloseTo(76, 6); // 38/100 * 200
+    expect(r.paragens[0].custoCombustivel).toBeCloseTo(76 * PARAMS.precoCombRef, 6);
+  });
+
+  it("coeficiente de carga e rateio continuam a usar o peso próprio de cada cliente (inalterado)", () => {
+    const cap = PARAMS.capacidadeReboque; // CAMIAO+REBOQUE
+    expect(r.paragens[0].coeficienteCarga).toBeCloseTo(15000 / cap, 6);
+    expect(r.paragens[1].coeficienteCarga).toBeCloseTo(7000 / cap, 6);
+    const a = r.rateio.find((c) => c.cliente === "A")!;
+    const b = r.rateio.find((c) => c.cliente === "B")!;
+    expect(a.coefReal).toBeCloseTo(15000 / cap, 6);
+    expect(b.coefReal).toBeCloseTo(7000 / cap, 6);
+  });
+
+  it("Σ custo atribuído = custo total da rota (rateio continua consistente)", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
   });
 });

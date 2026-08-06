@@ -2,6 +2,53 @@ import { calcularParagem, coeficienteReal, efetivos, pesoTransportado, type Cont
 import { valorPortagem } from "./lookups";
 import type { ParagemInput, RateioCliente, RotaCalc } from "./types";
 
+/** Chave de agrupamento: mesma direção (tipoViagem) e mesmo dia — idRota
+ * pode ser reutilizado em rotas multi-dia, por isso o dia entra na chave
+ * para não juntar viagens de dias diferentes num só grupo. */
+function chaveGrupoPeso(p: ParagemInput): string {
+  const dia = p.data ? new Date(p.data).toISOString().slice(0, 10) : "";
+  return `${p.tipoViagem}|${dia}`;
+}
+
+/**
+ * Peso realmente a bordo durante cada troço de uma rota (array paralelo a
+ * `paragens`, por índice) — ver o algoritmo comentado em
+ * `ParagemInput.pesoEmTransito` (lib/calc/types.ts). Agrupa por direção +
+ * dia, ordena por `kmInicial` dentro do grupo (sequência física real, mesmo
+ * critério de `lib/rotas-service.ts::carregarRota`), e acumula: começa na
+ * soma de tudo o que vai ser descarregado no grupo e vai subtraindo o que
+ * sai / somando o que entra a cada troço. Paragens `VAZIO` ficam de fora do
+ * agrupamento. Grupos de 1 paragem devolvem `undefined` (sem correção —
+ * `calcularParagem` cai no peso próprio da paragem, comportamento
+ * inalterado — cobre a esmagadora maioria das rotas, incl. HILP01).
+ */
+export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[] {
+  const resultado: (number | undefined)[] = paragens.map(() => undefined);
+
+  const grupos = new Map<string, number[]>();
+  paragens.forEach((p, i) => {
+    if (p.tipoVeiculo === "VAZIO") return;
+    const chave = chaveGrupoPeso(p);
+    const indices = grupos.get(chave) ?? [];
+    indices.push(i);
+    grupos.set(chave, indices);
+  });
+
+  for (const indices of grupos.values()) {
+    if (indices.length < 2) continue; // grupo de 1 -> sem correção
+    const ordenados = [...indices].sort(
+      (a, b) => (paragens[a].kmInicial || 0) - (paragens[b].kmInicial || 0),
+    );
+    let acumulado = ordenados.reduce((s, i) => s + (paragens[i].kgDescarregados || 0), 0);
+    for (const i of ordenados) {
+      resultado[i] = acumulado;
+      acumulado += (paragens[i].kgCarregados || 0) - (paragens[i].kgDescarregados || 0);
+    }
+  }
+
+  return resultado;
+}
+
 /**
  * Calcula uma rota completa a partir das suas paragens (§4.2).
  * Agrega custos, calcula rentabilidade e o rateio auditável por cliente.
@@ -13,7 +60,8 @@ export function calcularRota(
 ): RotaCalc {
   // Custos efetivos por paragem (snapshot congelado ou contexto atual).
   const effs = paragens.map((p) => efetivos(p, ctx));
-  const calc = paragens.map((p) => calcularParagem(p, ctx));
+  const pesos = pesosEmTransito(paragens);
+  const calc = paragens.map((p, i) => calcularParagem({ ...p, pesoEmTransito: pesos[i] }, ctx));
 
   // Componentes do custo total da rota.
   const somaCustoParagens = calc.reduce((a, c) => a + c.custoParagem, 0);

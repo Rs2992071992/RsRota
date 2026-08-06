@@ -70,6 +70,12 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
 
   const kmFeitos = (p.kmFinal || 0) - (p.kmInicial || 0);
   const peso = pesoTransportado(p);
+  // Peso realmente a bordo durante este troço (rota com vários clientes ->
+  // camião mais pesado nos primeiros troços); por defeito é o peso próprio
+  // (paragem isolada / orçamento, comportamento inalterado). Só entra no
+  // consumo — coeficienteCarga/precoPorKg continuam a refletir o peso
+  // próprio do cliente (rateio inalterado, ver lib/calc/perRoute.ts).
+  const pesoParaConsumo = p.pesoEmTransito ?? peso;
   const nPaletes = p.nPaletes || 0;
 
   // Coeficiente de carga: paletes -> nº paletes/capacidade desse tipo (uma
@@ -88,7 +94,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // peso configurado na tabela (garante isto explicitamente, não depende de
   // o peso das paletes calhar sempre no primeiro escalão da tabela).
   const ehPalete = p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
-  const consumoL100 = consumoPorCarga(ehPalete ? 0 : peso, tabelaConsumo);
+  const consumoL100 = consumoPorCarga(ehPalete ? 0 : pesoParaConsumo, tabelaConsumo);
   const litrosGastos = (consumoL100 / 100) * kmFeitos;
   const precoCombUsado =
     p.precoCombRefOverride != null ? p.precoCombRefOverride : eff.precoCombRef;

@@ -2,6 +2,41 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ⛽ Consumo de combustível reflete o peso real a bordo em cada troço (2026-08-06)
+
+Plano: `C:\Users\Ricardo\.claude\plans\eventual-fluttering-crane.md`. O
+Ricardo notou que, numa rota com vários clientes, o camião vai ficando mais
+leve a cada entrega — mas o motor calculava o consumo de cada troço só com
+o peso próprio desse cliente, ignorando o resto da carga ainda a bordo.
+Confirmado com dados reais (rota `RIC-A22`).
+
+- [x] `lib/calc/types.ts` — `ParagemInput.pesoEmTransito?: number` (opcional,
+  sem impacto em nenhum literal existente)
+- [x] `lib/calc/perRoute.ts` — `pesosEmTransito()`: agrupa paragens por
+  `idRota`+`tipoViagem`+dia, ordena por `kmInicial`, acumula peso a
+  descer/subir por troço; injetado em `calcularRota` antes de
+  `calcularParagem`. Grupos de 1 paragem (maioria das rotas, incl. HILP01)
+  ficam inalterados.
+- [x] `lib/calc/perStop.ts` — só o `consumoL100` passa a usar
+  `pesoEmTransito ?? peso`; `coeficienteCarga`/`precoPorKg` e o rateio
+  entre clientes (`coeficienteReal` em `perRoute.ts`) continuam a usar o
+  peso próprio de cada paragem — confirmado com o Ricardo (cada cliente
+  paga pelo que é dele; só o custo total da rota fica mais exato).
+  Aplica-se também a rotas antigas (sem peso congelado em snapshot,
+  confirmado com o Ricardo).
+- [x] 15 testes novos (`pesosEmTransito` isolada + `calcularRota` com
+  números exatos: consumo 38/28/25 L/100km em vez de 31/25/25 para o mesmo
+  cenário) — 104 testes verdes no total, `tsc --noEmit` limpo, `next
+  build` OK
+- [x] Validado à mão contra a rota real `RIC-A22` (script `tsx` temporário):
+  consumo por troço passa a descer 35→28→28→28→25→25→25→25 L/100km ao
+  longo do dia 2026-07-09, e os troços do dia seguinte (idRota reutilizado)
+  ficam corretamente isolados
+- [ ] **Nota para o Ricardo**: os custos/lucros de rotas antigas com mais de
+  1 cliente na mesma direção/dia vão mostrar valores ligeiramente
+  diferentes a partir de agora (mais exatos) — o km e o peso registados
+  não mudam, só a fórmula do consumo
+
 ## 📦 Cargas — empacotamento de paletes por veículo/reboque (2026-08-04)
 
 Plano: `C:\Users\Ricardo\.claude\plans\eventual-fluttering-crane.md`. Nova

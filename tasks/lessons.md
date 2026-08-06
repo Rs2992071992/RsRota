@@ -2,6 +2,35 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-06] | O motor de custo calculava o consumo de combustível de
+  cada paragem só a partir do peso próprio dessa paragem
+  (`pesoTransportado = max(kgCarregados, kgDescarregados)`), ignorando que
+  numa rota com vários clientes o camião vai fisicamente mais pesado nos
+  primeiros troços (ainda leva a carga dos clientes seguintes) e mais leve
+  nos últimos. Confirmado com dados reais (`RIC-A22`): os `kgDescarregados`
+  por troço não formam nenhuma progressão, são só o valor próprio de cada
+  cliente — o consumo de cada troço estava a ser calculado com o peso
+  errado sempre que uma rota tinha mais do que 1 paragem na mesma
+  direção/dia. | Acrescentado `pesoEmTransito` opcional a `ParagemInput`
+  (`lib/calc/types.ts`) + `pesosEmTransito()` em `lib/calc/perRoute.ts`,
+  que agrupa paragens por `idRota`+`tipoViagem`+dia (multi-dia reutiliza o
+  mesmo `idRota`), ordena por `kmInicial` (sequência física real) e
+  acumula: começa na soma do que vai ser descarregado no grupo e vai
+  subtraindo/somando a cada troço. Só entra no cálculo do consumo — o
+  rateio entre clientes (`coeficienteReal`) e `coeficienteCarga` continuam
+  a usar o peso próprio de cada paragem (confirmado com o Ricardo:
+  "cada cliente paga pelo que é dele, só o custo total da rota fica mais
+  exato"). Grupos de 1 paragem (a esmagadora maioria, incl. o caso de
+  referência HILP01) ficam matematicamente inalterados — parâmetro
+  opcional com fallback, mesma técnica já usada para `nPaletes` em
+  `coeficienteReal`. Sem peso "congelado" em `Paragem.snapshot`, por isso
+  a correção aplica-se também a rotas antigas (confirmado com o Ricardo,
+  mesmo princípio já usado nas tabelas de portagem). Validado à mão contra
+  a RIC-A22 real via script `tsx` (consumo passou de valores sem padrão
+  para uma descida limpa 35→28→28→28→25→25→25→25 L/100km ao longo do dia),
+  e com testes novos que fixam os números exatos (não só invariantes do
+  rateio, que passavam mesmo sem a correção estar a funcionar).
+
 - [2026-08-04] | No modelo `Carregamento`/`PedidoPalete`/`TipoPalete` (feature
   Cargas), o catch `e instanceof Prisma.PrismaClientKnownRequestError &&
   e.code === "P2003"` para apagar um registo com `onDelete: Restrict` **não
