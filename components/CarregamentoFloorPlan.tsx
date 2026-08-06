@@ -17,6 +17,12 @@ const CORES_CATEGORICAS = [
   "#e34948",
 ];
 
+/** Cantos arredondados dos paletes — proporcional ao tamanho, com limite para não
+ * distorcer paletes pequenas/estreitas. */
+function raioCanto(comprimento: number, largura: number): number {
+  return Math.min(Math.min(comprimento, largura) * 0.12, 60);
+}
+
 export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResultado[] }) {
   const clientes: { id: number; nome: string }[] = [];
   const vistos = new Set<number>();
@@ -45,72 +51,122 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
   }
 
   return (
-    <div className="space-y-4">
-      {caixas.map((cx) => (
-        <div key={cx.caixa.id}>
-          <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-semibold">{cx.caixa.label}</span>
-            <span className="text-gray-500">
-              {Math.round(cx.comprimentoUsadoMm)} / {cx.caixa.comprimentoMm} mm ·{" "}
-              {cx.areaTotalMm2 > 0 ? Math.round((cx.areaUsadaMm2 / cx.areaTotalMm2) * 100) : 0}%
-              ocupado
-            </span>
+    <div className="space-y-5">
+      {caixas.map((cx) => {
+        const pct = cx.areaTotalMm2 > 0 ? Math.round((cx.areaUsadaMm2 / cx.areaTotalMm2) * 100) : 0;
+        return (
+          <div key={cx.caixa.id}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-gray-700">{cx.caixa.label}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">
+                  {Math.round(cx.comprimentoUsadoMm)} / {cx.caixa.comprimentoMm} mm
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
+                  <span className="h-1.5 w-10 overflow-hidden rounded-full bg-brand/15">
+                    <span
+                      className="block h-full rounded-full bg-brand"
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </span>
+                  {pct}%
+                </span>
+              </div>
+            </div>
+            {/* Desenhado na horizontal: o eixo do comprimento (o mais comprido)
+                fica em X, a largura em Y — mais natural para ler um camião
+                visto de cima do que a orientação vertical (comprimento em Y). */}
+            <svg
+              viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 shadow-sm"
+              style={{ maxHeight: 260 }}
+              preserveAspectRatio="xMinYMin meet"
+            >
+              <rect
+                x={4}
+                y={4}
+                width={cx.caixa.comprimentoMm - 8}
+                height={cx.caixa.larguraMm - 8}
+                rx={16}
+                fill="none"
+                stroke="#d8d6cc"
+                strokeWidth={8}
+              />
+              {cx.prateleiras.flatMap((p) =>
+                p.itens.map((item) => {
+                  const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
+                  return (
+                    <g key={`${item.pedidoId}-${item.x}-${item.y}`}>
+                      <rect
+                        x={item.y}
+                        y={item.x}
+                        width={item.comprimentoOcupado}
+                        height={item.larguraOcupada}
+                        rx={rx}
+                        fill={corDoCliente(item.clienteId)}
+                        stroke="#fff"
+                        strokeWidth={6}
+                      >
+                        <title>{`${item.clienteNome} — ${item.tipoPaleteNome}`}</title>
+                      </rect>
+                      <foreignObject
+                        x={item.y}
+                        y={item.x}
+                        width={item.comprimentoOcupado}
+                        height={item.larguraOcupada}
+                      >
+                        <div
+                          // @ts-expect-error -- xmlns só é necessário para serialização estática
+                          xmlns="http://www.w3.org/1999/xhtml"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "0 8px",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: "#fff",
+                              fontWeight: 600,
+                              fontFamily: "inherit",
+                              fontSize: Math.max(
+                                Math.min(item.larguraOcupada, item.comprimentoOcupado) / 7,
+                                20,
+                              ),
+                              lineHeight: 1.15,
+                              textAlign: "center",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              textShadow: "0 1px 3px rgba(0,0,0,.35)",
+                            }}
+                          >
+                            {item.clienteNome}
+                          </span>
+                        </div>
+                      </foreignObject>
+                    </g>
+                  );
+                }),
+              )}
+            </svg>
           </div>
-          {/* Desenhado na horizontal: o eixo do comprimento (o mais comprido)
-              fica em X, a largura em Y — mais natural para ler um camião
-              visto de cima do que a orientação vertical (comprimento em Y). */}
-          <svg
-            viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
-            className="w-full rounded border border-gray-200 bg-gray-50"
-            style={{ maxHeight: 260 }}
-            preserveAspectRatio="xMinYMin meet"
-          >
-            <rect
-              x={0}
-              y={0}
-              width={cx.caixa.comprimentoMm}
-              height={cx.caixa.larguraMm}
-              fill="none"
-              stroke="#e1e0d9"
-              strokeWidth={8}
-            />
-            {cx.prateleiras.flatMap((p) =>
-              p.itens.map((item) => (
-                <g key={`${item.pedidoId}-${item.x}-${item.y}`}>
-                  <rect
-                    x={item.y}
-                    y={item.x}
-                    width={item.comprimentoOcupado}
-                    height={item.larguraOcupada}
-                    fill={corDoCliente(item.clienteId)}
-                    stroke="#fff"
-                    strokeWidth={4}
-                  >
-                    <title>{`${item.clienteNome} — ${item.tipoPaleteNome}`}</title>
-                  </rect>
-                  <text
-                    x={item.y + item.comprimentoOcupado / 2}
-                    y={item.x + item.larguraOcupada / 2}
-                    fill="#fff"
-                    fontSize={Math.max(Math.min(item.larguraOcupada, item.comprimentoOcupado) / 6, 24)}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                  >
-                    {item.clienteNome}
-                  </text>
-                </g>
-              )),
-            )}
-          </svg>
-        </div>
-      ))}
+        );
+      })}
 
       {clientes.length > 0 && (
-        <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+        <div className="flex flex-wrap gap-2">
           {clientes.map((c, i) => (
-            <span key={c.id} className="flex items-center gap-1">
+            <span
+              key={c.id}
+              className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600 shadow-sm"
+            >
               <span
-                className="inline-block h-3 w-3 rounded-sm"
+                className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{ background: CORES_CATEGORICAS[i % CORES_CATEGORICAS.length] }}
               />
               {c.nome}
