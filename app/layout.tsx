@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SelecaoCamposNumericos from "@/components/SelecaoCamposNumericos";
 
 export const metadata: Metadata = {
   title: "Gestão de Rotas — Rentabilidade",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-PT">
-      <body>{children}</body>
+      <body>
+        <SelecaoCamposNumericos />
+        {children}
+      </body>
     </html>
   );
 }
