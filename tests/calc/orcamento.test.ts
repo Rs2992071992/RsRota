@@ -113,6 +113,39 @@ describe("estimarLinha — paletes (ocupação por nº; peso não entra, consumo
   });
 });
 
+describe("estimarLinha — adicionais (noites fora + alimentação)", () => {
+  const base = { km: 580, pesoKg: 28000, tipoVeiculo: "CAMIAO+REBOQUE", zonaPortagem: "Galiza" };
+  const semAdicionais = estimarLinha(base, ctx, snapshot);
+  const comAdicionais = estimarLinha(
+    { ...base, noitesFora: 2, alimentacao: 15 },
+    ctx,
+    snapshot,
+  );
+
+  it("custo estimado soma noitesFora × valorNoite + alimentação", () => {
+    const acrescimo = round2(2 * snapshot.valorNoite + 15);
+    expect(comAdicionais.custoEstimado).toBe(round2(semAdicionais.custoEstimado + acrescimo));
+  });
+  it("o detalhe expõe noitesFora/valorNoite/custoNoites/alimentacao", () => {
+    expect(comAdicionais.detalhe.noitesFora).toBe(2);
+    expect(comAdicionais.detalhe.valorNoite).toBe(snapshot.valorNoite);
+    expect(comAdicionais.detalhe.custoNoites).toBe(round2(2 * snapshot.valorNoite));
+    expect(comAdicionais.detalhe.alimentacao).toBe(15);
+  });
+  it("sem noitesFora/alimentacao (retrocompatibilidade), custo fica igual ao caso base", () => {
+    expect(semAdicionais.detalhe.noitesFora).toBe(0);
+    expect(semAdicionais.detalhe.alimentacao).toBe(0);
+    expect(semAdicionais.custoEstimado).toBe(
+      round2(semAdicionais.detalhe.custoCombustivel +
+        semAdicionais.detalhe.custoAdblue +
+        semAdicionais.detalhe.custoMotorista +
+        semAdicionais.detalhe.custoVeiculo +
+        semAdicionais.detalhe.portagem +
+        semAdicionais.detalhe.portagensExtra),
+    );
+  });
+});
+
 describe("totaisDevis", () => {
   it("soma preços + IVA, arredondado a 2 casas", () => {
     const t = totaisDevis([{ preco: 100 }, { preco: 50.5 }], 23);

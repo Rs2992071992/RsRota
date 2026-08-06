@@ -2,6 +2,33 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🧾 Orçamentos — cliente por dropdown, zona por lista, adicionais (2026-08-06)
+
+Plano: `C:\Users\Ricardo\.claude\plans\humble-cuddling-stardust.md`. 3 pedidos
+do Ricardo ao formulário de orçamentos.
+
+- [x] Cliente: campo passa de input+datalist para `<select>` real (lista de
+  clientes + opção "➕ Novo cliente…" que revela um input de texto livre com
+  botão "← Existente" para voltar) — `OrcamentoForm.tsx`
+- [x] Zona de portagem por linha: sugestões da `TabelaPortagem` (mesmo padrão
+  datalist do `ParagemEditor.tsx`), carregada nas 2 páginas
+  (`orcamentos/novo`, `orcamentos/[id]`)
+- [x] Adicionais por linha (noites do motorista + alimentação): novo em
+  orçamentos — o motor (`calcularParagem`) não os incluía no custo por
+  paragem (só no total da rota, `perRoute.ts`). `estimarLinha` agora soma
+  `noitesFora × valorNoite (snapshot) + alimentação` a `custoEstimado`;
+  campos opcionais em `LinhaDevis`/`EstimarLinhaInput` (retrocompatível com
+  orçamentos antigos sem estes campos no Json)
+- [x] `lib/validacao.ts` (`linhaDevisSchema`/`estimarDevisSchema`),
+  `app/api/devis/estimar/route.ts`, `DetalheLinha.tsx` (painel interno)
+  atualizados
+- [x] 6 testes novos (107 no total), `tsc --noEmit` limpo, `next build` OK
+- [ ] **Verificação manual (utilizador)**: criar orçamento — escolher cliente
+  existente no dropdown (autofill) e "Novo cliente" (texto livre); zona de
+  portagem sugere as configuradas em Parâmetros; preencher noites/alimentação
+  numa linha, "Calcular" e confirmar o acréscimo no custo + painel de
+  detalhe; guardar e reabrir para confirmar persistência
+
 ## ⛽ Consumo de combustível reflete o peso real a bordo em cada troço (2026-08-06)
 
 Plano: `C:\Users\Ricardo\.claude\plans\eventual-fluttering-crane.md`. O

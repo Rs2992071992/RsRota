@@ -60,7 +60,15 @@ export async function POST(req: Request) {
     snapshotParaRegisto(d.motoristaId ?? null, d.veiculoId ?? null),
   ]);
   const { custoEstimado, precoSugerido, detalhe } = estimarLinha(
-    { km, pesoKg: d.pesoKg, tipoVeiculo: d.tipoVeiculo, nPaletes: d.nPaletes, zonaPortagem: d.zonaPortagem },
+    {
+      km,
+      pesoKg: d.pesoKg,
+      tipoVeiculo: d.tipoVeiculo,
+      nPaletes: d.nPaletes,
+      zonaPortagem: d.zonaPortagem,
+      noitesFora: d.noitesFora,
+      alimentacao: d.alimentacao,
+    },
     ctx,
     snapshot,
     portagemOverride,

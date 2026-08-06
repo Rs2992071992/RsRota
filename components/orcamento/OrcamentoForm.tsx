@@ -47,9 +47,14 @@ interface Props {
   clientes: ClienteOpt[];
   veiculos: { id: number; nome: string }[];
   motoristas: { id: number; nome: string | null; codigo: string }[];
+  /** Zonas de portagem já configuradas em Parâmetros (sugestões). */
+  zonas: string[];
   /** Cliente pré-selecionado ao criar (ex.: vindo da ficha do cliente). */
   clienteInicial?: string;
 }
+
+/** Valor sentinela da opção "novo cliente" no dropdown. */
+const CLIENTE_NOVO = "__novo__";
 
 /** Linha + estado de UI (não persistido). */
 type LinhaUI = LinhaDevis & {
@@ -71,6 +76,8 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
     tipoVeiculo: "CAMIAO",
     nPaletes: 0,
     zonaPortagem: null,
+    noitesFora: 0,
+    alimentacao: 0,
     custoEstimado: 0,
     preco: 0,
     kmManual: false,
@@ -83,6 +90,7 @@ export default function OrcamentoForm({
   clientes,
   veiculos,
   motoristas,
+  zonas,
   clienteInicial,
 }: Props) {
   const router = useRouter();
@@ -91,19 +99,33 @@ export default function OrcamentoForm({
   // Em criação com cliente pré-selecionado, herda os contactos da ficha do cliente.
   const cInit = !devis && clienteInicial ? clientes.find((c) => c.nome === clienteInicial) : undefined;
 
-  const [cliente, setCliente] = useState(devis?.cliente ?? clienteInicial ?? "");
+  const clienteInicialNome = devis?.cliente ?? clienteInicial ?? "";
+  const [cliente, setCliente] = useState(clienteInicialNome);
   const [clienteEmail, setClienteEmail] = useState(devis?.clienteEmail ?? cInit?.email ?? "");
   const [clienteContato, setClienteContato] = useState(
     devis?.clienteContato ?? cInit?.contato ?? "",
   );
   const [clienteMorada, setClienteMorada] = useState(devis?.clienteMorada ?? cInit?.morada ?? "");
+  // Modo "novo cliente" (texto livre) em vez do dropdown: sem clientes cadastrados,
+  // ou o nome atual não corresponde a nenhum da lista (não perder o valor gravado).
+  const [clienteNovoModo, setClienteNovoModo] = useState(
+    () =>
+      clientes.length === 0 ||
+      (!!clienteInicialNome && !clientes.some((c) => c.nome === clienteInicialNome)),
+  );
   const [origemPadrao, setOrigemPadrao] = useState(devis?.origemPadrao ?? "");
   const [validade, setValidade] = useState(devis?.validade ?? "");
   const [estado, setEstado] = useState(devis?.estado ?? "RASCUNHO");
   const [ivaPercent, setIvaPercent] = useState(devis?.ivaPercent ?? 23);
   const [observacoes, setObservacoes] = useState(devis?.observacoes ?? "");
   const [linhas, setLinhas] = useState<LinhaUI[]>(
-    (devis?.linhas ?? []).map((l) => ({ ...l, kmManual: false, aCalcular: false })),
+    (devis?.linhas ?? []).map((l) => ({
+      ...l,
+      noitesFora: l.noitesFora ?? 0,
+      alimentacao: l.alimentacao ?? 0,
+      kmManual: false,
+      aCalcular: false,
+    })),
   );
   // Motorista/veículo usados só para a ESTIMATIVA (não ficam no orçamento).
   const [motoristaId, setMotoristaId] = useState<number | null>(null);
@@ -149,6 +171,8 @@ export default function OrcamentoForm({
           tipoVeiculo: l.tipoVeiculo,
           nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
+          noitesFora: l.noitesFora,
+          alimentacao: l.alimentacao,
           motoristaId,
           veiculoId,
           kmManual: l.kmManual ? l.km : null,
@@ -202,6 +226,8 @@ export default function OrcamentoForm({
           tipoVeiculo: l.tipoVeiculo,
           nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
+          noitesFora: l.noitesFora,
+          alimentacao: l.alimentacao,
           custoEstimado: l.custoEstimado,
           preco: l.preco,
         })),
@@ -237,18 +263,52 @@ export default function OrcamentoForm({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <label className="label">Cliente *</label>
-            <input
-              className="input"
-              list="lista-clientes"
-              value={cliente}
-              onChange={(e) => escolherCliente(e.target.value)}
-              placeholder="Nome do cliente"
-            />
-            <datalist id="lista-clientes">
-              {clientes.map((c) => (
-                <option key={c.nome} value={c.nome} />
-              ))}
-            </datalist>
+            {clienteNovoModo ? (
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  value={cliente}
+                  onChange={(e) => setCliente(e.target.value)}
+                  placeholder="Nome do novo cliente"
+                  autoFocus
+                />
+                {clientes.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-secondary whitespace-nowrap"
+                    onClick={() => {
+                      setClienteNovoModo(false);
+                      setCliente("");
+                    }}
+                  >
+                    ← Existente
+                  </button>
+                )}
+              </div>
+            ) : (
+              <select
+                className="input"
+                value={cliente}
+                onChange={(e) => {
+                  if (e.target.value === CLIENTE_NOVO) {
+                    setClienteNovoModo(true);
+                    setCliente("");
+                  } else {
+                    escolherCliente(e.target.value);
+                  }
+                }}
+              >
+                <option value="" disabled>
+                  Selecionar cliente…
+                </option>
+                {clientes.map((c) => (
+                  <option key={c.nome} value={c.nome}>
+                    {c.nome}
+                  </option>
+                ))}
+                <option value={CLIENTE_NOVO}>➕ Novo cliente…</option>
+              </select>
+            )}
           </div>
           <div>
             <label className="label">Email</label>
@@ -357,6 +417,12 @@ export default function OrcamentoForm({
           </button>
         </div>
 
+        <datalist id="lista-zonas-orcamento">
+          {zonas.map((z) => (
+            <option key={z} value={z} />
+          ))}
+        </datalist>
+
         {linhas.length === 0 && (
           <div className="card text-sm text-gray-400">
             Sem linhas. Adicione um transporte para estimar o preço.
@@ -451,6 +517,7 @@ export default function OrcamentoForm({
                 <label className="label">Zona portagem</label>
                 <input
                   className="input"
+                  list="lista-zonas-orcamento"
                   value={l.zonaPortagem ?? ""}
                   onChange={(e) => patchLinha(i, { zonaPortagem: e.target.value || null })}
                   placeholder="(opcional)"
@@ -465,6 +532,30 @@ export default function OrcamentoForm({
                   onChange={(e) =>
                     patchLinha(i, { km: Number(e.target.value) || 0, kmManual: true })
                   }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Noites fora (nº)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={l.noitesFora ?? 0}
+                  onChange={(e) => patchLinha(i, { noitesFora: Number(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <label className="label">Alimentação (€)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={l.alimentacao ?? 0}
+                  onChange={(e) => patchLinha(i, { alimentacao: Number(e.target.value) || 0 })}
                 />
               </div>
             </div>

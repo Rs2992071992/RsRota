@@ -9,7 +9,7 @@ export default async function NovoOrcamentoPage({
 }: {
   searchParams: { cliente?: string };
 }) {
-  const [clientes, veiculos, motoristas] = await Promise.all([
+  const [clientes, veiculos, motoristas, portagens] = await Promise.all([
     prisma.cliente.findMany({
       orderBy: { nome: "asc" },
       select: { nome: true, email: true, morada: true, contato: true },
@@ -24,6 +24,7 @@ export default async function NovoOrcamentoPage({
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, codigo: true },
     }),
+    prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" }, select: { zona: true } }),
   ]);
 
   return (
@@ -38,6 +39,7 @@ export default async function NovoOrcamentoPage({
         clientes={clientes}
         veiculos={veiculos}
         motoristas={motoristas}
+        zonas={portagens.map((p) => p.zona)}
         clienteInicial={searchParams.cliente}
       />
     </div>

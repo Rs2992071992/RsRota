@@ -22,7 +22,11 @@ export interface LinhaDevis {
   /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
   nPaletes: number;
   zonaPortagem: string | null;
-  /** Custo estimado pelo motor (comb + adblue + motorista + veículo + portagens). */
+  /** Nº de noites fora do motorista (opcional; ausente em linhas antigas). */
+  noitesFora?: number;
+  /** Alimentação (€, opcional; ausente em linhas antigas). */
+  alimentacao?: number;
+  /** Custo estimado pelo motor (comb + adblue + motorista + veículo + portagens + noites + alimentação). */
   custoEstimado: number;
   /** Preço faturado ao cliente (sugerido = custo × margem; editável). */
   preco: number;
@@ -37,6 +41,10 @@ export interface EstimarLinhaInput {
   zonaPortagem?: string | null;
   /** Portagens extra fixas (opcional; somam-se ao custo). */
   portagensExtra?: number;
+  /** Nº de noites fora do motorista (custo = noitesFora × valorNoite do snapshot). */
+  noitesFora?: number;
+  /** Alimentação (€, soma-se diretamente ao custo). */
+  alimentacao?: number;
 }
 
 /** Decomposição do custo (uso INTERNO no escritório; nunca aparece no PDF do cliente). */
@@ -61,6 +69,10 @@ export interface DetalheEstimativa {
   /** true se a portagem veio do cálculo automático (TollGuru); false se da tabela. */
   portagemAuto: boolean;
   portagensExtra: number;
+  noitesFora: number;
+  valorNoite: number;
+  custoNoites: number;
+  alimentacao: number;
   margemMinima: number;
 }
 
@@ -117,7 +129,11 @@ export function estimarLinha(
   const portagemAuto = portagemOverride != null;
   const portagem = portagemAuto ? portagemOverride : calc.portagemTabela;
 
-  const custoEstimado = round2(calc.custoParagem + portagem);
+  const noitesFora = input.noitesFora || 0;
+  const custoNoites = round2(noitesFora * snapshot.valorNoite);
+  const alimentacao = round2(input.alimentacao || 0);
+
+  const custoEstimado = round2(calc.custoParagem + portagem + custoNoites + alimentacao);
   const precoSugerido = round2(custoEstimado * snapshot.margemMinima);
   return {
     custoEstimado,
@@ -140,6 +156,10 @@ export function estimarLinha(
       portagem: round2(portagem),
       portagemAuto,
       portagensExtra: round2(calc.portagensExtra),
+      noitesFora,
+      valorNoite: snapshot.valorNoite,
+      custoNoites,
+      alimentacao,
       margemMinima: snapshot.margemMinima,
     },
   };

@@ -78,6 +78,15 @@ export default function DetalheLinha({ detalhe, custoEstimado, preco }: Props) {
           {detalhe.portagensExtra > 0 && (
             <Linha rotulo="Portagens extra" valor={fmtEuro(detalhe.portagensExtra)} />
           )}
+          {detalhe.noitesFora > 0 && (
+            <Linha
+              rotulo={`Noites fora (${detalhe.noitesFora} × ${fmtEuro(detalhe.valorNoite)})`}
+              valor={fmtEuro(detalhe.custoNoites)}
+            />
+          )}
+          {detalhe.alimentacao > 0 && (
+            <Linha rotulo="Alimentação" valor={fmtEuro(detalhe.alimentacao)} />
+          )}
           <div className="mt-1 flex justify-between border-t border-gray-200 pt-1 font-semibold">
             <span>Custo total</span>
             <span>{fmtEuro(custoEstimado)}</span>

@@ -145,6 +145,8 @@ export const linhaDevisSchema = z.object({
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
   nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().max(120).nullable().default(null),
+  noitesFora: numNaoNeg.default(0),
+  alimentacao: numNaoNeg.default(0),
   custoEstimado: numNaoNeg.default(0),
   preco: numNaoNeg.default(0),
 });
@@ -174,6 +176,8 @@ export const estimarDevisSchema = z.object({
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
   nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().nullable().default(null),
+  noitesFora: numNaoNeg.default(0),
+  alimentacao: numNaoNeg.default(0),
   motoristaId: z.number().int().positive().nullable().optional(),
   veiculoId: z.number().int().positive().nullable().optional(),
   /** Se preenchido, ignora o cálculo automático de distância e usa este km (ida). */

@@ -2,6 +2,17 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-06] | `npm run build` (`prisma generate && next build`) falhava
+  sempre com `EPERM: operation not permitted, rename
+  ...query_engine-windows.dll.node.tmpNNNN -> ...query_engine-windows.dll.node`
+  neste ambiente Windows, mesmo sem nenhum `next dev`/processo a escutar
+  portas 3000/3001 (havia vários `node.exe` residuais a segurar o handle). |
+  Quando a alteração **não toca no `prisma/schema.prisma`**, `prisma
+  generate` é desnecessário — correr `npx next build` diretamente (salta o
+  generate) para validar a build sem depender de destrancar o `.dll`. Só
+  investigar/matar processos node residuais se o schema tiver mesmo mudado
+  (nesse caso o client tem de ser regenerado).
+
 - [2026-08-06] | `EditarNomeCliente` (`components/EditarNomeCliente.tsx`)
   guardava o nome editável em `useState(nome)`. Como o componente não
   desmonta ao trocar de cliente selecionado (só o prop `nome` muda), o
