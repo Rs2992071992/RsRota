@@ -98,6 +98,7 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoi
           zonas={zonas}
           veiculos={veiculos}
           valorNoite={valorNoite}
+          mostrarDetalheEuroNoites={false}
           onClose={() => setAEditar(null)}
         />
       )}

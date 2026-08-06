@@ -45,7 +45,13 @@ export default async function RegistoPage({
       searchParams.idRota
         ? prisma.paragem.findMany({
             where: { ...filtroRotas, idRota: searchParams.idRota },
-            select: { cliente: true, noitesFora: true, alimentacao: true },
+            select: {
+              cliente: true,
+              zonaPortagem: true,
+              portagensExtra: true,
+              noitesFora: true,
+              alimentacao: true,
+            },
             orderBy: { id: "asc" },
           })
         : Promise.resolve([]),

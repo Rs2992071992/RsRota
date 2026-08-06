@@ -32,6 +32,8 @@ interface Props {
 
 interface ParagemRotaResumo {
   cliente: string;
+  zonaPortagem: string;
+  portagensExtra: number;
   noitesFora: number;
   alimentacao: number;
 }
@@ -102,6 +104,14 @@ export default function RegistoForm({
   );
   const alimentacaoJaRegistada = useMemo(
     () => paragensRota.map((p) => p.alimentacao).filter((v) => v > 0),
+    [paragensRota],
+  );
+  const zonasJaUsadas = useMemo(
+    () => Array.from(new Set(paragensRota.map((p) => p.zonaPortagem).filter(Boolean))),
+    [paragensRota],
+  );
+  const portagensJaRegistadas = useMemo(
+    () => paragensRota.map((p) => p.portagensExtra).filter((v) => v > 0),
     [paragensRota],
   );
 
@@ -228,7 +238,13 @@ export default function RegistoForm({
       if (novoId) setIdRotaAtiva(novoId);
       setParagensRota((prev) => [
         ...prev,
-        { cliente: payload.cliente, noitesFora: payload.noitesFora, alimentacao: payload.alimentacao },
+        {
+          cliente: payload.cliente,
+          zonaPortagem: payload.zonaPortagem,
+          portagensExtra: payload.portagensExtra,
+          noitesFora: payload.noitesFora,
+          alimentacao: payload.alimentacao,
+        },
       ]);
       setMsg({
         tipo: "ok",
@@ -456,9 +472,31 @@ export default function RegistoForm({
               <option key={z} value={z} />
             ))}
           </datalist>
+          {zonasJaUsadas.length > 0 && (
+            <p className="mt-1 text-xs text-blue-600">
+              Já {zonasJaUsadas.length === 1 ? "foi usada" : "foram usadas"}: {listarComE(zonasJaUsadas)} nesta
+              rota.
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {campoNum("portagensExtra", "Portagens Extra (€)")}
+          <div>
+            <label className="label">Portagens Extra (€)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              className="input"
+              value={f.portagensExtra}
+              onChange={(e) => set("portagensExtra", e.target.value)}
+            />
+            {erros.portagensExtra && <p className="mt-1 text-xs text-red-600">{erros.portagensExtra}</p>}
+            {portagensJaRegistadas.length > 0 && (
+              <p className="mt-1 text-xs text-blue-600">
+                Já foram introduzidos: {listarComE(portagensJaRegistadas.map(fmtEuro))} nesta rota.
+              </p>
+            )}
+          </div>
           <div>
             <label className="label">Alimentação (€)</label>
             <input

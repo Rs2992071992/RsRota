@@ -32,11 +32,22 @@ registado nesta rota, em tempo real.
 - [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes (sem tocar no
   motor de cálculo). Testado `GET /api/paragens` sem sessão → 401 (dev
   server local, sem criar dados de teste na BD)
+- [x] Mesmo padrão estendido a "Portagens Extra (€)" (lista os valores já
+  lançados) e "Zona Portagem" (lista as zonas já usadas) — só no formulário
+  de registo, não no Histórico
+- [x] `components/ParagemEditor.tsx` ganhou `mostrarDetalheEuroNoites`
+  (default `true`); `HistoricoMotorista.tsx` passa `false` — o motorista
+  deixa de ver "N × 70 € = X €" ao corrigir uma paragem no Histórico.
+  Escritório (`ParagemAcoes.tsx`, sem a prop) mantém o detalhe em euros,
+  como já era o comportamento pedido em 2026-07-14
+- [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes
 - [ ] **Verificação manual (utilizador)**: registar 2 paragens na mesma rota
-  com noites/alimentação e confirmar que as notas por baixo dos campos
-  aparecem e somam certo; "Continuar rota" a partir do Histórico
-  pré-carrega essas notas; confirmar que o Histórico mostra os totais por
-  rota; escritório continua a ver tudo normalmente
+  com noites/alimentação/portagens extra/zona e confirmar que as notas por
+  baixo dos campos aparecem e somam certo; "Continuar rota" a partir do
+  Histórico pré-carrega essas notas; confirmar que o Histórico mostra os
+  totais por rota E que "Corrigir" já não mostra o valor em euros da noite;
+  escritório continua a ver tudo normalmente (incl. o detalhe em euros ao
+  editar)
 
 ## 🧾 Orçamentos — cliente por dropdown, zona por lista, adicionais (2026-08-06)
 

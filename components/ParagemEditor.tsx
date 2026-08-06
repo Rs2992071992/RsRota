@@ -43,6 +43,8 @@ interface Props {
   valorNoite: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
+  /** Mostrar o detalhe "N × valor = total" nas Noites fora (só no escritório). */
+  mostrarDetalheEuroNoites?: boolean;
   onClose: () => void;
 }
 
@@ -52,6 +54,7 @@ export default function ParagemEditor({
   veiculos,
   valorNoite,
   mostrarReceita = false,
+  mostrarDetalheEuroNoites = true,
   onClose,
 }: Props) {
   const router = useRouter();
@@ -268,11 +271,13 @@ export default function ParagemEditor({
               value={f.noitesFora}
               onChange={(e) => set("noitesFora", e.target.value as never)}
             />
-            <p className="mt-1 text-xs text-gray-500">
-              {Number(f.noitesFora) > 0
-                ? `${Number(f.noitesFora)} × ${valorNoite.toFixed(2)} € = ${(Number(f.noitesFora) * valorNoite).toFixed(2)} €`
-                : `Valor por noite: ${valorNoite.toFixed(2)} €`}
-            </p>
+            {mostrarDetalheEuroNoites && (
+              <p className="mt-1 text-xs text-gray-500">
+                {Number(f.noitesFora) > 0
+                  ? `${Number(f.noitesFora)} × ${valorNoite.toFixed(2)} € = ${(Number(f.noitesFora) * valorNoite).toFixed(2)} €`
+                  : `Valor por noite: ${valorNoite.toFixed(2)} €`}
+              </p>
+            )}
           </div>
           {campo("horasExtra", "Horas Extra")}
           {campo("litrosEspanha", "Litros Espanha")}
