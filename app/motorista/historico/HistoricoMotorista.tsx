@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import ParagemEditor, { type ParagemEditavel, type VeiculoOpcao } from "@/components/ParagemEditor";
-import { fmtData, fmtNum } from "@/lib/format";
+import { fmtData, fmtEuro, fmtNum } from "@/lib/format";
 
 export type ParagemHist = ParagemEditavel;
 
@@ -50,12 +50,19 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoi
           `/motorista/registo?idRota=${encodeURIComponent(idRota)}` +
           `&tipoVeiculo=${encodeURIComponent(ultima.tipoVeiculo)}` +
           `&kmInicial=${ultima.kmFinal}`;
+        const totalNoites = ps.reduce((soma, p) => soma + p.noitesFora, 0);
+        const totalAlimentacao = ps.reduce((soma, p) => soma + p.alimentacao, 0);
 
         return (
           <div key={idRota} className="card space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">
-                Rota {idRota} <span className="text-sm font-normal text-gray-400">· {ps.length} paragem(ns)</span>
+                Rota {idRota}{" "}
+                <span className="text-sm font-normal text-gray-400">
+                  · {ps.length} paragem(ns)
+                  {totalNoites > 0 ? ` · ${totalNoites} noite(s)` : ""}
+                  {totalAlimentacao > 0 ? ` · ${fmtEuro(totalAlimentacao)} alimentação` : ""}
+                </span>
               </h2>
               <Link href={continuarHref} className="btn-secondary text-sm">
                 + Continuar rota

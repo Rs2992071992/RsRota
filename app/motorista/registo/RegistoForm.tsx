@@ -27,6 +27,19 @@ interface Props {
   rotasRecentes: string[];
   clientes: string[];
   inicial?: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
+  paragensRotaIniciais: ParagemRotaResumo[];
+}
+
+interface ParagemRotaResumo {
+  cliente: string;
+  noitesFora: number;
+  alimentacao: number;
+}
+
+// "12 €, 8 € e 5 €" — junta com vírgula e liga o último item com "e".
+function listarComE(itens: string[]): string {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -64,6 +77,7 @@ export default function RegistoForm({
   rotasRecentes,
   clientes,
   inicial,
+  paragensRotaIniciais,
 }: Props) {
   const estadoInicial: Campos = {
     ...estadoBase,
@@ -78,6 +92,18 @@ export default function RegistoForm({
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
+  // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
+  // e evitar duplicar noites/alimentação ao longo de várias paragens).
+  const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
+
+  const noitesJaRegistadas = useMemo(
+    () => paragensRota.reduce((soma, p) => soma + p.noitesFora, 0),
+    [paragensRota],
+  );
+  const alimentacaoJaRegistada = useMemo(
+    () => paragensRota.map((p) => p.alimentacao).filter((v) => v > 0),
+    [paragensRota],
+  );
 
   function set<K extends keyof Campos>(k: K, v: Campos[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
@@ -200,6 +226,10 @@ export default function RegistoForm({
       const novoId = data.paragem?.idRota as string | undefined;
       const eraNova = !idRotaAtiva;
       if (novoId) setIdRotaAtiva(novoId);
+      setParagensRota((prev) => [
+        ...prev,
+        { cliente: payload.cliente, noitesFora: payload.noitesFora, alimentacao: payload.alimentacao },
+      ]);
       setMsg({
         tipo: "ok",
         texto:
@@ -265,7 +295,10 @@ export default function RegistoForm({
             <button
               type="button"
               className="text-sm font-medium text-blue-700 underline"
-              onClick={() => setIdRotaAtiva("")}
+              onClick={() => {
+                setIdRotaAtiva("");
+                setParagensRota([]);
+              }}
             >
               Nova rota
             </button>
@@ -426,7 +459,23 @@ export default function RegistoForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           {campoNum("portagensExtra", "Portagens Extra (€)")}
-          {campoNum("alimentacao", "Alimentação (€)")}
+          <div>
+            <label className="label">Alimentação (€)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              className="input"
+              value={f.alimentacao}
+              onChange={(e) => set("alimentacao", e.target.value)}
+            />
+            {erros.alimentacao && <p className="mt-1 text-xs text-red-600">{erros.alimentacao}</p>}
+            {alimentacaoJaRegistada.length > 0 && (
+              <p className="mt-1 text-xs text-blue-600">
+                Já foram introduzidos: {listarComE(alimentacaoJaRegistada.map(fmtEuro))} nesta rota.
+              </p>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -441,6 +490,12 @@ export default function RegistoForm({
               onChange={(e) => set("noitesFora", e.target.value)}
               placeholder="0"
             />
+            {noitesJaRegistadas > 0 && (
+              <p className="mt-1 text-xs text-blue-600">
+                Já {noitesJaRegistadas === 1 ? "foi introduzida 1 noite" : `foram introduzidas ${noitesJaRegistadas} noites`}{" "}
+                nesta rota.
+              </p>
+            )}
           </div>
           {campoNum("horasExtra", "Horas Extra")}
         </div>

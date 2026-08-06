@@ -2,6 +2,42 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🌙 Resumo da rota em curso — evitar sobreposição de noites/alimentação (2026-08-06)
+
+Pedido do Ricardo: o motorista regista uma paragem de cada vez (mesma
+`idRota`) e "Noites fora"/"Alimentação" são campos por paragem — a meio de
+uma rota com vários clientes já não sabe o que introduziu, arriscando
+duplicar ou esquecer. Abordagem escolhida: **não mexer no schema** (noites/
+alimentação continuam por paragem), só tornar visível o que já foi
+registado nesta rota, em tempo real.
+
+- [x] `app/api/paragens/route.ts` (GET): motorista passa a poder consultar
+  as SUAS PRÓPRIAS paragens de uma rota (`?idRota=`), sem alargar acesso a
+  outras rotas/motoristas (401 sem sessão, 403 para motorista sem `idRota`;
+  escritório mantém a listagem completa inalterada)
+- [x] `app/motorista/registo/page.tsx`: quando `searchParams.idRota` vier
+  preenchido (fluxo "Continuar rota" a partir do Histórico), pré-carrega as
+  paragens já existentes dessa rota e passa como prop
+- [x] `app/motorista/registo/RegistoForm.tsx`:
+  - novo estado `paragensRota` (paragens já submetidas nesta rota); ao
+    submeter, acrescenta a paragem devolvida pelo servidor (sem pedido
+    extra); "Nova rota" limpa a lista
+  - nota inline por baixo de "Noites fora": "Já foi introduzida 1 noite
+    nesta rota." / "Já foram introduzidas N noites nesta rota."
+  - nota inline por baixo de "Alimentação": lista os valores individuais já
+    lançados — "Já foram introduzidos: 12€, 8€ e 5€ nesta rota."
+- [x] `app/motorista/historico/HistoricoMotorista.tsx`: cabeçalho de cada
+  rota passa a mostrar também Σ noites e Σ alimentação ao lado do nº de
+  paragens
+- [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes (sem tocar no
+  motor de cálculo). Testado `GET /api/paragens` sem sessão → 401 (dev
+  server local, sem criar dados de teste na BD)
+- [ ] **Verificação manual (utilizador)**: registar 2 paragens na mesma rota
+  com noites/alimentação e confirmar que as notas por baixo dos campos
+  aparecem e somam certo; "Continuar rota" a partir do Histórico
+  pré-carrega essas notas; confirmar que o Histórico mostra os totais por
+  rota; escritório continua a ver tudo normalmente
+
 ## 🧾 Orçamentos — cliente por dropdown, zona por lista, adicionais (2026-08-06)
 
 Plano: `C:\Users\Ricardo\.claude\plans\humble-cuddling-stardust.md`. 3 pedidos

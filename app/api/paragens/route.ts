@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getSessao, getSessaoInfo } from "@/lib/session";
+import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
 import { iniciais, gerarIdRota } from "@/lib/rota-id";
@@ -71,11 +71,24 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, paragem: criada }, { status: 201 });
 }
 
-// GET /api/paragens — lista (só escritório).
-export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
-    return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
+// GET /api/paragens — lista completa (só escritório) ou, para o motorista,
+// só as suas próprias paragens de UMA rota (?idRota=) — usado no registo para
+// mostrar o que já foi introduzido nessa rota e evitar duplicar noites/alimentação.
+export async function GET(req: Request) {
+  const sessao = getSessaoInfo();
+  if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
+
+  if (sessao.perfil === "ESCRITORIO") {
+    const paragens = await prisma.paragem.findMany({ orderBy: { data: "desc" } });
+    return NextResponse.json({ paragens });
   }
-  const paragens = await prisma.paragem.findMany({ orderBy: { data: "desc" } });
+
+  const idRota = new URL(req.url).searchParams.get("idRota");
+  if (!idRota) return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
+
+  const paragens = await prisma.paragem.findMany({
+    where: { motoristaId: sessao.id, idRota },
+    orderBy: { id: "asc" },
+  });
   return NextResponse.json({ paragens });
 }

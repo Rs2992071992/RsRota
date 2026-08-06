@@ -13,7 +13,7 @@ export default async function RegistoPage({
   const sessao = getSessaoInfo();
   const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
 
-  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha] =
+  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =
     await Promise.all([
       prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
       prisma.parametros.findUnique({ where: { id: 1 } }),
@@ -40,6 +40,15 @@ export default async function RegistoPage({
       // Clientes já usados (sugestões da lista predefinida) + fichas de contacto.
       prisma.paragem.findMany({ select: { cliente: true }, distinct: ["cliente"] }),
       prisma.cliente.findMany({ select: { nome: true } }),
+      // Rota vinda de "Continuar rota" (histórico): pré-carrega o que já foi
+      // introduzido para o resumo de noites/alimentação nascer preenchido.
+      searchParams.idRota
+        ? prisma.paragem.findMany({
+            where: { ...filtroRotas, idRota: searchParams.idRota },
+            select: { cliente: true, noitesFora: true, alimentacao: true },
+            orderBy: { id: "asc" },
+          })
+        : Promise.resolve([]),
     ]);
 
   const clientes = Array.from(
@@ -67,6 +76,7 @@ export default async function RegistoPage({
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}
       inicial={inicial}
+      paragensRotaIniciais={paragensRotaAtiva}
     />
   );
 }
