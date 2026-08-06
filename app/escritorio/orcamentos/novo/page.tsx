@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { listarClientesParaOrcamento } from "@/lib/clientes-service";
 import OrcamentoForm from "@/components/orcamento/OrcamentoForm";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +11,7 @@ export default async function NovoOrcamentoPage({
   searchParams: { cliente?: string };
 }) {
   const [clientes, veiculos, motoristas, portagens] = await Promise.all([
-    prisma.cliente.findMany({
-      orderBy: { nome: "asc" },
-      select: { nome: true, email: true, morada: true, contato: true },
-    }),
+    listarClientesParaOrcamento(),
     prisma.veiculo.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },

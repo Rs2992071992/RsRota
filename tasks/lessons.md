@@ -2,6 +2,21 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-06] | O dropdown de Cliente do orçamento (feature do mesmo dia,
+  cliente por dropdown) usava `prisma.cliente.findMany()` — a tabela
+  `Cliente` só tem uma linha quando alguém preenche a ficha de contacto
+  (`ContatoCliente`/`EditarNomeCliente`). A maioria dos clientes reais só
+  existe como string em `Paragem.cliente`/`Devis.cliente` (nunca ganharam
+  ficha), por isso não apareciam na lista — o Ricardo reportou "deveria
+  aparecer a lista dos nossos clientes" comparando com o separador Clientes,
+  que usa uma fonte diferente. | Para "todos os clientes conhecidos pela
+  app" (não só quem tem ficha), usar `listarNomesClientes()` (união
+  Paragem+Devis+Cliente, já existia em `lib/clientes-service.ts` para
+  `/escritorio/clientes/agrupar`) ou o `carregarClientes()` usado no
+  separador Clientes — nunca assumir que `prisma.cliente.findMany()` sozinho
+  é "a lista de clientes" da app. Criado `listarClientesParaOrcamento()`
+  (mesma união + contactos da ficha para autofill) e usado nas 2 páginas de
+  orçamento em vez da query direta à tabela `Cliente`.
 - [2026-08-06] | `npm run build` (`prisma generate && next build`) falhava
   sempre com `EPERM: operation not permitted, rename
   ...query_engine-windows.dll.node.tmpNNNN -> ...query_engine-windows.dll.node`

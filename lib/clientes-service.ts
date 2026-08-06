@@ -97,6 +97,31 @@ export async function listarNomesClientes(): Promise<NomeClienteResumo[]> {
   return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
+export interface ClienteOrcamentoOpt {
+  nome: string;
+  email: string | null;
+  morada: string | null;
+  contato: string | null;
+}
+
+/**
+ * Clientes disponíveis para o dropdown do orçamento: TODOS os nomes que já
+ * aparecem na app (Paragem/Devis/ficha — mesma união de `listarNomesClientes`,
+ * não só quem tem ficha de contacto preenchida), com os dados de contacto da
+ * ficha quando existirem (para o autofill ao selecionar).
+ */
+export async function listarClientesParaOrcamento(): Promise<ClienteOrcamentoOpt[]> {
+  const [nomes, fichas] = await Promise.all([
+    listarNomesClientes(),
+    prisma.cliente.findMany({ select: { nome: true, email: true, morada: true, contato: true } }),
+  ]);
+  const mapaFichas = new Map(fichas.map((f) => [f.nome, f]));
+  return nomes.map((n) => {
+    const f = mapaFichas.get(n.nome);
+    return { nome: n.nome, email: f?.email ?? null, morada: f?.morada ?? null, contato: f?.contato ?? null };
+  });
+}
+
 /** Lista de todos os clientes com totais (rentabilidade + tesouraria), ordenada por lucro desc. */
 export async function carregarClientes(): Promise<ResumoCliente[]> {
   const [rotas, paragens, contactos] = await Promise.all([

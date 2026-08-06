@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { fmtData } from "@/lib/format";
+import { listarClientesParaOrcamento } from "@/lib/clientes-service";
 import OrcamentoForm, { type DevisFull } from "@/components/orcamento/OrcamentoForm";
 import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
 import EnviarOrcamento from "@/components/orcamento/EnviarOrcamento";
@@ -15,10 +16,7 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
 
   const [devis, clientes, veiculos, motoristas, portagens] = await Promise.all([
     prisma.devis.findUnique({ where: { id } }),
-    prisma.cliente.findMany({
-      orderBy: { nome: "asc" },
-      select: { nome: true, email: true, morada: true, contato: true },
-    }),
+    listarClientesParaOrcamento(),
     prisma.veiculo.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
