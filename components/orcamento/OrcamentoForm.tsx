@@ -53,9 +53,6 @@ interface Props {
   clienteInicial?: string;
 }
 
-/** Valor sentinela da opção "novo cliente" no dropdown. */
-const CLIENTE_NOVO = "__novo__";
-
 /** Linha + estado de UI (não persistido). */
 type LinhaUI = LinhaDevis & {
   kmManual: boolean;
@@ -286,28 +283,32 @@ export default function OrcamentoForm({
                 )}
               </div>
             ) : (
-              <select
-                className="input"
-                value={cliente}
-                onChange={(e) => {
-                  if (e.target.value === CLIENTE_NOVO) {
+              <div className="flex gap-2">
+                <select
+                  className="input"
+                  value={cliente}
+                  onChange={(e) => escolherCliente(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Selecionar cliente…
+                  </option>
+                  {clientes.map((c) => (
+                    <option key={c.nome} value={c.nome}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn-secondary whitespace-nowrap"
+                  onClick={() => {
                     setClienteNovoModo(true);
                     setCliente("");
-                  } else {
-                    escolherCliente(e.target.value);
-                  }
-                }}
-              >
-                <option value="" disabled>
-                  Selecionar cliente…
-                </option>
-                {clientes.map((c) => (
-                  <option key={c.nome} value={c.nome}>
-                    {c.nome}
-                  </option>
-                ))}
-                <option value={CLIENTE_NOVO}>➕ Novo cliente…</option>
-              </select>
+                  }}
+                >
+                  + Novo
+                </button>
+              </div>
             )}
           </div>
           <div>
