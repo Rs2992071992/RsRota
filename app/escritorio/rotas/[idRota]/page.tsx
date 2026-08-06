@@ -8,6 +8,7 @@ import { AlertaBadge } from "@/components/Badge";
 import ParagemAcoes from "@/components/ParagemAcoes";
 import PagoToggle from "@/components/PagoToggle";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
+import RotaCombustivelOverride from "@/components/RotaCombustivelOverride";
 import type { ParagemEditavel } from "@/components/ParagemEditor";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,10 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
 
   const zonas = portagens.map((p) => p.zona);
   const valorNoite = parametros?.valorNoite ?? 70;
+  const precoCombRef = parametros?.precoCombRef ?? 1.834;
+  // Valor comum a todas as paragens da rota (null = a usar o padrão, ou valores mistos).
+  const overridesRota = Array.from(new Set(paragensRaw.map((p) => p.precoCombRefOverride ?? null)));
+  const overrideRotaAtual = overridesRota.length === 1 ? overridesRota[0] : null;
   const totalKgCarregados = paragensRaw.reduce((a, p) => a + p.kgCarregados, 0);
   const totalKgDescarregados = paragensRaw.reduce((a, p) => a + p.kgDescarregados, 0);
   const editavel = (id: number): ParagemEditavel | null => {
@@ -116,6 +121,20 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
             <span>{fmtEuro(rota.custoTotalRota)}</span>
           </div>
         </dl>
+      </div>
+
+      {/* Correção do preço de ref. combustível desta rota */}
+      <div className="card">
+        <h2 className="mb-1 font-semibold">Combustível desta rota</h2>
+        <p className="mb-3 text-xs text-gray-500">
+          Corrige o preço de referência do combustível para todas as paragens desta rota de uma vez.
+          Deixe vazio para usar o valor de Parâmetros ({fmtNum2(precoCombRef)} €/L).
+        </p>
+        <RotaCombustivelOverride
+          idRota={rota.idRota}
+          valorAtual={overrideRotaAtual}
+          precoParametro={precoCombRef}
+        />
       </div>
 
       {/* Paragens detalhadas */}

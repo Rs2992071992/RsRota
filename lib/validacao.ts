@@ -54,6 +54,15 @@ export const paragemSchema = z
 
 export type ParagemForm = z.infer<typeof paragemSchema>;
 
+/** Override do preço de ref. combustível para TODAS as paragens de uma rota
+ * de uma vez (corrigir rota a rota sem editar paragem a paragem). null/vazio
+ * = volta a usar o valor global de Parâmetros. */
+export const rotaOverrideSchema = z.object({
+  precoCombRefOverride: numOpcional,
+});
+
+export type RotaOverrideForm = z.infer<typeof rotaOverrideSchema>;
+
 const n = z.number().finite();
 
 /** Schema de um veículo da frota (custos próprios + pneus). */
