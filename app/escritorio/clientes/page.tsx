@@ -101,7 +101,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <EditarNomeCliente nome={detalhe.nome} />
+                <EditarNomeCliente key={detalhe.nome} nome={detalhe.nome} />
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                     detalhe.lucro < 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"

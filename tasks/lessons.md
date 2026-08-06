@@ -2,6 +2,18 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-06] | `EditarNomeCliente` (`components/EditarNomeCliente.tsx`)
+  guardava o nome editável em `useState(nome)`. Como o componente não
+  desmonta ao trocar de cliente selecionado (só o prop `nome` muda), o
+  React reaproveitava a instância e `novoNome`/`aEditar` ficavam presos ao
+  valor do cliente anterior — abrir "editar" noutro cliente mostrava o
+  nome que tinha ficado da edição anterior. | Sempre que um componente
+  client-side guarda em `useState` um valor inicializado a partir de um
+  prop que pode mudar sem desmontar (troca de seleção numa lista/detalhe),
+  passar `key={prop}` no pai para forçar remount e reset limpo do estado,
+  em vez de `useEffect` a sincronizar manualmente. Aplicado em
+  `app/escritorio/clientes/page.tsx:104` (`key={detalhe.nome}`).
+
 - [2026-08-06] | O motor de custo calculava o consumo de combustível de
   cada paragem só a partir do peso próprio dessa paragem
   (`pesoTransportado = max(kgCarregados, kgDescarregados)`), ignorando que
