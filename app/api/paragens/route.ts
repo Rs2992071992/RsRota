@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       noitesFora: d.noitesFora,
       alimentacao: d.alimentacao,
       horasExtra: d.horasExtra,
+      recolha: d.recolha,
       faturarCliente: d.faturarCliente?.trim() || null,
       precoCombRefOverride: d.precoCombRefOverride ?? null,
       receitaPaga: d.receitaPaga,

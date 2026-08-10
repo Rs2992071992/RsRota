@@ -189,12 +189,15 @@ model Paragem {
   alimentacao   Float @default(0)
   horasExtra    Float @default(0)
 
-  // Recolha cujo material vai ser entregue a OUTRO cliente mais tarde na mesma
-  // rota (ex.: ir buscar material defeituoso/paletes vazias a um fornecedor
-  // para entregar ao cliente final) — indica a quem faturar o custo desta
-  // paragem em vez do próprio `cliente` (ex.: recolha em "Tec-masterferro"
-  // faturada a "Tecfil"). null (default) = fatura normalmente ao próprio
-  // cliente, preserva o rateio de toda a história existente.
+  // Sinalização simples do motorista: "isto é uma recolha para entregar a
+  // outro cliente" — não escolhe o destino (não sabe/não interessa no
+  // momento do registo), só assinala para o escritório rever.
+  recolha Boolean @default(false)
+
+  // A quem faturar o custo desta paragem em vez do próprio `cliente` — só
+  // preenchido pelo escritório (ex.: recolha em "Tec-masterferro" faturada a
+  // "Tecfil"). null (default) = fatura normalmente ao próprio cliente,
+  // preserva o rateio de toda a história existente.
   faturarCliente String?
 
   // Override opcional do preço de referência do combustível para esta paragem.

@@ -57,6 +57,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     noitesFora: p.noitesFora,
     alimentacao: p.alimentacao,
     horasExtra: p.horasExtra,
+    recolha: p.recolha,
     faturarCliente: p.faturarCliente,
     precoCombRefOverride: p.precoCombRefOverride,
     receitaPaga: p.receitaPaga,

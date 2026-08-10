@@ -2,6 +2,35 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🚚 Motorista só assinala "Recolha"; escolher o cliente fica só no escritório (2026-08-11)
+
+Ajuste ao pedido de há pouco: o dropdown "Faturar esta recolha a" no
+formulário do motorista foi trocado por um checkbox simples "Recolha",
+colocado logo acima de "KG Carregados" — o motorista só assinala, não
+escolhe destino. A escolha do cliente a faturar continua só no escritório
+(`ParagemEditor.tsx`, dropdown inalterado).
+
+- [x] Schema: novo `Paragem.recolha Boolean @default(false)` (separado de
+  `faturarCliente`) — puramente aditivo, `db push` sem avisos de perda de
+  dados
+- [x] `lib/validacao.ts`, `lib/calc/types.ts` (`ParagemInput`/`ParagemCalc`),
+  `lib/calc/perStop.ts` (passthrough), `lib/rotas-service.ts`,
+  `app/api/paragens/route.ts` — `recolha` é só informativo, **não entra no
+  rateio** (só `faturarCliente` afeta o cálculo, inalterado)
+- [x] `RegistoForm.tsx`: removido o dropdown de clientes; checkbox
+  "Recolha" acima de KG Carregados; reset após submeter
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: badge da tabela distingue
+  "recolha → Cliente" (já atribuída, âmbar) de "recolha — por atribuir"
+  (assinalada pelo motorista mas ainda sem destino, vermelho) — dá ao
+  escritório uma forma visual de saber o que falta rever
+- [x] 114 testes verdes (motor de cálculo não mudou, `recolha` não afeta
+  rateio), `tsc --noEmit` limpo, `next build` OK
+- [ ] **Verificação manual**: no registo do motorista, marcar "Recolha" e
+  gravar; confirmar em `/escritorio/rotas/<idRota>` que aparece o badge
+  vermelho "por atribuir"; editar essa paragem e escolher o cliente no
+  dropdown do escritório — badge passa a âmbar "recolha → Cliente" e o
+  rateio atualiza
+
 ## 🔀 Recolhas: escolher A QUEM faturar (dropdown), não só excluir (2026-08-11)
 
 Evolução do pedido de ontem: o Ricardo já tinha usado a checkbox "não

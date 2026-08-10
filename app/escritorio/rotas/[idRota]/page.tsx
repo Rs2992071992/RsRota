@@ -168,10 +168,16 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
               <tr key={p.id ?? i}>
                 <td className="td font-medium">
                   {p.cliente}
-                  {p.faturarCliente && (
+                  {p.faturarCliente ? (
                     <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-800">
                       recolha → {p.faturarCliente}
                     </span>
+                  ) : (
+                    p.recolha && (
+                      <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-normal text-red-800">
+                        recolha — por atribuir
+                      </span>
+                    )
                   )}
                 </td>
                 <td className="td">{p.tipoVeiculo}</td>

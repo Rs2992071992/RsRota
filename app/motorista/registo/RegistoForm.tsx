@@ -103,9 +103,9 @@ export default function RegistoForm({
   // chegar mais depressa a "Registar paragem" — expandem só se precisar.
   const [mostrarEspanha, setMostrarEspanha] = useState(false);
   // Recolha cujo material vai ser entregue a outro cliente mais tarde na
-  // mesma rota — "" = fatura normalmente a este cliente; preenchido = nome
-  // do cliente a faturar em vez deste.
-  const [faturarCliente, setFaturarCliente] = useState("");
+  // mesma rota — só assinala; quem vai ser faturado fica para o escritório
+  // atribuir depois (ParagemEditor).
+  const [recolha, setRecolha] = useState(false);
   // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
   // e evitar duplicar noites/alimentação ao longo de várias paragens).
   const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
@@ -244,7 +244,7 @@ export default function RegistoForm({
         noitesFora: num(f.noitesFora),
         alimentacao: num(f.alimentacao),
         horasExtra: num(f.horasExtra),
-        faturarCliente: faturarCliente.trim() || null,
+        recolha,
         receitaPaga: 0,
         litrosEspanha: f.litrosEspanha === "" ? null : num(f.litrosEspanha),
         custoEspanha: f.custoEspanha === "" ? null : num(f.custoEspanha),
@@ -290,7 +290,7 @@ export default function RegistoForm({
         cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
       setMostrarEspanha(false);
-      setFaturarCliente("");
+      setRecolha(false);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -459,23 +459,6 @@ export default function RegistoForm({
               ))}
             </datalist>
             {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
-            <div className="mt-2">
-              <label className="label">Recolha — faturar a (se souber)</label>
-              <select
-                className="input"
-                value={faturarCliente}
-                onChange={(e) => setFaturarCliente(e.target.value)}
-              >
-                <option value="">— faturar normalmente a este cliente —</option>
-                {clientes
-                  .filter((c) => c !== f.cliente)
-                  .map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-              </select>
-            </div>
           </div>
         )}
       </div>
@@ -483,6 +466,12 @@ export default function RegistoForm({
       <div className="card grid grid-cols-2 gap-3">
         {campoNum("kmInicial", "KM Inicial")}
         {campoNum("kmFinal", "KM Final")}
+        <div className="col-span-2">
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={recolha} onChange={(e) => setRecolha(e.target.checked)} />
+            Recolha
+          </label>
+        </div>
         {ehPalete ? (
           <div>
             <label className="label">Nº de paletes</label>

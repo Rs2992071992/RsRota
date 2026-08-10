@@ -137,11 +137,13 @@ export interface ParagemInput {
   precoCombRefOverride?: number | null;
   receitaPaga: number;
   /**
-   * Recolha para entregar a outro cliente (ver Paragem.faturarCliente no
-   * schema) — quando preenchido, o rateio atribui o coeficiente desta
-   * paragem a este nome em vez do próprio `cliente`. null/ausente = fatura
-   * normalmente ao próprio cliente (comportamento inalterado).
+   * Recolha para entregar a outro cliente: `recolha` é o assinalar do
+   * motorista (informativo, não afeta o rateio); `faturarCliente`, quando
+   * preenchido, atribui o coeficiente desta paragem a esse nome em vez do
+   * próprio `cliente`. null/ausente = fatura normalmente ao próprio
+   * cliente (comportamento inalterado).
    */
+  recolha?: boolean;
   faturarCliente?: string | null;
   // Informativo (Espanha)
   litrosEspanha?: number | null;
@@ -154,7 +156,8 @@ export interface ParagemCalc {
   idRota: string;
   cliente: string;
   tipoVeiculo: string;
-  /** Passthrough — ver ParagemInput.faturarCliente. */
+  /** Passthrough — ver ParagemInput.recolha / .faturarCliente. */
+  recolha: boolean;
   faturarCliente: string | null;
   pesoTransportado: number;
   /** Nº de paletes (passthrough; só relevante para tipos de palete). */

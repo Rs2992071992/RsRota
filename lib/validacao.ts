@@ -40,8 +40,11 @@ export const paragemSchema = z
     noitesFora: numNaoNeg.default(0),
     alimentacao: numNaoNeg.default(0),
     horasExtra: numNaoNeg.default(0),
-    // Recolha para entregar a outro cliente — nome do cliente a faturar, ou
-    // null/vazio para faturar normalmente ao próprio `cliente`.
+    // Recolha para entregar a outro cliente: `recolha` é o assinalar do
+    // motorista (sem escolher destino); `faturarCliente` é o nome do
+    // cliente a faturar, preenchido pelo escritório (null/vazio = fatura
+    // normalmente ao próprio `cliente`).
+    recolha: z.boolean().default(false),
     faturarCliente: z.string().trim().nullable().optional(),
     precoCombRefOverride: numOpcional,
     receitaPaga: numNaoNeg.default(0),
