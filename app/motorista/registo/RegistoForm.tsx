@@ -520,23 +520,7 @@ export default function RegistoForm({
               </p>
             )}
           </div>
-          <div>
-            <label className="label">Alimentação (€)</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              className="input"
-              value={f.alimentacao}
-              onChange={(e) => set("alimentacao", e.target.value)}
-            />
-            {erros.alimentacao && <p className="mt-1 text-xs text-red-600">{erros.alimentacao}</p>}
-            {alimentacaoJaRegistada.length > 0 && (
-              <p className="mt-1 text-xs text-blue-600">
-                Já foram introduzidos: {listarComE(alimentacaoJaRegistada.map(fmtEuro))} nesta rota.
-              </p>
-            )}
-          </div>
+          {campoNum("horasExtra", "Horas Extra")}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -546,7 +530,7 @@ export default function RegistoForm({
               inputMode="numeric"
               step="1"
               min="0"
-              className="input"
+              className="input max-w-[110px]"
               value={f.noitesFora}
               onChange={(e) => set("noitesFora", e.target.value)}
               placeholder="0"
@@ -558,7 +542,23 @@ export default function RegistoForm({
               </p>
             )}
           </div>
-          {campoNum("horasExtra", "Horas Extra")}
+          <div>
+            <label className="label">Alimentação (€)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              className="input max-w-[110px]"
+              value={f.alimentacao}
+              onChange={(e) => set("alimentacao", e.target.value)}
+            />
+            {erros.alimentacao && <p className="mt-1 text-xs text-red-600">{erros.alimentacao}</p>}
+            {alimentacaoJaRegistada.length > 0 && (
+              <p className="mt-1 text-xs text-blue-600">
+                Já foram introduzidos: {listarComE(alimentacaoJaRegistada.map(fmtEuro))} nesta rota.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
