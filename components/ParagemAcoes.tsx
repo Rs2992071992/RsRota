@@ -8,11 +8,12 @@ interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
   veiculos: VeiculoOpcao[];
+  clientes: string[];
   valorNoite: number;
 }
 
 /** Botões "Editar" e "Apagar" (escritório) para uma paragem. */
-export default function ParagemAcoes({ paragem, zonas, veiculos, valorNoite }: Props) {
+export default function ParagemAcoes({ paragem, zonas, veiculos, clientes, valorNoite }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [aApagar, setAApagar] = useState(false);
@@ -56,6 +57,7 @@ export default function ParagemAcoes({ paragem, zonas, veiculos, valorNoite }: P
           paragem={paragem}
           zonas={zonas}
           veiculos={veiculos}
+          clientes={clientes}
           valorNoite={valorNoite}
           mostrarReceita
           onClose={() => setAberto(false)}

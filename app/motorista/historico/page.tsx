@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
+import { listarNomesClientes } from "@/lib/clientes-service";
 import HistoricoMotorista, { type ParagemHist } from "./HistoricoMotorista";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export default async function HistoricoPage() {
   const sessao = getSessaoInfo();
   const motoristaId = sessao?.perfil === "MOTORISTA" ? sessao.id : -1;
 
-  const [paragensRaw, portagens, params, veiculos] = await Promise.all([
+  const [paragensRaw, portagens, params, veiculos, nomesClientes] = await Promise.all([
     prisma.paragem.findMany({
       where: { motoristaId },
       orderBy: [{ data: "desc" }, { id: "desc" }],
@@ -20,6 +21,7 @@ export default async function HistoricoPage() {
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true },
     }),
+    listarNomesClientes(),
   ]);
 
   const paragens: ParagemHist[] = paragensRaw.map((p) => ({
@@ -40,7 +42,7 @@ export default async function HistoricoPage() {
     noitesFora: p.noitesFora,
     alimentacao: p.alimentacao,
     horasExtra: p.horasExtra,
-    naoFaturarCliente: p.naoFaturarCliente,
+    faturarCliente: p.faturarCliente,
     litrosEspanha: p.litrosEspanha,
     custoEspanha: p.custoEspanha,
     receitaPaga: p.receitaPaga,
@@ -51,6 +53,7 @@ export default async function HistoricoPage() {
       paragens={paragens}
       zonas={portagens.map((p) => p.zona)}
       veiculos={veiculos}
+      clientes={nomesClientes.map((c) => c.nome)}
       valorNoite={params?.valorNoite ?? 70}
     />
   );

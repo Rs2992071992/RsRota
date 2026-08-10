@@ -169,15 +169,15 @@ describe("calcularRota — rateio misto peso + paletes normaliza a 100 %", () =>
 
 // Reproduz o cenário real (rota RIC-Tec-eurored): recolha num fornecedor,
 // material entregue mais tarde ao cliente final — o fornecedor não deve
-// pagar rateio, só o cliente final.
-describe("calcularRota — recolha naoFaturarCliente não gera linha própria no rateio", () => {
+// pagar rateio, o custo soma-se à quota do cliente indicado em `faturarCliente`.
+describe("calcularRota — recolha (faturarCliente) soma-se à quota do cliente indicado", () => {
   const recolha: ParagemInput[] = [
     paragemBase({
       cliente: "Fornecedor",
       kmInicial: 0,
       kmFinal: 100,
       kgCarregados: 1000,
-      naoFaturarCliente: true,
+      faturarCliente: "Cliente Final",
     }),
     paragemBase({
       cliente: "Cliente Final",
@@ -201,6 +201,50 @@ describe("calcularRota — recolha naoFaturarCliente não gera linha própria no
   it("o custo da recolha continua incluído no total da rota (não desaparece)", () => {
     const soCliente = calcularRota("REC01", [recolha[1]], ctx);
     expect(r.custoTotalRota).toBeGreaterThan(soCliente.custoTotalRota);
+  });
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+});
+
+// Prova que a recolha soma-se especificamente à quota do cliente indicado —
+// não dilui por todos os clientes faturáveis da rota (diferença chave vs. só
+// excluir a paragem do rateio).
+describe("calcularRota — recolha soma-se só ao cliente indicado, não dilui pelos outros", () => {
+  const mistaComRecolha: ParagemInput[] = [
+    paragemBase({
+      cliente: "Fornecedor",
+      kmInicial: 0,
+      kmFinal: 50,
+      kgCarregados: 500,
+      faturarCliente: "Cliente Final",
+    }),
+    paragemBase({
+      cliente: "Cliente Final",
+      kmInicial: 50,
+      kmFinal: 150,
+      kgDescarregados: 2000,
+      receitaPaga: 1000,
+    }),
+    paragemBase({
+      cliente: "Cliente Outro",
+      kmInicial: 150,
+      kmFinal: 250,
+      kgDescarregados: 1000,
+      receitaPaga: 500,
+    }),
+  ];
+  const r = calcularRota("REC02", mistaComRecolha, ctx);
+  const capReboque = 24000; // ver tests/calc/fixtures.ts (PARAMS.capacidadeReboque)
+
+  it("Cliente Outro só paga o seu próprio coeficiente (inalterado pela recolha)", () => {
+    const clienteOutro = r.rateio.find((c) => c.cliente === "Cliente Outro")!;
+    expect(clienteOutro.coefReal).toBeCloseTo(1000 / capReboque, 6);
+  });
+  it("Cliente Final paga o seu coeficiente + o da recolha (soma, não dilui)", () => {
+    const clienteFinal = r.rateio.find((c) => c.cliente === "Cliente Final")!;
+    expect(clienteFinal.coefReal).toBeCloseTo(2000 / capReboque + 500 / capReboque, 6);
   });
   it("Σ custo atribuído = custo total da rota", () => {
     const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);

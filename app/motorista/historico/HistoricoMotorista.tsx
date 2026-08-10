@@ -11,10 +11,11 @@ interface Props {
   paragens: ParagemHist[];
   zonas: string[];
   veiculos: VeiculoOpcao[];
+  clientes: string[];
   valorNoite: number;
 }
 
-export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoite }: Props) {
+export default function HistoricoMotorista({ paragens, zonas, veiculos, clientes, valorNoite }: Props) {
   const [aEditar, setAEditar] = useState<ParagemHist | null>(null);
 
   // Agrupa por ID Rota, mantendo a ordem (mais recente primeiro).
@@ -97,6 +98,7 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, valorNoi
           paragem={aEditar}
           zonas={zonas}
           veiculos={veiculos}
+          clientes={clientes}
           valorNoite={valorNoite}
           mostrarDetalheEuroNoites={false}
           onClose={() => setAEditar(null)}

@@ -40,7 +40,9 @@ export const paragemSchema = z
     noitesFora: numNaoNeg.default(0),
     alimentacao: numNaoNeg.default(0),
     horasExtra: numNaoNeg.default(0),
-    naoFaturarCliente: z.boolean().default(false),
+    // Recolha para entregar a outro cliente — nome do cliente a faturar, ou
+    // null/vazio para faturar normalmente ao próprio `cliente`.
+    faturarCliente: z.string().trim().nullable().optional(),
     precoCombRefOverride: numOpcional,
     receitaPaga: numNaoNeg.default(0),
     pago: z.boolean().default(false),

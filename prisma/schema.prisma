@@ -191,11 +191,11 @@ model Paragem {
 
   // Recolha cujo material vai ser entregue a OUTRO cliente mais tarde na mesma
   // rota (ex.: ir buscar material defeituoso/paletes vazias a um fornecedor
-  // para entregar ao cliente final) — default false preserva o rateio de toda
-  // a história existente. Quando true, esta paragem fica de fora do rateio por
-  // cliente (o custo dilui-se nos clientes faturáveis da rota, tal como um
-  // trajeto VAZIO), mas continua a contar para km/consumo/histórico.
-  naoFaturarCliente Boolean @default(false)
+  // para entregar ao cliente final) — indica a quem faturar o custo desta
+  // paragem em vez do próprio `cliente` (ex.: recolha em "Tec-masterferro"
+  // faturada a "Tecfil"). null (default) = fatura normalmente ao próprio
+  // cliente, preserva o rateio de toda a história existente.
+  faturarCliente String?
 
   // Override opcional do preço de referência do combustível para esta paragem.
   precoCombRefOverride Float?

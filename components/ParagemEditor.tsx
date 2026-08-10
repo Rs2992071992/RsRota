@@ -31,7 +31,8 @@ export interface ParagemEditavel {
   noitesFora: number;
   alimentacao: number;
   horasExtra: number;
-  naoFaturarCliente: boolean;
+  /** Recolha para entregar a outro cliente — nome a faturar, ou null para faturar a este. */
+  faturarCliente: string | null;
   litrosEspanha: number | null;
   custoEspanha: number | null;
   receitaPaga: number;
@@ -41,6 +42,8 @@ interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
   veiculos: VeiculoOpcao[];
+  /** Nomes de clientes conhecidos, para o dropdown "Faturar esta recolha a". */
+  clientes: string[];
   valorNoite: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
@@ -53,6 +56,7 @@ export default function ParagemEditor({
   paragem,
   zonas,
   veiculos,
+  clientes,
   valorNoite,
   mostrarReceita = false,
   mostrarDetalheEuroNoites = true,
@@ -112,7 +116,7 @@ export default function ParagemEditor({
         noitesFora: Number(f.noitesFora),
         alimentacao: Number(f.alimentacao),
         horasExtra: Number(f.horasExtra),
-        naoFaturarCliente: f.naoFaturarCliente,
+        faturarCliente: f.faturarCliente?.trim() || null,
         litrosEspanha: f.litrosEspanha === null || f.litrosEspanha === ("" as never) ? null : Number(f.litrosEspanha),
         custoEspanha: f.custoEspanha === null || f.custoEspanha === ("" as never) ? null : Number(f.custoEspanha),
         ...(mostrarReceita ? { receitaPaga: Number(f.receitaPaga) } : {}),
@@ -191,14 +195,21 @@ export default function ParagemEditor({
             <input className="input" value={f.cliente} onChange={(e) => set("cliente", e.target.value)} />
           </div>
           <div className="col-span-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={f.naoFaturarCliente}
-                onChange={(e) => set("naoFaturarCliente", e.target.checked as never)}
-              />
-              Recolha para entregar a outro cliente (não faturar a este)
-            </label>
+            <label className="label">Faturar esta recolha a</label>
+            <select
+              className="input"
+              value={f.faturarCliente ?? ""}
+              onChange={(e) => set("faturarCliente", (e.target.value || null) as never)}
+            >
+              <option value="">— faturar normalmente a este cliente —</option>
+              {clientes
+                .filter((c) => c !== f.cliente)
+                .map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+            </select>
           </div>
           <div>
             <label className="label">Tipo Viagem</label>

@@ -103,15 +103,16 @@ export function calcularRota(
   let somaCoef = 0;
   for (let i = 0; i < paragens.length; i++) {
     const p = paragens[i];
-    // Ficam de fora do rateio: trajetos a vazio (VAZIO, repositionamento sem
-    // cliente a faturar) e recolhas marcadas `naoFaturarCliente` (o material
-    // vai ser entregue a outro cliente mais tarde na mesma rota — é esse
-    // cliente final que deve absorver o custo, não quem só forneceu o
-    // material). Qualquer outro tipo participa (mesmo com peso 0 mal
+    // Só os trajetos a vazio (VAZIO) ficam de fora: são repositionamento, sem
+    // cliente a faturar. Qualquer outro tipo participa (mesmo com peso 0 mal
     // registado), para nunca perder um cliente realmente faturado.
-    if (p.tipoVeiculo === "VAZIO" || p.naoFaturarCliente) continue;
+    if (p.tipoVeiculo === "VAZIO") continue;
     const coef = coeficienteReal(p.tipoVeiculo, pesoTransportado(p), effs[i], p.nPaletes || 0);
-    const chave = p.cliente || "(sem cliente)";
+    // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
+    // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.
+    // recolha em "Tec-masterferro" faturada a "Tecfil" soma-se à quota da
+    // Tecfil, não gera linha própria nem dilui pelos outros clientes da rota.
+    const chave = p.faturarCliente?.trim() || p.cliente || "(sem cliente)";
     const atual = porCliente.get(chave) ?? {
       cliente: chave,
       coefReal: 0,

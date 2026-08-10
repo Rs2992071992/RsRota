@@ -46,6 +46,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const d = parsed.data;
   const data: Record<string, unknown> = { ...d };
   if (d.data) data.data = new Date(d.data);
+  if (d.faturarCliente !== undefined) data.faturarCliente = d.faturarCliente?.trim() || null;
 
   // Estado de cobrança: ao marcar pago sem data, regista a data de hoje; ao desmarcar,
   // limpa a data de pagamento.

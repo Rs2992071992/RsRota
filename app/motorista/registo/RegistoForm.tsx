@@ -103,8 +103,9 @@ export default function RegistoForm({
   // chegar mais depressa a "Registar paragem" — expandem só se precisar.
   const [mostrarEspanha, setMostrarEspanha] = useState(false);
   // Recolha cujo material vai ser entregue a outro cliente mais tarde na
-  // mesma rota — não fica a pagar a share desta paragem no rateio.
-  const [naoFaturarCliente, setNaoFaturarCliente] = useState(false);
+  // mesma rota — "" = fatura normalmente a este cliente; preenchido = nome
+  // do cliente a faturar em vez deste.
+  const [faturarCliente, setFaturarCliente] = useState("");
   // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
   // e evitar duplicar noites/alimentação ao longo de várias paragens).
   const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
@@ -243,7 +244,7 @@ export default function RegistoForm({
         noitesFora: num(f.noitesFora),
         alimentacao: num(f.alimentacao),
         horasExtra: num(f.horasExtra),
-        naoFaturarCliente,
+        faturarCliente: faturarCliente.trim() || null,
         receitaPaga: 0,
         litrosEspanha: f.litrosEspanha === "" ? null : num(f.litrosEspanha),
         custoEspanha: f.custoEspanha === "" ? null : num(f.custoEspanha),
@@ -289,7 +290,7 @@ export default function RegistoForm({
         cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
       setMostrarEspanha(false);
-      setNaoFaturarCliente(false);
+      setFaturarCliente("");
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -458,14 +459,23 @@ export default function RegistoForm({
               ))}
             </datalist>
             {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
-            <label className="mt-2 flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={naoFaturarCliente}
-                onChange={(e) => setNaoFaturarCliente(e.target.checked)}
-              />
-              Recolha para entregar a outro cliente (não faturar a este)
-            </label>
+            <div className="mt-2">
+              <label className="label">Recolha — faturar a (se souber)</label>
+              <select
+                className="input"
+                value={faturarCliente}
+                onChange={(e) => setFaturarCliente(e.target.value)}
+              >
+                <option value="">— faturar normalmente a este cliente —</option>
+                {clientes
+                  .filter((c) => c !== f.cliente)
+                  .map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
         )}
       </div>

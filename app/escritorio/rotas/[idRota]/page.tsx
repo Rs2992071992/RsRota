@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { carregarRota } from "@/lib/rotas-service";
+import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
 import { AlertaBadge } from "@/components/Badge";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RotaDetalhe({ params }: { params: { idRota: string } }) {
   const idRota = decodeURIComponent(params.idRota);
-  const [{ rota, paragensRaw }, portagens, parametros, veiculos] = await Promise.all([
+  const [{ rota, paragensRaw }, portagens, parametros, veiculos, nomesClientes] = await Promise.all([
     carregarRota(idRota),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
@@ -23,10 +24,12 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true },
     }),
+    listarNomesClientes(),
   ]);
   if (!rota) notFound();
 
   const zonas = portagens.map((p) => p.zona);
+  const clientes = nomesClientes.map((c) => c.nome);
   const valorNoite = parametros?.valorNoite ?? 70;
   const precoCombRef = parametros?.precoCombRef ?? 1.834;
   // Valor comum a todas as paragens da rota (null = a usar o padrão, ou valores mistos).
@@ -55,7 +58,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       noitesFora: p.noitesFora,
       alimentacao: p.alimentacao,
       horasExtra: p.horasExtra,
-      naoFaturarCliente: p.naoFaturarCliente,
+      faturarCliente: p.faturarCliente,
       litrosEspanha: p.litrosEspanha,
       custoEspanha: p.custoEspanha,
       receitaPaga: p.receitaPaga,
@@ -165,9 +168,9 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
               <tr key={p.id ?? i}>
                 <td className="td font-medium">
                   {p.cliente}
-                  {p.naoFaturarCliente && (
+                  {p.faturarCliente && (
                     <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-800">
-                      recolha
+                      recolha → {p.faturarCliente}
                     </span>
                   )}
                 </td>
@@ -189,6 +192,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                       paragem={editavel(p.id)!}
                       zonas={zonas}
                       veiculos={veiculos}
+                      clientes={clientes}
                       valorNoite={valorNoite}
                     />
                   ) : (
@@ -214,9 +218,9 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         <p className="mb-3 text-xs text-gray-500">
           Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
           quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
-          somar 100 %. Os trajetos a vazio e as paragens marcadas "recolha" (material para entregar a
-          outro cliente) são repartidos pelos clientes faturáveis. O coef. real (peso/capacidade)
-          é só indicador: acima de 1 indica sobrecarga.
+          somar 100 %. Os trajetos a vazio são repartidos pelos clientes; as paragens marcadas
+          "recolha → Cliente" somam o seu custo à quota desse cliente em vez de gerarem linha própria.
+          O coef. real (peso/capacidade) é só indicador: acima de 1 indica sobrecarga.
         </p>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">

@@ -133,7 +133,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     idRota: p.idRota,
     cliente: p.cliente,
     tipoVeiculo: p.tipoVeiculo,
-    naoFaturarCliente: p.naoFaturarCliente ?? false,
+    faturarCliente: p.faturarCliente ?? null,
     pesoTransportado: peso,
     nPaletes,
     kmFeitos,

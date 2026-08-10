@@ -2,6 +2,49 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔀 Recolhas: escolher A QUEM faturar (dropdown), não só excluir (2026-08-11)
+
+Evolução do pedido de ontem: o Ricardo já tinha usado a checkbox "não
+faturar a este" em 4 paragens reais (Tec-junqueira, Tec-Viveres ferry,
+Tec-masterferro, Tec-A2, todas na rota RIC-Tec-eurored) — mas com só um
+boolean, o custo diluía-se por TODOS os clientes faturáveis da rota, não
+só pelo cliente final certo. Pedido: um campo "Faturar esta recolha a"
+com dropdown dos clientes conhecidos (mesma lista usada em Orçamentos),
+para atribuir o custo especificamente à Tecfil/Blowtec/etc.
+
+- [x] Schema: `Paragem.naoFaturarCliente` (boolean) substituído por
+  `Paragem.faturarCliente String?` (nome do cliente a faturar; null =
+  fatura normalmente ao próprio `cliente`) — **dados reais migrados**, não
+  perdidos: as 4 paragens já marcadas foram lidas por SQL antes do drop da
+  coluna antiga e reescritas como `faturarCliente = "Tecfil"` (confirmado
+  pelo próprio Ricardo: "todos os kg em kg carregados são para a Tecfil"
+  nesta rota) — sequência seguida: adicionar coluna nova → migrar dados →
+  só depois `db push --accept-data-loss` a remover a antiga
+- [x] `lib/calc/perRoute.ts`: `chave = p.faturarCliente || p.cliente` no
+  rateio — o coeficiente da recolha SOMA-se à quota do cliente indicado
+  (não dilui por todos); `lib/calc/types.ts`, `perStop.ts`,
+  `lib/rotas-service.ts`, `lib/validacao.ts`, APIs — mesmo padrão de antes,
+  só trocando boolean por string
+- [x] UI: checkbox trocada por `<select>` "Faturar esta recolha a" em
+  `RegistoForm.tsx` (motorista, usa a lista `clientes` já existente no
+  formulário) e `ParagemEditor.tsx` (escritório + Histórico do motorista,
+  nova prop `clientes` alimentada por `listarNomesClientes()` — mesma
+  função já usada em Orçamentos, não duplicada); badge da tabela de
+  Paragens passa a mostrar "recolha → {cliente}" em vez de só "recolha"
+- [x] 3 testes novos substituem/complementam os 4 de ontem em
+  `tests/calc/perRoute.test.ts` — prova explícita de que a recolha soma
+  ao cliente indicado e NÃO dilui pelos outros (`Cliente Outro` mantém o
+  seu coeficiente inalterado) — 114 testes verdes no total, `tsc
+  --noEmit` limpo, `next build` OK
+- [x] Confirmado contra a BD real: as 4 paragens migradas já aparecem com
+  `faturarCliente: "Tecfil"`; rateio real da rota RIC-Tec-eurored já não
+  mostra Tec-junqueira/Tec-masterferro/Tec-A2 como linhas próprias (Tecfil
+  subiu de 179,63 € para 359,26 €, absorvendo o custo certo)
+- [ ] **Ação do utilizador**: falta só a Blo-Synergy (recolha de 4 paletes)
+  — não estava nas 4 já marcadas, por isso não foi migrada automaticamente;
+  ir a `/escritorio/rotas/RIC-Tec-eurored`, editar essa paragem e escolher
+  "Blowtec" no novo dropdown "Faturar esta recolha a"
+
 ## 💰 Recolhas: não faturar ao fornecedor, faturar ao cliente final (2026-08-10)
 
 Bug de negócio real encontrado ao investigar a rota `RIC-Tec-eurored`: uma
