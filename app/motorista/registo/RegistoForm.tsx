@@ -99,6 +99,9 @@ export default function RegistoForm({
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
+  // Secções opcionais começam encolhidas (só um botão) para o motorista
+  // chegar mais depressa a "Registar paragem" — expandem só se precisar.
+  const [mostrarEspanha, setMostrarEspanha] = useState(false);
   // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
   // e evitar duplicar noites/alimentação ao longo de várias paragens).
   const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
@@ -281,6 +284,7 @@ export default function RegistoForm({
         kmInicial: f.kmFinal,
         cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
+      setMostrarEspanha(false);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -559,13 +563,24 @@ export default function RegistoForm({
       </div>
 
       <div className="card space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Combustível por fora (Espanha) — informativo, poupança
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {campoNum("litrosEspanha", "Litros Espanha")}
-          {campoNum("custoEspanha", "Custo Espanha (€)")}
-        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <input
+            type="checkbox"
+            checked={mostrarEspanha}
+            onChange={(e) => {
+              const marcado = e.target.checked;
+              setMostrarEspanha(marcado);
+              if (!marcado) setF((prev) => ({ ...prev, litrosEspanha: "", custoEspanha: "" }));
+            }}
+          />
+          Abasteci em Espanha
+        </label>
+        {mostrarEspanha && (
+          <div className="grid grid-cols-2 gap-3">
+            {campoNum("litrosEspanha", "Litros Espanha")}
+            {campoNum("custoEspanha", "Custo Espanha (€)")}
+          </div>
+        )}
       </div>
 
       {avisos.length > 0 && (
