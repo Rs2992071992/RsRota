@@ -189,6 +189,14 @@ model Paragem {
   alimentacao   Float @default(0)
   horasExtra    Float @default(0)
 
+  // Recolha cujo material vai ser entregue a OUTRO cliente mais tarde na mesma
+  // rota (ex.: ir buscar material defeituoso/paletes vazias a um fornecedor
+  // para entregar ao cliente final) — default false preserva o rateio de toda
+  // a história existente. Quando true, esta paragem fica de fora do rateio por
+  // cliente (o custo dilui-se nos clientes faturáveis da rota, tal como um
+  // trajeto VAZIO), mas continua a contar para km/consumo/histórico.
+  naoFaturarCliente Boolean @default(false)
+
   // Override opcional do preço de referência do combustível para esta paragem.
   precoCombRefOverride Float?
 

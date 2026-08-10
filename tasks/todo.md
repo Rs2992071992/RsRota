@@ -2,6 +2,47 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 💰 Recolhas: não faturar ao fornecedor, faturar ao cliente final (2026-08-10)
+
+Bug de negócio real encontrado ao investigar a rota `RIC-Tec-eurored`: uma
+recolha (ex. material defeituoso, paletes vazias) entregue mais tarde a
+outro cliente na mesma rota gerava linha própria no rateio — **o
+fornecedor da recolha e o cliente final eram os dois cobrados pelo mesmo
+material**. Confirmado com números reais: Tec-masterferro (44,38 €),
+Tec-A2 (47,62 €) e Blo-Synergy (120,31 €) pagavam a recolha, e a Tecfil
+(179,63 €)/Blowtec (120,31 €) pagavam outra vez a entrega do mesmo
+material.
+
+- [x] Schema: `Paragem.naoFaturarCliente Boolean @default(false)` — `db
+  push` feito no Neon (default preserva 100% do histórico/rateio já
+  calculado)
+- [x] `lib/calc/types.ts` (`ParagemInput`/`ParagemCalc`), `lib/calc/perStop.ts`
+  (passthrough), `lib/calc/perRoute.ts` — paragens `naoFaturarCliente` ficam
+  de fora do rateio por cliente (mesmo tratamento que `VAZIO`), mas continuam
+  a contar para custo total/consumo/histórico
+  — o custo dilui-se nos clientes faturáveis da rota
+- [x] `lib/validacao.ts`, `lib/rotas-service.ts` (`paragemToInput`),
+  `app/api/paragens/route.ts` (PATCH herda automaticamente via
+  `paragemSchema.partial()`)
+- [x] UI: checkbox "Recolha para entregar a outro cliente (não faturar a
+  este)" em `RegistoForm.tsx` (motorista) e `ParagemEditor.tsx`
+  (escritório + Histórico do motorista); badge "recolha" + nota explicativa
+  na tabela de Paragens/Rateio de `app/escritorio/rotas/[idRota]/page.tsx`
+- [x] 4 testes novos em `tests/calc/perRoute.test.ts` (reproduzem o cenário
+  real: fornecedor não aparece no rateio, cliente final paga 100%, custo da
+  recolha continua incluído no total, Σ custoAtribuido = custoTotalRota) —
+  111 testes verdes no total, `tsc --noEmit` limpo, `next build` OK
+- [x] Confirmado contra a BD real: coluna existe (default `false`), rateio
+  atual da rota `RIC-Tec-eurored` ainda mostra o duplo-cobrar (nada mudou
+  retroativamente, como esperado)
+- [ ] **Ação do utilizador**: em `/escritorio/rotas/RIC-Tec-eurored`, editar
+  as paragens Tec-masterferro, Tec-A2 e Blo-Synergy e marcar "Recolha para
+  entregar a outro cliente" em cada uma — o rateio passa a atribuir esse
+  custo só à Tecfil/Blowtec
+- [ ] **Verificação manual**: no registo do motorista, marcar a checkbox
+  numa recolha e confirmar que essa paragem não aparece no rateio da rota
+  (mas continua na lista de Paragens, com o badge "recolha")
+
 ## 🔧 Aviso de inspeção do veículo ao motorista (2026-08-10)
 
 Pedido do Ricardo: ao selecionar o veículo no registo, avisar o motorista se

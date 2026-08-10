@@ -136,6 +136,13 @@ export interface ParagemInput {
   horasExtra: number;
   precoCombRefOverride?: number | null;
   receitaPaga: number;
+  /**
+   * Recolha para entregar a outro cliente (ver Paragem.naoFaturarCliente no
+   * schema) — fica de fora do rateio por cliente, sem deixar de contar para
+   * km/consumo/histórico. Opcional (default false) para não quebrar chamadas
+   * existentes ao motor.
+   */
+  naoFaturarCliente?: boolean;
   // Informativo (Espanha)
   litrosEspanha?: number | null;
   custoEspanha?: number | null;
@@ -147,6 +154,8 @@ export interface ParagemCalc {
   idRota: string;
   cliente: string;
   tipoVeiculo: string;
+  /** Passthrough — ver ParagemInput.naoFaturarCliente. */
+  naoFaturarCliente: boolean;
   pesoTransportado: number;
   /** Nº de paletes (passthrough; só relevante para tipos de palete). */
   nPaletes: number;

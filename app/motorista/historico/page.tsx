@@ -40,6 +40,7 @@ export default async function HistoricoPage() {
     noitesFora: p.noitesFora,
     alimentacao: p.alimentacao,
     horasExtra: p.horasExtra,
+    naoFaturarCliente: p.naoFaturarCliente,
     litrosEspanha: p.litrosEspanha,
     custoEspanha: p.custoEspanha,
     receitaPaga: p.receitaPaga,

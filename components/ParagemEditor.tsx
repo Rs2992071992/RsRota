@@ -31,6 +31,7 @@ export interface ParagemEditavel {
   noitesFora: number;
   alimentacao: number;
   horasExtra: number;
+  naoFaturarCliente: boolean;
   litrosEspanha: number | null;
   custoEspanha: number | null;
   receitaPaga: number;
@@ -111,6 +112,7 @@ export default function ParagemEditor({
         noitesFora: Number(f.noitesFora),
         alimentacao: Number(f.alimentacao),
         horasExtra: Number(f.horasExtra),
+        naoFaturarCliente: f.naoFaturarCliente,
         litrosEspanha: f.litrosEspanha === null || f.litrosEspanha === ("" as never) ? null : Number(f.litrosEspanha),
         custoEspanha: f.custoEspanha === null || f.custoEspanha === ("" as never) ? null : Number(f.custoEspanha),
         ...(mostrarReceita ? { receitaPaga: Number(f.receitaPaga) } : {}),
@@ -187,6 +189,16 @@ export default function ParagemEditor({
           <div>
             <label className="label">Cliente / Local</label>
             <input className="input" value={f.cliente} onChange={(e) => set("cliente", e.target.value)} />
+          </div>
+          <div className="col-span-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={f.naoFaturarCliente}
+                onChange={(e) => set("naoFaturarCliente", e.target.checked as never)}
+              />
+              Recolha para entregar a outro cliente (não faturar a este)
+            </label>
           </div>
           <div>
             <label className="label">Tipo Viagem</label>

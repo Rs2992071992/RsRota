@@ -102,6 +102,9 @@ export default function RegistoForm({
   // Secções opcionais começam encolhidas (só um botão) para o motorista
   // chegar mais depressa a "Registar paragem" — expandem só se precisar.
   const [mostrarEspanha, setMostrarEspanha] = useState(false);
+  // Recolha cujo material vai ser entregue a outro cliente mais tarde na
+  // mesma rota — não fica a pagar a share desta paragem no rateio.
+  const [naoFaturarCliente, setNaoFaturarCliente] = useState(false);
   // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
   // e evitar duplicar noites/alimentação ao longo de várias paragens).
   const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
@@ -240,6 +243,7 @@ export default function RegistoForm({
         noitesFora: num(f.noitesFora),
         alimentacao: num(f.alimentacao),
         horasExtra: num(f.horasExtra),
+        naoFaturarCliente,
         receitaPaga: 0,
         litrosEspanha: f.litrosEspanha === "" ? null : num(f.litrosEspanha),
         custoEspanha: f.custoEspanha === "" ? null : num(f.custoEspanha),
@@ -285,6 +289,7 @@ export default function RegistoForm({
         cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
       setMostrarEspanha(false);
+      setNaoFaturarCliente(false);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -453,6 +458,14 @@ export default function RegistoForm({
               ))}
             </datalist>
             {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
+            <label className="mt-2 flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={naoFaturarCliente}
+                onChange={(e) => setNaoFaturarCliente(e.target.checked)}
+              />
+              Recolha para entregar a outro cliente (não faturar a este)
+            </label>
           </div>
         )}
       </div>

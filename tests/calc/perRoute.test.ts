@@ -167,6 +167,47 @@ describe("calcularRota — rateio misto peso + paletes normaliza a 100 %", () =>
   });
 });
 
+// Reproduz o cenário real (rota RIC-Tec-eurored): recolha num fornecedor,
+// material entregue mais tarde ao cliente final — o fornecedor não deve
+// pagar rateio, só o cliente final.
+describe("calcularRota — recolha naoFaturarCliente não gera linha própria no rateio", () => {
+  const recolha: ParagemInput[] = [
+    paragemBase({
+      cliente: "Fornecedor",
+      kmInicial: 0,
+      kmFinal: 100,
+      kgCarregados: 1000,
+      naoFaturarCliente: true,
+    }),
+    paragemBase({
+      cliente: "Cliente Final",
+      kmInicial: 100,
+      kmFinal: 250,
+      kgDescarregados: 1000,
+      receitaPaga: 800,
+    }),
+  ];
+  const r = calcularRota("REC01", recolha, ctx);
+
+  it("o fornecedor (recolha) não aparece no rateio", () => {
+    expect(r.rateio.find((c) => c.cliente === "Fornecedor")).toBeUndefined();
+    expect(r.rateio).toHaveLength(1);
+  });
+  it("o cliente final paga 100 % da rota (Σ quotas = 1)", () => {
+    const clienteFinal = r.rateio.find((c) => c.cliente === "Cliente Final")!;
+    expect(clienteFinal.quota).toBeCloseTo(1, 6);
+    expect(clienteFinal.custoAtribuido).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("o custo da recolha continua incluído no total da rota (não desaparece)", () => {
+    const soCliente = calcularRota("REC01", [recolha[1]], ctx);
+    expect(r.custoTotalRota).toBeGreaterThan(soCliente.custoTotalRota);
+  });
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+});
+
 describe("calcularRota — rota em prejuízo dispara alerta vermelho", () => {
   const r = calcularRota(
     "HILP01",

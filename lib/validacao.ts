@@ -40,6 +40,7 @@ export const paragemSchema = z
     noitesFora: numNaoNeg.default(0),
     alimentacao: numNaoNeg.default(0),
     horasExtra: numNaoNeg.default(0),
+    naoFaturarCliente: z.boolean().default(false),
     precoCombRefOverride: numOpcional,
     receitaPaga: numNaoNeg.default(0),
     pago: z.boolean().default(false),

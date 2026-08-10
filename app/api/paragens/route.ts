@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       noitesFora: d.noitesFora,
       alimentacao: d.alimentacao,
       horasExtra: d.horasExtra,
+      naoFaturarCliente: d.naoFaturarCliente,
       precoCombRefOverride: d.precoCombRefOverride ?? null,
       receitaPaga: d.receitaPaga,
       litrosEspanha: d.litrosEspanha ?? null,

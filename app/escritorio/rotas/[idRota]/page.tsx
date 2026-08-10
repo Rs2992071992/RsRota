@@ -55,6 +55,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       noitesFora: p.noitesFora,
       alimentacao: p.alimentacao,
       horasExtra: p.horasExtra,
+      naoFaturarCliente: p.naoFaturarCliente,
       litrosEspanha: p.litrosEspanha,
       custoEspanha: p.custoEspanha,
       receitaPaga: p.receitaPaga,
@@ -162,7 +163,14 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
           <tbody className="divide-y divide-gray-100">
             {rota.paragens.map((p, i) => (
               <tr key={p.id ?? i}>
-                <td className="td font-medium">{p.cliente}</td>
+                <td className="td font-medium">
+                  {p.cliente}
+                  {p.naoFaturarCliente && (
+                    <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-800">
+                      recolha
+                    </span>
+                  )}
+                </td>
                 <td className="td">{p.tipoVeiculo}</td>
                 <td className="td text-right">{fmtNum(p.kmFeitos)}</td>
                 <td className="td text-right">{fmtNum(p.pesoTransportado)}</td>
@@ -206,7 +214,8 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         <p className="mb-3 text-xs text-gray-500">
           Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
           quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
-          somar 100 %. Os trajetos a vazio são repartidos pelos clientes. O coef. real (peso/capacidade)
+          somar 100 %. Os trajetos a vazio e as paragens marcadas "recolha" (material para entregar a
+          outro cliente) são repartidos pelos clientes faturáveis. O coef. real (peso/capacidade)
           é só indicador: acima de 1 indica sobrecarga.
         </p>
         <div className="overflow-x-auto">
