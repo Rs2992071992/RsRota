@@ -70,6 +70,31 @@ export default function VeiculoCamposForm({
         </div>
       </div>
 
+      <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-amber-50/60 p-3">
+        <div>
+          <label className="label">Data limite de inspeção</label>
+          <input
+            type="date"
+            className="input"
+            value={f.dataLimiteInspecao ?? ""}
+            onChange={(e) =>
+              setF((p) => ({ ...p, dataLimiteInspecao: e.target.value || null, inspecaoVerificada: false }))
+            }
+          />
+        </div>
+        <div className="flex items-end pb-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={f.inspecaoVerificada}
+              disabled={!f.dataLimiteInspecao}
+              onChange={(e) => setF((p) => ({ ...p, inspecaoVerificada: e.target.checked }))}
+            />
+            Já foi à inspeção (silencia o aviso ao motorista)
+          </label>
+        </div>
+      </div>
+
       <div className="mt-4">
         <h4 className="mb-2 font-semibold">Pneus por eixo (custo / km)</h4>
         <div className="overflow-x-auto">

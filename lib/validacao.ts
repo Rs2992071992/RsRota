@@ -86,6 +86,9 @@ export const veiculoSchema = z.object({
   // Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas).
   caixaComprimentoMm: n.positive("Deve ser > 0").nullable().optional(),
   caixaLarguraMm: n.positive("Deve ser > 0").nullable().optional(),
+  // Inspeção periódica — prazo + confirmação de que já foi feita.
+  dataLimiteInspecao: z.string().trim().nullable().optional(),
+  inspecaoVerificada: z.boolean().optional(),
   pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
 });
 

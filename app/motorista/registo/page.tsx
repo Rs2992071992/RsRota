@@ -35,6 +35,8 @@ export default async function RegistoPage({
           capacidadeReboque: true,
           capacidadePaleteA: true,
           capacidadePaleteB: true,
+          dataLimiteInspecao: true,
+          inspecaoVerificada: true,
         },
       }),
       // Clientes já usados (sugestões da lista predefinida) + fichas de contacto.
@@ -73,7 +75,10 @@ export default async function RegistoPage({
   return (
     <RegistoForm
       zonas={portagens.map((p) => p.zona)}
-      veiculos={veiculos}
+      veiculos={veiculos.map((v) => ({
+        ...v,
+        dataLimiteInspecao: v.dataLimiteInspecao ? v.dataLimiteInspecao.toISOString() : null,
+      }))}
       capacidadeCamiao={params?.capacidadeCamiao ?? 14000}
       capacidadeReboque={params?.capacidadeReboque ?? 24000}
       capacidadePaleteA={params?.capacidadePaleteA ?? 38}

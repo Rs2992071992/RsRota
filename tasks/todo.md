@@ -2,6 +2,132 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔧 Aviso de inspeção do veículo ao motorista (2026-08-10)
+
+Pedido do Ricardo: ao selecionar o veículo no registo, avisar o motorista se
+o veículo tem inspeção a chegar (45 dias/mês e meio antes do prazo) ou já
+vencida. O escritório define o prazo e confirma quando a inspeção é feita,
+o que cala o aviso até ao próximo prazo.
+
+- [x] Schema: `Veiculo.dataLimiteInspecao DateTime?` +
+  `Veiculo.inspecaoVerificada Boolean @default(false)` — `db push` feito no
+  Neon (confirmado por leitura direta: veículo existente ficou com
+  `null`/`false`)
+- [x] `lib/validacao.ts` (`veiculoSchema`) + `lib/veiculo-form.ts`
+  (`VeiculoLike`/`VeiculoForm`/`veiculoParaForm`) — novos campos
+- [x] `components/VeiculoCamposForm.tsx` — campo de data + checkbox "Já foi
+  à inspeção" (desabilitado sem data); editar a data desmarca a checkbox
+  no próprio formulário (espelha a regra do servidor)
+- [x] APIs `app/api/veiculos/route.ts` (POST) e `.../[id]/route.ts` (PATCH)
+  — conversão string→Date; no PATCH, mudar `dataLimiteInspecao` para uma
+  data diferente da gravada força `inspecaoVerificada = false`
+  automaticamente (decisão confirmada com o Ricardo: reset automático, para
+  nunca ficar um aviso silenciado por engano num prazo novo)
+- [x] `app/motorista/registo/RegistoForm.tsx` — novo aviso no mesmo padrão
+  dos `avisos` já existentes (capacidade/zona), reage à seleção do veículo:
+  "Este veículo tem de ir à inspeção até dd/mm/aaaa" (ou "já devia ter
+  ido..." se o prazo já passou), a partir de 45 dias antes; `page.tsx`
+  passa os 2 campos novos (convertidos para ISO string)
+- [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes (motor de
+  cálculo não mudou)
+- [ ] **Verificação manual (utilizador)**: em `/escritorio/veiculos/[id]`,
+  definir uma data limite de inspeção próxima (dentro de 45 dias) num
+  veículo ativo; ir a `/motorista/registo`, selecionar esse veículo e
+  confirmar o aviso amarelo; marcar "Já foi à inspeção" e confirmar que o
+  aviso desaparece; mudar a data para outra diferente e confirmar que a
+  checkbox volta a ficar desmarcada (e o aviso reaparece se dentro dos 45
+  dias)
+
+## 📱 2 apps Android (Motorista / Administração) — plano (2026-08-06)
+
+Pedido do Ricardo: transformar isto em 2 apps Android separadas — uma para
+motoristas, outra para administração. Decisões já tomadas com o Ricardo:
+**distribuição por APK direto** (sideload, sem Play Store) e **registo de
+paragens offline** para o motorista (zonas sem sinal nas rotas). Ainda por
+implementar — isto é só o plano, nada foi codificado.
+
+### Decisão de arquitetura
+- **Capacitor** (não React Native/Expo): embrulha a UI web existente numa
+  shell nativa Android, reaproveita ~90% do código React/Tailwind já feito,
+  ganha acesso a SQLite/rede/storage nativos só onde é preciso. Reescrever
+  tudo em React Native seria muito mais esforço sem benefício aqui (não há
+  UI nativa exótica a precisar).
+- **App Administração**: sem necessidade offline → shell Capacitor a
+  apontar para o `/escritorio` já hospedado no Vercel (WebView remoto,
+  como um browser dedicado com ícone próprio). Praticamente nenhuma
+  alteração ao código atual.
+- **App Motorista**: PRECISA de offline para "Registar paragem" → não pode
+  ser só um WebView remoto (se não há rede, nem a página carrega). Vai ser
+  um cliente leve novo (Vite+React), com os ecrãs embutidos no `.apk`
+  (bundle local), que fala com a mesma API do Vercel e guarda dados em
+  SQLite local quando offline.
+- **Autenticação**: cookie httpOnly atual não é fiável entre origens
+  diferentes (app em `capacitor://localhost` a chamar a API em
+  `...vercel.app`) nem funciona offline. As apps passam a autenticar por
+  **token** (login devolve um token assinado, guardado em storage seguro
+  do telemóvel, enviado como `Authorization: Bearer` em cada pedido) — o
+  site continua a usar cookie normalmente, sem alteração.
+
+### Fase 0 — Pré-requisitos e backend partilhado
+- [ ] Instalar toolchain Android (Android Studio + SDK) na máquina onde se
+  vai buildar — sem isto não se gera nenhum `.apk`
+- [ ] `lib/session.ts`/API: emitir token assinado no login (reaproveitar
+  `createSessionValue`/HMAC já existente) devolvido no corpo da resposta,
+  além do cookie; middleware/rotas de API passam a aceitar sessão por
+  cookie (site) OU por header `Authorization` (apps), sem duplicar lógica
+- [ ] CORS nas rotas de API chamadas pelas apps (`/api/auth/login`,
+  `/api/paragens`, `/api/veiculos`, `/api/parametros`, dados de
+  referência) — permitir a origem das apps Capacitor
+- [ ] Gerar keystore de assinatura Android (guardar em local seguro com
+  cópia de segurança — perdê-lo impede atualizar as apps no futuro)
+
+### Fase 1 — App Administração (mais simples, sem offline)
+- [ ] Novo projeto Capacitor, `server.url` a apontar para
+  `https://<domínio-vercel>/escritorio`, appId próprio (ex.
+  `com.pego.logistica.admin`)
+- [ ] Ícone, nome, splash screen
+- [ ] Confirmar que a sessão (cookie) persiste entre aberturas da app
+  (cookie jar do WebView Android)
+- [ ] Build de release assinado, instalar num telemóvel Android real e
+  validar login + navegação completa (dashboard, rotas, clientes, etc.)
+
+### Fase 2 — App Motorista (com offline)
+- [ ] Cliente leve novo (Vite+React), só 3 ecrãs: login, registar paragem,
+  histórico/resumo de rota — reaproveitando os componentes de
+  formulário/lógica onde fizer sentido
+- [ ] SQLite local (`@capacitor-community/sqlite`) com 2 zonas:
+  - cache de dados de referência (zonas de portagem, veículos, clientes,
+    rotas recentes) — atualizada sempre que há rede
+  - fila de "paragens por sincronizar" (criadas offline)
+- [ ] Regra combinada com o Ricardo antes de implementar: **iniciar uma
+  rota NOVA exige rede** (o ID é gerado pelo servidor, evita conflitos);
+  **continuar uma rota já ativa funciona offline** (cada paragem nova é
+  só enfileirada localmente, sem depender de ID novo)
+- [ ] Sincronização automática ao recuperar rede (plugin `Network` do
+  Capacitor) + botão manual "Sincronizar agora"; UI mostra claramente
+  paragens "por sincronizar" vs "sincronizadas"
+- [ ] As notas "já introduzido" (noites/alimentação/portagens/zona,
+  feature de hoje) passam a olhar também para a fila local, não só para a
+  API — para continuarem a evitar duplicação mesmo offline
+- [ ] Teste manual completo: registar 3 paragens em modo avião, sincronizar
+  ao voltar a rede, confirmar no escritório que ficaram todas certas (sem
+  duplicados, sem perdas)
+
+### Fase 3 — Distribuição
+- [ ] Build de release assinado de cada app
+- [ ] Instalar e validar em pelo menos 1 telemóvel Android real por perfil
+- [ ] Processo de distribuição: partilhar o `.apk` (link/drive/WhatsApp) a
+  cada atualização; lembrar de ativar "Fontes desconhecidas" no Android
+  (aviso normal do Play Protect para apps fora da Play Store)
+
+### Nota de esforço
+Isto não é uma tarde de trabalho — a app Administração é rápida (poucos
+dias), mas a app Motorista com sincronização offline é a parte grande do
+projeto (fila local, resolução da regra rota nova vs continuar rota,
+testes de sincronização em cenários reais). Vale a pena fazer em 2
+entregas separadas (Administração primeiro, valida o processo de build/
+assinatura/distribuição; Motorista depois).
+
 ## 🌙 Resumo da rota em curso — evitar sobreposição de noites/alimentação (2026-08-06)
 
 Pedido do Ricardo: o motorista regista uma paragem de cada vez (mesma

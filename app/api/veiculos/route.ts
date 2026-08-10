@@ -31,11 +31,12 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { pneus, ...dados } = parsed.data;
+  const { pneus, dataLimiteInspecao, ...dados } = parsed.data;
 
   const veiculo = await prisma.veiculo.create({
     data: {
       ...dados,
+      dataLimiteInspecao: dataLimiteInspecao ? new Date(dataLimiteInspecao) : null,
       pneus: { create: pneus.map((p, i) => ({ eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })) },
     },
     include: { pneus: { orderBy: { ordem: "asc" } } },

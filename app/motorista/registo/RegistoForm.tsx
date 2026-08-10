@@ -12,7 +12,12 @@ export interface VeiculoOpcao {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  dataLimiteInspecao: string | null;
+  inspecaoVerificada: boolean;
 }
+
+// 45 dias (mês e meio) antes do prazo, o motorista começa a ver o aviso.
+const DIAS_AVISO_INSPECAO = 45;
 
 const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 
@@ -170,8 +175,22 @@ export default function RegistoForm({
     if (f.zonaPortagem.trim() && !zonas.some((z) => z.toLowerCase() === f.zonaPortagem.trim().toLowerCase())) {
       a.push(`A zona de portagem "${f.zonaPortagem}" não existe na tabela.`);
     }
+    if (veiculoSel?.dataLimiteInspecao && !veiculoSel.inspecaoVerificada) {
+      const prazo = new Date(veiculoSel.dataLimiteInspecao);
+      const avisoDesde = new Date(prazo);
+      avisoDesde.setDate(avisoDesde.getDate() - DIAS_AVISO_INSPECAO);
+      const hojeDate = new Date(hoje());
+      if (hojeDate >= avisoDesde) {
+        const prazoFmt = prazo.toLocaleDateString("pt-PT");
+        a.push(
+          hojeDate > prazo
+            ? `Este veículo já devia ter ido à inspeção (prazo era ${prazoFmt}).`
+            : `Este veículo tem de ir à inspeção até ${prazoFmt}.`,
+        );
+      }
+    }
     return a;
-  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, peso, capacidade, capacidadePaletes, ehPalete, zonas]);
+  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, peso, capacidade, capacidadePaletes, ehPalete, zonas, veiculoSel]);
 
   function validar(): boolean {
     const e: Record<string, string> = {};

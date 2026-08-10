@@ -101,6 +101,13 @@ model Veiculo {
   caixaComprimentoMm Float?
   caixaLarguraMm     Float?
 
+  // --- Inspeção periódica — aviso ao motorista ao selecionar o veículo no
+  // registo, a partir de 45 dias antes do prazo. `inspecaoVerificada` cala o
+  // aviso quando o escritório confirma que já foi feita; reposta a false
+  // sempre que o prazo (`dataLimiteInspecao`) muda para uma data diferente.
+  dataLimiteInspecao DateTime?
+  inspecaoVerificada Boolean   @default(false)
+
   pneus         Pneu[]
   paragens      Paragem[]
   manutencoes   Manutencao[]

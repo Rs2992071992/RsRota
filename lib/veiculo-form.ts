@@ -27,6 +27,8 @@ export interface VeiculoLike {
   capacidadePaleteB: number;
   caixaComprimentoMm?: number | null;
   caixaLarguraMm?: number | null;
+  dataLimiteInspecao?: Date | string | null;
+  inspecaoVerificada?: boolean;
   pneus: PneuForm[];
 }
 
@@ -49,6 +51,9 @@ export interface VeiculoForm {
   /** Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas). */
   caixaComprimentoMm: number | null;
   caixaLarguraMm: number | null;
+  /** Prazo de inspeção (yyyy-mm-dd) — aviso ao motorista a partir de 45 dias antes. */
+  dataLimiteInspecao: string | null;
+  inspecaoVerificada: boolean;
   pneus: PneuForm[];
 }
 
@@ -91,6 +96,10 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
     capacidadePaleteB: v.capacidadePaleteB,
     caixaComprimentoMm: v.caixaComprimentoMm ?? null,
     caixaLarguraMm: v.caixaLarguraMm ?? null,
+    dataLimiteInspecao: v.dataLimiteInspecao
+      ? new Date(v.dataLimiteInspecao).toISOString().slice(0, 10)
+      : null,
+    inspecaoVerificada: v.inspecaoVerificada ?? false,
     pneus: v.pneus.map((p) => ({ ...p })),
   };
 }
