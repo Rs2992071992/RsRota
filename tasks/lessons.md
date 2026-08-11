@@ -2,6 +2,26 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-11] | `Pneu` tem `veiculoId` opcional (`null` = template global
+  em Parâmetros; preenchido = pertence a um veículo, editado em Veículos).
+  `app/escritorio/parametros/page.tsx` fazia `prisma.pneu.findMany({
+  orderBy... })` **sem** `where: { veiculoId: null }` — carregava os pneus
+  de TODOS os veículos e mostrava-os juntos com o template, parecendo
+  "duplicados" (cada eixo com 2+ valores, um por camião). Pior: como
+  `PUT /api/parametros` grava sempre com `veiculoId: null` o que estiver
+  no array enviado, gravar a partir desta página com a lista poluída
+  visível escrevia os valores dos veículos para dentro do template global
+  (nunca apagava os originais por veículo, só ia acumulando cópias no
+  template) — encontrado porque o template tinha exatamente `nVeiculo1 +
+  nVeiculo2 - interseção` linhas, a assinatura clássica de uma UNION
+  acidental. | Sempre que um modelo tem uma FK opcional a servir de
+  "âmbito" (global vs por-dono), toda a query de listagem **tem de
+  filtrar esse âmbito explicitamente** — nunca confiar que "não há
+  veículos a mais no ecrã" só porque a UI não mostra uma coluna de
+  dono. Convém também um teste/smoke-check simples (contagem de linhas
+  por `veiculoId`) sempre que o utilizador reportar "demasiadas linhas
+  repetidas" numa tabela editável ligada a uma FK opcional.
+
 - [2026-08-11] | A app Android "RsRota — Administração" (`capacitor.config.json`,
   `server.url`) abre diretamente em `/escritorio`, um caminho sem `page.tsx`
   próprio (só existem sub-páginas: `/escritorio/dashboard`, `/escritorio/rotas`,
