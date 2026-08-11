@@ -53,6 +53,7 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, clientes
           `&kmInicial=${ultima.kmFinal}`;
         const totalNoites = ps.reduce((soma, p) => soma + p.noitesFora, 0);
         const totalAlimentacao = ps.reduce((soma, p) => soma + p.alimentacao, 0);
+        const totalZonasPortagem = ps.filter((p) => p.zonaPortagem.trim() !== "").length;
 
         return (
           <div key={idRota} className="card space-y-3">
@@ -61,6 +62,7 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, clientes
                 Rota {idRota}{" "}
                 <span className="text-sm font-normal text-gray-400">
                   · {ps.length} paragem(ns)
+                  {totalZonasPortagem > 0 ? ` · ${totalZonasPortagem} zona(s) de portagem` : ""}
                   {totalNoites > 0 ? ` · ${totalNoites} noite(s)` : ""}
                   {totalAlimentacao > 0 ? ` · ${fmtEuro(totalAlimentacao)} alimentação` : ""}
                 </span>

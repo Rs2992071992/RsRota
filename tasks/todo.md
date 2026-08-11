@@ -2,6 +2,18 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🧾 Histórico do motorista mostra quantas zonas de portagem por rota (2026-08-11)
+
+Pedido do Ricardo: no Histórico do motorista, mostrar quantas vezes o
+campo "Zona Portagem" foi preenchido por rota, para o motorista perceber
+de relance se já registou a portagem e evitar duplicar/sobrecustar.
+
+- [x] `app/motorista/historico/HistoricoMotorista.tsx`: cabeçalho de cada
+  rota ganha `N zona(s) de portagem` (conta paragens com `zonaPortagem`
+  não vazio), ao lado do nº de paragens/noites/alimentação já existentes
+- [x] Não mexe no motor de cálculo — `tsc --noEmit` limpo, `next build`
+  OK, 114 testes continuam verdes
+
 ## 🚚 Motorista só assinala "Recolha"; escolher o cliente fica só no escritório (2026-08-11)
 
 Ajuste ao pedido de há pouco: o dropdown "Faturar esta recolha a" no
