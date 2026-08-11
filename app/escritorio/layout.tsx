@@ -17,7 +17,7 @@ export default async function EscritorioLayout({ children }: { children: React.R
   const vencidos = await contarVencidos();
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
+      <header className="relative border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <span className="font-bold text-brand">Gestão de Rotas</span>
