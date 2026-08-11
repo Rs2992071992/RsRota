@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function ParametrosPage() {
   const [params, pneus, portagens, consumo, tiposPalete] = await Promise.all([
     prisma.parametros.findUnique({ where: { id: 1 } }),
-    prisma.pneu.findMany({ orderBy: { ordem: "asc" } }),
+    prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.tabelaConsumo.findMany({ orderBy: { cargaKg: "asc" } }),
     prisma.tipoPalete.findMany({ orderBy: [{ ordem: "asc" }, { nome: "asc" }] }),
