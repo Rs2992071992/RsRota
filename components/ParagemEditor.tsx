@@ -49,6 +49,8 @@ interface Props {
   mostrarReceita?: boolean;
   /** Mostrar o detalhe "N × valor = total" nas Noites fora (só no escritório). */
   mostrarDetalheEuroNoites?: boolean;
+  /** Mostrar "Faturar esta recolha a" — a quem faturar é decisão do escritório, não do motorista. */
+  mostrarFaturarCliente?: boolean;
   onClose: () => void;
 }
 
@@ -60,6 +62,7 @@ export default function ParagemEditor({
   valorNoite,
   mostrarReceita = false,
   mostrarDetalheEuroNoites = true,
+  mostrarFaturarCliente = true,
   onClose,
 }: Props) {
   const router = useRouter();
@@ -194,23 +197,25 @@ export default function ParagemEditor({
             <label className="label">Cliente / Local</label>
             <input className="input" value={f.cliente} onChange={(e) => set("cliente", e.target.value)} />
           </div>
-          <div className="col-span-2">
-            <label className="label">Faturar esta recolha a</label>
-            <select
-              className="input"
-              value={f.faturarCliente ?? ""}
-              onChange={(e) => set("faturarCliente", (e.target.value || null) as never)}
-            >
-              <option value="">— faturar normalmente a este cliente —</option>
-              {clientes
-                .filter((c) => c !== f.cliente)
-                .map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-            </select>
-          </div>
+          {mostrarFaturarCliente && (
+            <div className="col-span-2">
+              <label className="label">Faturar esta recolha a</label>
+              <select
+                className="input"
+                value={f.faturarCliente ?? ""}
+                onChange={(e) => set("faturarCliente", (e.target.value || null) as never)}
+              >
+                <option value="">— faturar normalmente a este cliente —</option>
+                {clientes
+                  .filter((c) => c !== f.cliente)
+                  .map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label">Tipo Viagem</label>
             <select className="input" value={f.tipoViagem} onChange={(e) => set("tipoViagem", e.target.value)}>

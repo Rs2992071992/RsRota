@@ -103,6 +103,7 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, clientes
           clientes={clientes}
           valorNoite={valorNoite}
           mostrarDetalheEuroNoites={false}
+          mostrarFaturarCliente={false}
           onClose={() => setAEditar(null)}
         />
       )}
