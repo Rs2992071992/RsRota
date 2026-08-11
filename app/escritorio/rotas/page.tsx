@@ -127,7 +127,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
       </form>
 
       {/* Totais */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="card">
           <p className="text-xs text-gray-500">Custo total</p>
           <p className="text-lg font-bold">{fmtEuro(totalCusto)}</p>
@@ -145,7 +145,7 @@ export default async function RotasPage({ searchParams }: { searchParams: Search
       </div>
 
       {/* Totais de carga (kg + paletes) */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="card">
           <p className="text-xs text-gray-500">Total KG Carregados</p>
           <p className="text-lg font-bold">{fmtNum(totalKgCarregados)} kg</p>

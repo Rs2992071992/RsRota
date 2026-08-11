@@ -184,7 +184,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
               </div>
 
               {/* Pagamentos (informativo) */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Kpi rotulo="Já pago" valor={fmtEuro(detalhe.jaPago)} cor="text-green-700" />
                 <Kpi rotulo="Por pagar" valor={fmtEuro(detalhe.porPagar)} cor="text-amber-700" />
                 <Kpi
