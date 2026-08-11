@@ -220,7 +220,12 @@ implementar — isto é só o plano, nada foi codificado.
 - [x] Build de **debug** gerado com sucesso —
   `android\app\build\outputs\apk\debug\app-debug.apk` (4,1 MB). Confirma
   todo o toolchain (JDK 21 + SDK + Gradle) a funcionar de ponta a ponta
-- [ ] Ícone, nome, splash screen (por agora usa os defaults do Capacitor)
+- [x] Ícone + splash screen com o logo do camião fornecido pelo Ricardo
+  (`resources/icon.png`/`splash.png`, recortado só a parte central e
+  limpo dos cantos do fundo de rua desfocado). Gerados via
+  `@capacitor/assets` para todas as densidades Android (launcher
+  adaptativo + splash claro/escuro). Build de debug repetido, confirma
+  que ficou tudo integrado corretamente
 - [ ] Confirmar que a sessão (cookie) persiste entre aberturas da app
   (cookie jar do WebView Android)
 - [ ] Build de **release** assinado (falta gerar o keystore), instalar num
