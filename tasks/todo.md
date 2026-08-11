@@ -239,11 +239,20 @@ implementar — isto é só o plano, nada foi codificado.
   `android\app\build\outputs\apk\release\app-release.apk` (8,4 MB),
   assinatura confirmada por `apksigner verify --print-certs`
   (CN=Ricardo Silva, SHA-256 do certificado registado no commit)
-- [ ] Confirmar que a sessão (cookie) persiste entre aberturas da app
-  (cookie jar do WebView Android)
-- [ ] Instalar o `app-release.apk` num telemóvel Android real e validar
-  login + navegação completa (dashboard, rotas, clientes, etc.) —
-  **falta só isto para a Fase 1 estar concluída**
+- [x] Sessão (cookie) confirmada a persistir entre aberturas da app —
+  validado indiretamente: foi exatamente essa persistência que expôs o
+  bug de 404 em `/escritorio` (corrigido em 2026-08-11, ver lições), o
+  que só acontece com sessão já ativa ao reabrir a app
+- [x] `app-release.apk` instalado num telemóvel Android real pelo
+  Ricardo; login + navegação completa validados ao longo de várias
+  sessões reais (dashboard, rotas, detalhe de rota, motoristas,
+  cargas/planta de carga, parâmetros) — **Fase 1 concluída** ✅.
+  Como a app é um WebView remoto para `/escritorio` (não tem nada
+  embutido no `.apk`), todas as correções e o rebranding RsRota feitos
+  hoje (menu mobile, ícone Sair, tabelas, bug dos pneus, "RsRota" no
+  login/cabeçalho) já se aplicam à app instalada sem precisar de novo
+  `.apk` — só um fecho completo + reabertura (ou limpar cache) para
+  apanhar a versão nova
 
 ### Fase 2 — App Motorista (com offline)
 - [ ] Cliente leve novo (Vite+React), só 3 ecrãs: login, registar paragem,
