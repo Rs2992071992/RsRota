@@ -2,6 +2,21 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-11] | A app Android "RsRota — Administração" (`capacitor.config.json`,
+  `server.url`) abre diretamente em `/escritorio`, um caminho sem `page.tsx`
+  próprio (só existem sub-páginas: `/escritorio/dashboard`, `/escritorio/rotas`,
+  etc.). O `middleware.ts` só redirecionava quem **não** tinha sessão (para
+  `/login`) — quem já estava autenticado (cookie de sessão persistida entre
+  aberturas da app, o comportamento que se queria) caía num 404 puro do
+  Next.js, sem nenhum `catch-all`/`not-found` a apanhar. Reportado pelo
+  Ricardo como "ao ligar dá erro 404" depois de já ter feito login uma vez.
+  | Sempre que um `server.url`/deep-link externo aponta para um caminho
+  "pasta" (`/escritorio`, `/motorista`) que só tem `layout.tsx` e nenhum
+  `page.tsx` seu, o middleware tem de redirecionar esse caminho exato para
+  o home do perfil **também no caso autenticado**, não só no caso
+  sem-sessão — testado forçando uma cookie assinada localmente (HMAC com
+  `AUTH_SECRET`) contra `curl`, sem precisar de saber o PIN real.
+
 - [2026-08-11] | Setup do toolchain Android (projeto irmão
   `app-administracao-android`) neste Windows: (1) `local.properties` com
   `sdk.dir=C:\Android\sdk` (barra invertida) corrompe o caminho — ficheiros
