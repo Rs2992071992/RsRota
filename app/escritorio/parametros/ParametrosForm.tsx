@@ -6,6 +6,7 @@ import { derivarCustos } from "@/lib/calc/params";
 import type { ParametrosCusto, PneuItem } from "@/lib/calc/types";
 import { fmtEuro, fmtNum2 } from "@/lib/format";
 import TiposPaleteEditor, { type TipoPaleteBD } from "./TiposPaleteEditor";
+import AlterarPinEscritorio from "./AlterarPinEscritorio";
 
 type ParamsBD = ParametrosCusto & { id: number; atualizadoEm: Date };
 type Pneu = { eixo: string; custo: number; km: number };
@@ -145,6 +146,8 @@ export default function ParametrosForm({
         Os pneus aqui são o <strong>template global</strong>; cada veículo tem os seus próprios na
         página de Veículos.
       </p>
+
+      <AlterarPinEscritorio />
 
       {/* Valores derivados (validação) */}
       <div className="card border-brand/30 bg-brand/5">

@@ -127,6 +127,17 @@ export const motoristaParamsSchema = z.object({
 
 export type MotoristaParamsForm = z.infer<typeof motoristaParamsSchema>;
 
+/** Escritório muda o PIN de um motorista — já tem autoridade sobre a conta, não precisa do PIN antigo. */
+export const alterarPinMotoristaSchema = z.object({
+  pin: z.string().trim().min(4, "O PIN deve ter pelo menos 4 dígitos."),
+});
+
+/** Escritório muda o seu próprio PIN — exige o PIN atual como confirmação de identidade. */
+export const alterarPinEscritorioSchema = z.object({
+  pinAtual: z.string().trim().min(1, "Indique o PIN atual."),
+  pinNovo: z.string().trim().min(4, "O novo PIN deve ter pelo menos 4 dígitos."),
+});
+
 /** Schema da ficha de contacto de um cliente (só dados de contacto). */
 const txtContacto = z.string().trim().max(500).nullable().optional();
 export const clienteContactoSchema = z.object({

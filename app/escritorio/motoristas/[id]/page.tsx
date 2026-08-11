@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { fmtData, fmtEuro, fmtNum } from "@/lib/format";
 import { carregarEstatisticasMotorista } from "@/lib/motoristas-service";
 import MotoristaParamsForm from "./MotoristaParamsForm";
+import AlterarPinMotorista from "./AlterarPinMotorista";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,8 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
           fatorAnualizacao: motorista.fatorAnualizacao,
         }}
       />
+
+      <AlterarPinMotorista id={motorista.id} codigo={motorista.codigo} />
 
       {paragens.length === 0 ? (
         <div className="card text-sm text-gray-500">Este motorista ainda não registou paragens.</div>
