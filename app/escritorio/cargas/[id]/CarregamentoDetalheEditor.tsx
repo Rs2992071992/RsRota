@@ -511,7 +511,7 @@ export default function CarregamentoDetalheEditor({
 
       {/* Quanto mais cabe */}
       <div className="card">
-        <h3 className="mb-3 font-semibold">Quanto mais cabe (por tipo de palete)</h3>
+        <h3 className="mb-3 font-semibold">Quantidade que ainda cabe (por tipo de palete)</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {detalhe.estimativasRestantes.map((e) => (
             <div key={e.tipoPaleteId}>
