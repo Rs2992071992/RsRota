@@ -222,7 +222,10 @@ implementar — isto é só o plano, nada foi codificado.
   `c:\Users\Ricardo\Desktop\app_logistica\app-administracao-android\`.
   `capacitor.config.json` (não `.ts` — falhava a carregar neste ambiente,
   ver lições) com `server.url` = `https://app-logistica-olive.vercel.app/escritorio`,
-  appId `com.ricardosilva.logisticaadmin` (fácil de trocar, é só sideload)
+  appId `com.ricardosilva.logisticaadmin` (fácil de trocar, é só sideload).
+  Nome da app decidido com o Ricardo (2026-08-11): **"RsRota"** — a app
+  Administração chama-se "RsRota — Administração" (a futura app do
+  motorista deve seguir o mesmo padrão: "RsRota — Motorista")
 - [x] Build de **debug** gerado com sucesso —
   `android\app\build\outputs\apk\debug\app-debug.apk` (4,1 MB). Confirma
   todo o toolchain (JDK 21 + SDK + Gradle) a funcionar de ponta a ponta
