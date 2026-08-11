@@ -27,7 +27,7 @@ export default async function MotoristasPage() {
           Ainda não há motoristas. Podem ser criados na página de login (botão “Criar motorista”).
         </div>
       ) : (
-        <div className="card overflow-x-auto">
+        <div className="card scroll-fade-x overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>

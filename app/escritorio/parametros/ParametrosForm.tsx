@@ -265,7 +265,7 @@ function TabelaEditavel<T>({
 }) {
   return (
     <div>
-      <div className="overflow-x-auto">
+      <div className="scroll-fade-x overflow-x-auto">
         <table className="min-w-full">
           <thead>
             <tr>

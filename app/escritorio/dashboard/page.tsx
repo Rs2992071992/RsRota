@@ -71,7 +71,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Rentabilidade por cliente */}
-      <div className="card overflow-x-auto">
+      <div className="card scroll-fade-x overflow-x-auto">
         <h2 className="mb-3 font-semibold">Rentabilidade por cliente</h2>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

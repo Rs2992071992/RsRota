@@ -119,7 +119,7 @@ export default function ManutencoesModal({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="scroll-fade-x overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr>

@@ -90,7 +90,7 @@ export default function TiposPaleteEditor({ tiposIniciais }: { tiposIniciais: Ti
       </p>
       {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
 
-      <div className="overflow-x-auto">
+      <div className="scroll-fade-x overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr>

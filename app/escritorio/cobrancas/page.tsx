@@ -64,7 +64,7 @@ export default async function ContasAReceber() {
         </div>
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card scroll-fade-x overflow-x-auto">
         {linhas.length === 0 ? (
           <p className="text-sm text-gray-500">Sem valores a cobrar registados.</p>
         ) : (

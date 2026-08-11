@@ -18,7 +18,7 @@ export default async function OrcamentosPage() {
         </Link>
       </div>
 
-      <div className="card overflow-x-auto p-0">
+      <div className="card scroll-fade-x overflow-x-auto p-0">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

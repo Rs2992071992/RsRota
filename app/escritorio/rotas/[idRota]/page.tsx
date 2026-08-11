@@ -114,7 +114,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       {/* Decomposição do custo da rota */}
       <div className="card">
         <h2 className="mb-3 font-semibold">Decomposição do custo da rota</h2>
-        <dl className="grid grid-cols-2 gap-y-2 text-sm md:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
           <Item label="Custos das paragens" valor={rota.somaCustoParagens} />
           <Item label="Noites" valor={rota.somaNoites} />
           <Item label="Alimentação" valor={rota.somaAlimentacao} />
@@ -142,7 +142,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       </div>
 
       {/* Paragens detalhadas */}
-      <div className="card overflow-x-auto">
+      <div className="card scroll-fade-x overflow-x-auto">
         <h2 className="mb-3 font-semibold">Paragens</h2>
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
@@ -228,7 +228,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
           "recolha → Cliente" somam o seu custo à quota desse cliente em vez de gerarem linha própria.
           O coef. real (peso/capacidade) é só indicador: acima de 1 indica sobrecarga.
         </p>
-        <div className="overflow-x-auto">
+        <div className="scroll-fade-x overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -327,7 +327,7 @@ function Cobrancas({ paragens, faturado }: { paragens: ParagemCobranca[]; fatura
       {linhas.length === 0 ? (
         <p className="text-sm text-gray-500">Sem valores a cobrar nesta rota.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="scroll-fade-x overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>

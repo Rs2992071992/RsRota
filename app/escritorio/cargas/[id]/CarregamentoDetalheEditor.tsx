@@ -441,7 +441,7 @@ export default function CarregamentoDetalheEditor({
         {detalhe.pedidos.length === 0 ? (
           <p className="text-sm text-gray-500">Ainda não há pedidos neste carregamento.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="scroll-fade-x overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr>
@@ -480,7 +480,7 @@ export default function CarregamentoDetalheEditor({
       {naoColocadosAgrupados.length > 0 && (
         <div className="card border-red-200">
           <h3 className="mb-2 font-semibold text-red-700">Sem espaço</h3>
-          <div className="overflow-x-auto">
+          <div className="scroll-fade-x overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr>
