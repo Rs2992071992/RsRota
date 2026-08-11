@@ -2,6 +2,34 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-12] | A diagnosticar um 403 da API da TollGuru, o 1º pedido direto
+  (fora da app) teve sucesso; pedidos seguintes passaram todos a dar 403.
+  Concluí (errado) que era o `User-Agent` do fetch do Node — troquei o UA
+  num 2º pedido, voltou a dar 403, "confirmei" a teoria com só 2 pontos de
+  dados, sem controlar a variável tempo. Só ao fazer mais um pedido limpo é
+  que a TollGuru devolveu a mensagem real: `"exceeded daily quota of 15
+  transactions"` — plano trial (email pessoal) esgotado pelos meus próprios
+  testes em sequência. | Ao diagnosticar erros intermitentes de uma API
+  externa (sobretudo em contas trial/gratuitas), verificar sempre quota/rate
+  limit ANTES de mudar variáveis e "confirmar" teorias — 2 pedidos em
+  minutos não isolam nada se a causa real for o número de pedidos em si.
+  Ler a mensagem de erro completa do corpo da resposta (não só o código
+  HTTP) antes de teorizar — a TollGuru já dizia a causa exata na 1ª vez que
+  o corpo da resposta foi mesmo lido.
+- [2026-08-12] | `lib/portagens.ts` (`calcularPortagem`) já tinha sido
+  desenhada em 2026-06-11 para nunca bloquear o orçamento se a TollGuru
+  falhar (chave em falta/expirada, erro de rede, HTTP não-200 — tudo
+  devolve `{km:null, tollEur:null, erro}` e `estimar/route.ts` usa isso só
+  como aviso, nunca como bloqueio). Isto pagou-se sozinho quando o Ricardo
+  pediu para garantir que a app sobrevive ao fim do trial gratuito (14
+  dias, sem orçamento para plano pago) — a resposta foi "já está garantido,
+  zero alterações". | Ao integrar uma API paga/com quota como accessório
+  (não essencial), desenhar a resiliência ANTES de a chave existir sequer
+  (fallback sempre testável sem a chave) poupa exatamente este tipo de
+  pergunta depois — a integração deve poder ser desligada a qualquer
+  momento (quota esgotada, trial a expirar, conta cancelada) sem tocar em
+  código nenhum.
+
 - [2026-08-11] | `lib/portagens.ts` (integração TollGuru, escrita em 2026-06-11
   sem chave disponível para testar) enviava o tipo de veículo como campo solto
   `vehicleType` no corpo do pedido. O Ricardo partilhou o schema OpenAPI oficial

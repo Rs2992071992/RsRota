@@ -761,9 +761,25 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
   (route/routes[0], distance.value em metros, costs.cash/tag/minimumTollCost)
   confirmado campo a campo contra o schema, sem alterações necessárias — ver
   lições
-- [ ] **Verificar em produção** com a chave real configurada: 1.º cálculo real
-  (rota com portagem conhecida) e comparar o valor devolvido com a tabela por
-  zona, para confirmar que bate certo
+- [x] **Verificado em produção com a chave real** (2026-08-12): 1.º pedido
+  direto à TollGuru (fora da app, `curl`, para isolar) devolveu dados reais e
+  plausíveis — Lisboa→Porto, camião 2 eixos: 314 km, portagem 43,85 € (via
+  A1) — confirma chave, conta e o fix de `vehicle.type` todos corretos
+- [ ] **Ação do utilizador**: o plano trial (email pessoal) só dá **15
+  pedidos/dia** — esgotado durante os testes de hoje (`"Request denied. You
+  have exceeded daily quota of 15 transactions."`). Ou esperar o reset diário
+  (a app continua a funcionar normalmente entretanto, cai no fallback da
+  tabela por zona sempre que a quota está esgotada), ou adicionar cartão e
+  mudar de plano na TollGuru se quiseres uso sem este limite
+- [x] **Confirmado (2026-08-12): não é preciso nenhuma alteração de código
+  para o trial expirar.** O Ricardo avisou que a chave só é válida 14 dias
+  (~2026-08-26) e não quer pagar subscrição. `calcularPortagem()` já foi
+  desenhada desde 2026-06-11 para nunca bloquear — qualquer falha (chave
+  expirada, 401/403, rede) devolve só `erro` e a app cai sozinha na tabela
+  por zona, sem nada visível a partir. Quando o trial acabar, não é preciso
+  fazer nada: volta ao comportamento de sempre. Só **opcional**: remover
+  `TOLLGURU_API_KEY` da Vercel depois de expirar, por arrumação (não é
+  preciso para a app continuar a funcionar bem)
 
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 
