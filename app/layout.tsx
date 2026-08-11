@@ -3,7 +3,7 @@ import "./globals.css";
 import SelecaoCamposNumericos from "@/components/SelecaoCamposNumericos";
 
 export const metadata: Metadata = {
-  title: "Gestão de Rotas — Rentabilidade",
+  title: "RsRota — A tua rota, os teus custos, sob controlo",
   description: "Análise de rentabilidade de rotas de transporte Portugal ⇄ Espanha",
 };
 

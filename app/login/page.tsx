@@ -86,8 +86,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="card w-full max-w-sm">
-        <h1 className="mb-1 text-xl font-bold text-brand">Gestão de Rotas</h1>
-        <p className="mb-6 text-sm text-gray-500">Rentabilidade de transporte PT ⇄ ES</p>
+        <h1 className="mb-1 text-xl font-bold text-brand">RsRota</h1>
+        <p className="mb-6 text-sm text-gray-500">A tua rota, os teus custos, sob controlo.</p>
 
         <div className="mb-4 grid grid-cols-2 gap-2">
           <button
