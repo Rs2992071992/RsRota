@@ -206,9 +206,15 @@ implementar — isto é só o plano, nada foi codificado.
   de origem `capacitor://` diferente). A app Administração usa WebView
   remoto (mesma origem do site, cookie funciona normalmente, sem XHR
   cross-origin) — não precisa disto.
-- [ ] Gerar keystore de assinatura Android (guardar em local seguro com
-  cópia de segurança — perdê-lo impede atualizar as apps no futuro) —
-  falta para o build de **release**; o build de debug já feito não precisa
+- [x] Keystore de assinatura Android gerado (2026-08-11):
+  `app-administracao-android\release-key.jks` (RSA 2048, validade
+  ~27 anos, alias `logisticaadmin`), password aleatória forte guardada em
+  `android\keystore.properties` (gitignored, nunca commitado).
+  `android\app\build.gradle` lê esse ficheiro e assina o build de release
+  automaticamente se existir. **⚠️ Ação do Ricardo por fazer: copiar
+  `release-key.jks` + a password de `keystore.properties` para um local
+  seguro com backup (password manager, cloud privada) — perder qualquer
+  um dos dois impede atualizar esta app no futuro.**
 
 ### Fase 1 — App Administração (mais simples, sem offline)
 - [x] Novo projeto Capacitor criado em pasta irmã (fora do
@@ -226,11 +232,15 @@ implementar — isto é só o plano, nada foi codificado.
   `@capacitor/assets` para todas as densidades Android (launcher
   adaptativo + splash claro/escuro). Build de debug repetido, confirma
   que ficou tudo integrado corretamente
+- [x] Build de **release** assinado gerado e verificado —
+  `android\app\build\outputs\apk\release\app-release.apk` (8,4 MB),
+  assinatura confirmada por `apksigner verify --print-certs`
+  (CN=Ricardo Silva, SHA-256 do certificado registado no commit)
 - [ ] Confirmar que a sessão (cookie) persiste entre aberturas da app
   (cookie jar do WebView Android)
-- [ ] Build de **release** assinado (falta gerar o keystore), instalar num
-  telemóvel Android real e validar login + navegação completa (dashboard,
-  rotas, clientes, etc.)
+- [ ] Instalar o `app-release.apk` num telemóvel Android real e validar
+  login + navegação completa (dashboard, rotas, clientes, etc.) —
+  **falta só isto para a Fase 1 estar concluída**
 
 ### Fase 2 — App Motorista (com offline)
 - [ ] Cliente leve novo (Vite+React), só 3 ecrãs: login, registar paragem,
