@@ -753,9 +753,17 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
   usa sempre a tabela por zona (fallback), o que já é o comportamento atual usado
   em produção. Criar chave grátis em tollguru.com e configurar na Vercel só se
   quiseres portagens calculadas automaticamente por rota em vez da tabela fixa
-- [ ] **Verificar em produção** o parsing da resposta TollGuru (campos costs/summary)
-  no 1.º cálculo real e afinar `lib/portagens.ts` se necessário — só relevante depois
-  de configurar a chave acima
+- [x] **Bug real encontrado e corrigido antes de ligar a chave** (2026-08-11): o
+  Ricardo partilhou o schema OpenAPI oficial da TollGuru
+  (`toll-api-openapi-schema.json`) — `lib/portagens.ts` enviava o tipo de veículo
+  como `vehicleType` solto; o schema real exige `vehicle: { type }` aninhado
+  (corpo com `additionalProperties: false`). Corrigido; resto do parser
+  (route/routes[0], distance.value em metros, costs.cash/tag/minimumTollCost)
+  confirmado campo a campo contra o schema, sem alterações necessárias — ver
+  lições
+- [ ] **Verificar em produção** com a chave real configurada: 1.º cálculo real
+  (rota com portagem conhecida) e comparar o valor devolvido com a tabela por
+  zona, para confirmar que bate certo
 
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 

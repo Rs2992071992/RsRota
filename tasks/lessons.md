@@ -2,6 +2,22 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-11] | `lib/portagens.ts` (integração TollGuru, escrita em 2026-06-11
+  sem chave disponível para testar) enviava o tipo de veículo como campo solto
+  `vehicleType` no corpo do pedido. O Ricardo partilhou o schema OpenAPI oficial
+  (`toll-api-openapi-schema.json`) antes de configurar a chave na Vercel — o
+  schema real do endpoint `origin-destination-waypoints` (truck) exige
+  `vehicle: { type }` **aninhado**, e o corpo tem `additionalProperties:
+  false`. Sem isto ter sido apanhado agora, a chave ficaria configurada e a
+  app pareceria "a funcionar" (200 OK, sem erro), mas calculava portagens
+  para o veículo por defeito (carro), não para o camião real — um bug
+  silencioso, só visível comparando valores manualmente. | Ao escrever
+  integração contra uma API externa sem chave/sandbox disponível para testar
+  de verdade, documentar isso explicitamente (aqui devia ter ficado um aviso
+  "nunca testado contra a API real") e, assim que uma chave ou schema oficial
+  aparecer, validar campo a campo ANTES de dar a integração como pronta — não
+  basta o código compilar e "parecer razoável" com base em memória da API.
+
 - [2026-08-11] | A app tinha login por PIN desde o início (2026-06), mas
   nunca ganhou forma de o **mudar** depois de criado — só `POST
   /api/motoristas` definia um PIN, na criação. Resultado: confirmado por
