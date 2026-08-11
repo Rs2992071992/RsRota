@@ -2,6 +2,21 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-11] | A app tinha login por PIN desde o início (2026-06), mas
+  nunca ganhou forma de o **mudar** depois de criado — só `POST
+  /api/motoristas` definia um PIN, na criação. Resultado: confirmado por
+  leitura direta da BD que, meses depois, o escritório e o único motorista
+  ainda usavam os PINs por defeito (1234/0000) em produção, sem ninguém dar
+  por isso porque nada na app avisava. | Qualquer credencial com valor por
+  defeito conhecido (PIN, password inicial, chave de API de exemplo) precisa
+  de um caminho explícito para ser trocada, não só um caminho para ser
+  criada — decidir isso no momento em que o login é implementado, não depois
+  de alguém perguntar "isto já está seguro?". Testado o fluxo todo (alterar
+  → login com o novo → repor o original → login de novo) por `curl` com uma
+  cookie de sessão forjada por HMAC (mesmo `AUTH_SECRET` do `.env`) contra o
+  servidor local — permite validar mutações reais em produção (mesma BD)
+  sem depender do PIN real, desde que se restaure o valor original a seguir.
+
 - [2026-08-11] | `Pneu` tem `veiculoId` opcional (`null` = template global
   em Parâmetros; preenchido = pertence a um veículo, editado em Veículos).
   `app/escritorio/parametros/page.tsx` fazia `prisma.pneu.findMany({

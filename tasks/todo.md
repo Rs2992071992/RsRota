@@ -2,6 +2,39 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔐 Alterar PIN (escritório + motorista) (2026-08-11)
+
+Pedido do Ricardo: rever "o que falta" de segurança/config. Confirmado por
+leitura direta da BD que os 2 únicos utilizadores ainda usavam os PINs por
+defeito (escritório 1234, motorista "Ricardo" 0000) — e não existia nenhuma
+forma de os mudar pela app (só `POST /api/motoristas` definia um PIN, ao
+criar; não havia PATCH nenhum).
+
+- [x] `lib/validacao.ts`: `alterarPinEscritorioSchema` (exige `pinAtual` +
+  `pinNovo`) e `alterarPinMotoristaSchema` (só `pin`, já que o escritório tem
+  autoridade sobre a conta do motorista)
+- [x] `PATCH /api/auth/pin` — escritório muda o seu próprio PIN, valida o PIN
+  atual por bcrypt antes de aceitar o novo
+- [x] `PATCH /api/motoristas/[id]/pin` — escritório muda o PIN de um
+  motorista, sem precisar do PIN antigo
+- [x] UI: cartão "Segurança — Alterar PIN do Escritório" em
+  `/escritorio/parametros`; "Alterar PIN" na ficha de cada motorista
+  (`/escritorio/motoristas/[id]`)
+- [x] Testado de ponta a ponta contra a BD real (curl, sessão forjada por
+  HMAC com o `AUTH_SECRET` local): sem sessão → 403; PIN atual errado → 401;
+  PIN novo curto → 400; ciclo completo alterar → login com o PIN novo → repor
+  o original → login de novo, para os 2 utilizadores — PINs de produção
+  restaurados aos valores originais no fim dos testes
+- [x] De caminho, confirmado em produção (mesmo método) que `ORS_API_KEY`
+  está configurada (km automático real: Lisboa→Porto = 315 km) mas
+  `TOLLGURU_API_KEY` **não está** — portagens automáticas nunca chegaram a
+  ligar, a app usa sempre a tabela por zona (fallback já existente, nada
+  partido)
+- [ ] **Ação do utilizador**: ir a `/escritorio/parametros` e definir um PIN
+  novo para o Escritório; ir à ficha do motorista em
+  `/escritorio/motoristas/[id]` e definir um PIN novo para ele também — os
+  valores por defeito (1234/0000) continuam ativos até isto ser feito
+
 ## 🧾 Histórico do motorista mostra quantas zonas de portagem por rota (2026-08-11)
 
 Pedido do Ricardo: no Histórico do motorista, mostrar quantas vezes o
@@ -697,9 +730,9 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
 - [x] UI: menu "Orçamentos", lista, editor (`OrcamentoForm`), `EnviarOrcamento`,
   `EstadoOrcamentoBadge`, `ApagarOrcamento`
 - [x] tsc limpo, build OK, 63 testes verdes
-- [ ] **Ação do utilizador**: criar chave grátis OpenRouteService → `ORS_API_KEY` no
-  `.env` local **e** nas env vars da Vercel (sem ela, o km automático fica off; o km
-  manual continua a funcionar)
+- [x] `ORS_API_KEY` **configurada na Vercel** — confirmado em produção
+  (2026-08-11) via `POST /api/devis/estimar` real (Lisboa→Porto):
+  `kmAuto: 315` sem aviso, o cálculo automático está mesmo a funcionar
 - [ ] **Verificação manual**: criar orçamento (Lisboa→Porto, ida/volta), "Calcular"
   → km ~626 + preço sugerido; "Descarregar PDF" e "Preparar email"
 - [ ] (Opcional) Personalizar o cabeçalho da empresa em `lib/pdf/DevisDocument.tsx`
@@ -714,10 +747,15 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
   tabela por zona quando disponível (override em `estimarLinha`), com fallback gracioso
 - [x] Vista de orçamentos por cliente na ficha de Clientes (+ "Novo orçamento" pré-preenchido)
 - [x] 67 testes verdes, tsc limpo, build OK
-- [ ] **Ação do utilizador**: criar chave grátis TollGuru → `TOLLGURU_API_KEY` no `.env`
-  local **e** na Vercel (sem ela, portagens continuam pela tabela por zona)
+- [ ] **Ação do utilizador**: `TOLLGURU_API_KEY` **confirmado NÃO configurada na
+  Vercel** (2026-08-11, testado em produção real: `avisoPortagem: "TOLLGURU_API_KEY
+  não configurada."`) — as portagens automáticas nunca chegaram a ligar-se; a app
+  usa sempre a tabela por zona (fallback), o que já é o comportamento atual usado
+  em produção. Criar chave grátis em tollguru.com e configurar na Vercel só se
+  quiseres portagens calculadas automaticamente por rota em vez da tabela fixa
 - [ ] **Verificar em produção** o parsing da resposta TollGuru (campos costs/summary)
-  no 1.º cálculo real e afinar `lib/portagens.ts` se necessário
+  no 1.º cálculo real e afinar `lib/portagens.ts` se necessário — só relevante depois
+  de configurar a chave acima
 
 ## 💶 Cobranças / contas a receber (prazo 90 dias) (2026-06-10)
 
@@ -778,7 +816,11 @@ Objetivo: URL pública estável para partilhar a app (Next.js 14 + Prisma).
 - [x] Repo GitHub gocris78-cmyk/app-logistica + push
 - [x] Vercel: env vars DATABASE_URL + AUTH_SECRET definidas
 - [x] Deploy OK → https://app-logistica-olive.vercel.app (login 200, API 401 ✓)
-- [ ] Trocar PINs por defeito (escritório 1234 / motorista 0000) em produção
+- [ ] Trocar PINs por defeito (escritório 1234 / motorista 0000) em produção —
+  **confirmado ainda por trocar** (2026-08-11). Até agora não havia forma de o
+  fazer pela app; ver "🔐 Alterar PIN" acima — falta só o Ricardo ir a
+  `/escritorio/parametros` (PIN do escritório) e à ficha do motorista em
+  `/escritorio/motoristas/[id]` (PIN do motorista) e definir valores novos
 
 ## Histórico de validação
 - Importado o Excel real → 9 rotas batem ao cêntimo. 36 testes Vitest verdes. Build OK.
