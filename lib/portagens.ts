@@ -44,8 +44,12 @@ async function fetchComTimeout(url: string, init: RequestInit): Promise<Response
 
 /**
  * Calcula portagens (e distância) de camião entre duas moradas via TollGuru.
- * O parser é defensivo (aceita `route` ou `routes[0]`, e custo em cash/tag) para
- * tolerar variações da resposta.
+ * Pedido/resposta verificados contra o schema OpenAPI oficial do endpoint
+ * "origin-destination-waypoints" (truck): o tipo de veículo vai dentro de
+ * `vehicle: { type }` (não `vehicleType` solto — o schema não o reconhece); a
+ * moeda não é enviada, o TollGuru já infere EUR pelo país da rota. O parser é
+ * defensivo (aceita `route` ou `routes[0]`, e custo em cash/tag) para tolerar
+ * variações reais entre endpoints/exemplos.
  */
 export async function calcularPortagem(
   origem: string,
@@ -65,8 +69,7 @@ export async function calcularPortagem(
       body: JSON.stringify({
         from: { address: origem },
         to: { address: destino },
-        vehicleType: tipoTollguru(tipoVeiculo),
-        currency: "EUR",
+        vehicle: { type: tipoTollguru(tipoVeiculo) },
       }),
     });
     if (!res.ok) return { km: null, tollEur: null, erro: `TollGuru HTTP ${res.status}` };
