@@ -1,3 +1,4 @@
+import { LogOut } from "lucide-react";
 import { exigirPerfil } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { PRAZO_DIAS } from "@/lib/calc/pagamentos";
@@ -24,7 +25,10 @@ export default async function EscritorioLayout({ children }: { children: React.R
             <NavLinks vencidos={vencidos} />
           </div>
           <form action="/api/auth/logout" method="post">
-            <button className="text-sm text-gray-500 hover:text-gray-800">Sair</button>
+            <button className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+              <LogOut size={16} strokeWidth={2} />
+              Sair
+            </button>
           </form>
         </div>
       </header>
