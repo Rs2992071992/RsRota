@@ -30,6 +30,12 @@ export function middleware(req: NextRequest) {
     if (precisaEscritorio && perfil !== "ESCRITORIO") {
       return NextResponse.redirect(new URL("/motorista/registo", req.url));
     }
+    // "/escritorio" e "/motorista" (caminho exato, sem sub-página) não têm page.tsx
+    // próprio — sem este redirect dava 404 para quem já tem sessão (ex.: app Android
+    // que abre direto em /escritorio).
+    if (pathname === "/escritorio" || pathname === "/motorista") {
+      return NextResponse.redirect(new URL(homeFor(perfil), req.url));
+    }
   }
 
   return NextResponse.next();
