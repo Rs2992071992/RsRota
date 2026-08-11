@@ -2,6 +2,23 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-11] | Setup do toolchain Android (projeto irmão
+  `app-administracao-android`) neste Windows: (1) `local.properties` com
+  `sdk.dir=C:\Android\sdk` (barra invertida) corrompe o caminho — ficheiros
+  `.properties` tratam `\` como carácter de escape, e `\A`/`\s` não são
+  sequências válidas. Erro resultante ("sintaxe do nome do ficheiro...
+  incorreta") só aparece a meio do build (`compileDebugJavaWithJavac`), não
+  na leitura do ficheiro. (2) Capacitor 8.x/AGP atual exige **JDK 21**, não
+  chega o 17 (erro "invalid source release: 21"). | Em `local.properties`
+  do Android, usar sempre `/` no `sdk.dir` (funciona igual no Windows,
+  evita todo o problema de escape). Instalar JDK 21 (Temurin) antes de
+  qualquer build Capacitor/Android novo — `winget install --id
+  EclipseAdoptium.Temurin.21.JDK`. `capacitor.config.ts` também falhou
+  neste ambiente (Node a tentar carregar como ESM/CJS incorretamente,
+  "Unexpected token 'export'") — usar `capacitor.config.json` evita o
+  problema todo, sem perda de funcionalidade para configs simples (sem
+  lógica dinâmica).
+
 - [2026-08-06] | O dropdown de Cliente do orçamento (feature do mesmo dia,
   cliente por dropdown) usava `prisma.cliente.findMany()` — a tabela
   `Cliente` só tem uma linha quando alguém preenche a ficha de contacto

@@ -194,27 +194,38 @@ implementar — isto é só o plano, nada foi codificado.
   site continua a usar cookie normalmente, sem alteração.
 
 ### Fase 0 — Pré-requisitos e backend partilhado
-- [ ] Instalar toolchain Android (Android Studio + SDK) na máquina onde se
-  vai buildar — sem isto não se gera nenhum `.apk`
-- [ ] `lib/session.ts`/API: emitir token assinado no login (reaproveitar
-  `createSessionValue`/HMAC já existente) devolvido no corpo da resposta,
-  além do cookie; middleware/rotas de API passam a aceitar sessão por
-  cookie (site) OU por header `Authorization` (apps), sem duplicar lógica
-- [ ] CORS nas rotas de API chamadas pelas apps (`/api/auth/login`,
-  `/api/paragens`, `/api/veiculos`, `/api/parametros`, dados de
-  referência) — permitir a origem das apps Capacitor
+- [x] Instalar toolchain Android nesta máquina (2026-08-11): JDK 21
+  (Temurin, via winget — **JDK 17 não chega**, Capacitor 8.x/AGP atual
+  exige 21), Android SDK command-line tools em `C:\Android\sdk`
+  (`ANDROID_HOME`/`ANDROID_SDK_ROOT` persistidos), platform-tools,
+  `platforms;android-35`, `build-tools;35.0.0`, licenças aceites. Ver
+  gotchas em `tasks/lessons.md` (2026-08-11): `local.properties` tem de
+  usar `/`, não `\`, no `sdk.dir`.
+- [ ] `lib/session.ts`/API: emitir token assinado no login + CORS — **só
+  necessário para a app Motorista** (Fase 2, offline, chama a API a partir
+  de origem `capacitor://` diferente). A app Administração usa WebView
+  remoto (mesma origem do site, cookie funciona normalmente, sem XHR
+  cross-origin) — não precisa disto.
 - [ ] Gerar keystore de assinatura Android (guardar em local seguro com
-  cópia de segurança — perdê-lo impede atualizar as apps no futuro)
+  cópia de segurança — perdê-lo impede atualizar as apps no futuro) —
+  falta para o build de **release**; o build de debug já feito não precisa
 
 ### Fase 1 — App Administração (mais simples, sem offline)
-- [ ] Novo projeto Capacitor, `server.url` a apontar para
-  `https://<domínio-vercel>/escritorio`, appId próprio (ex.
-  `com.pego.logistica.admin`)
-- [ ] Ícone, nome, splash screen
+- [x] Novo projeto Capacitor criado em pasta irmã (fora do
+  `App-logistica-Ricardo`, a pedido do Ricardo):
+  `c:\Users\Ricardo\Desktop\app_logistica\app-administracao-android\`.
+  `capacitor.config.json` (não `.ts` — falhava a carregar neste ambiente,
+  ver lições) com `server.url` = `https://app-logistica-olive.vercel.app/escritorio`,
+  appId `com.ricardosilva.logisticaadmin` (fácil de trocar, é só sideload)
+- [x] Build de **debug** gerado com sucesso —
+  `android\app\build\outputs\apk\debug\app-debug.apk` (4,1 MB). Confirma
+  todo o toolchain (JDK 21 + SDK + Gradle) a funcionar de ponta a ponta
+- [ ] Ícone, nome, splash screen (por agora usa os defaults do Capacitor)
 - [ ] Confirmar que a sessão (cookie) persiste entre aberturas da app
   (cookie jar do WebView Android)
-- [ ] Build de release assinado, instalar num telemóvel Android real e
-  validar login + navegação completa (dashboard, rotas, clientes, etc.)
+- [ ] Build de **release** assinado (falta gerar o keystore), instalar num
+  telemóvel Android real e validar login + navegação completa (dashboard,
+  rotas, clientes, etc.)
 
 ### Fase 2 — App Motorista (com offline)
 - [ ] Cliente leve novo (Vite+React), só 3 ecrãs: login, registar paragem,
