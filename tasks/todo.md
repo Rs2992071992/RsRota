@@ -312,10 +312,68 @@ implementar — isto é só o plano, nada foi codificado.
   `.apk` — só um fecho completo + reabertura (ou limpar cache) para
   apanhar a versão nova
 
-### Fase 2 — App Motorista (com offline)
-- [ ] Cliente leve novo (Vite+React), só 3 ecrãs: login, registar paragem,
-  histórico/resumo de rota — reaproveitando os componentes de
-  formulário/lógica onde fizer sentido
+### Fase 2, Entrega 1 — App Motorista online (2026-08-12) ✅
+Plano completo: `C:\Users\Ricardo\.claude\plans\humble-fluttering-tide.md`.
+Decisão combinada com o Ricardo: construir primeiro a app completa só em
+modo **online** (exige rede sempre, tal como o site), e deixar o
+SQLite/fila offline para a Entrega 2 — a app não precisou de ser
+reescrita, o offline entra por cima desta mesma base.
+
+- [x] Backend (`App-logistica-Ricardo`): novo `GET
+  /api/motorista/dados-registo` (zonas, veículos ativos sem custos,
+  clientes, rotas recentes, subconjunto de Parametros — tudo o que
+  `app/motorista/registo/page.tsx` já carregava server-side, numa só
+  chamada); `GET /api/paragens` sem `?idRota=` deixou de dar 403 ao
+  motorista — passa a devolver todas as suas próprias paragens (só
+  motorista vê as próprias; ramo `?idRota=` inalterado). Testado com
+  `curl` + Bearer token forjado (mesmo HMAC local)
+- [x] Novo projeto irmão `c:\Users\Ricardo\Desktop\app_logistica\app-motorista-android\`
+  — Vite + React 19 + TypeScript + Tailwind (mesma paleta/classes
+  utilitárias do site: `.card`/`.btn`/`.input`/cor `brand`).
+  `@capacitor/preferences` guarda o token Bearer (chave
+  `CapacitorStorage.rsrota_token`). `webDir: "dist"` — bundle **local**
+  embutido no `.apk`, ao contrário da Administração (que usa
+  `server.url` remoto)
+- [x] Em dev, `vite.config.ts` tem um proxy `/api` → API real (evita CORS
+  sem mexer na allowlist de produção); `VITE_API_BASE` vazio em dev,
+  `.env.production` aponta para `https://app-logistica-olive.vercel.app`
+  no build — a app empacotada fala diretamente com a Vercel
+- [x] 3 ecrãs portados campo a campo da versão web (não é redesenho):
+  Login (só perfil motorista), Registar (avisos de capacidade/zona/
+  inspeção do veículo, notas "já introduzido nesta rota", paletes/VAZIO,
+  "Continuar rota"), Histórico (agrupado por rota, modal Corrigir/Apagar)
+- [x] **Testado a sério contra a API real de produção** (Playwright a
+  controlar o Chrome já instalado na máquina, sessão injetada via
+  `localStorage` para não depender do PIN real): ecrã de login (+ erro
+  com PIN errado), Registar carregou dados reais (2 veículos, 11 zonas,
+  89 clientes), submissão de uma paragem de teste criou mesmo a rota
+  (`RIC-TESTE-UI-APAGAR`), Histórico mostrou-a corretamente agrupada,
+  modal Corrigir abriu com dados reais (incl. campo "Nº de paletes"
+  condicional). Paragem de teste apagada a seguir (`DELETE
+  /api/paragens/205`) — produção fica como estava
+- [x] Capacitor Android configurado: `appId
+  com.ricardosilva.logisticamotorista`, ícone/splash reaproveitados da
+  Administração por agora (trocar se houver logo próprio do motorista).
+  **Novo keystore** (`release-key.jks`, RSA 2048, alias
+  `logisticamotorista`, password própria em `android/keystore.properties`,
+  gitignored) — não pode reutilizar o da Administração (appId diferente)
+- [x] Build de **debug** (`app-debug.apk`, 14 MB) e de **release**
+  assinado (`app-release.apk`, 8,5 MB) gerados com sucesso; assinatura
+  confirmada por `apksigner verify --print-certs` (CN=Ricardo Silva,
+  mesma organização/alias do keystore novo)
+- [ ] **⚠️ Ação do Ricardo**: copiar `release-key.jks` +
+  a password de `keystore.properties` (novo projeto
+  `app-motorista-android`) para um local seguro com backup — mesmo
+  cuidado já pedido para a Administração, keystore diferente desta vez
+- [ ] **Ação do Ricardo**: instalar o `app-release.apk` num telemóvel
+  Android real, fazer login com o PIN real e validar o fluxo completo
+  (registar paragem numa rota nova e a continuar, ver os avisos, corrigir
+  no Histórico) — só falta esta validação manual para a Entrega 1 estar
+  fechada
+- [ ] (Opcional) Logo/ícone próprio para a app Motorista, se não quiseres
+  reaproveitar o camião da Administração
+
+### Fase 2, Entrega 2 — SQLite + sincronização offline (por fazer)
 - [ ] SQLite local (`@capacitor-community/sqlite`) com 2 zonas:
   - cache de dados de referência (zonas de portagem, veículos, clientes,
     rotas recentes) — atualizada sempre que há rede
@@ -328,8 +386,9 @@ implementar — isto é só o plano, nada foi codificado.
   Capacitor) + botão manual "Sincronizar agora"; UI mostra claramente
   paragens "por sincronizar" vs "sincronizadas"
 - [ ] As notas "já introduzido" (noites/alimentação/portagens/zona,
-  feature de hoje) passam a olhar também para a fila local, não só para a
-  API — para continuarem a evitar duplicação mesmo offline
+  já implementadas na Entrega 1) passam a olhar também para a fila
+  local, não só para a API — para continuarem a evitar duplicação mesmo
+  offline
 - [ ] Teste manual completo: registar 3 paragens em modo avião, sincronizar
   ao voltar a rede, confirmar no escritório que ficaram todas certas (sem
   duplicados, sem perdas)

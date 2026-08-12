@@ -2,6 +2,45 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-12] | Ao gerar o keystore novo do projeto `app-motorista-android`
+  (`keytool -genkeypair`), (1) um `-dname` com campos vazios
+  (`L=,, S=,,`) rebenta com `IOException: empty AVA in RDN`; (2) o
+  formato PKCS12 (default do keytool moderno) não aceita `storePassword`
+  diferente de `keyPassword` — ignora silenciosamente o `-keypass` e usa
+  sempre o `-storepass` para os dois, com um aviso fácil de perder no
+  meio do output. | No `-dname`, omitir por completo os campos que não
+  se querem preencher (não deixar `X=,`); gerar sempre UMA password só e
+  usá-la para `storePassword` e `keyPassword` em `keystore.properties`,
+  não duas diferentes.
+- [2026-08-12] | Testar uma app Vite (`app-motorista-android`) contra a
+  API real em `npm run dev` (porta 5173) batia direto num 403 de CORS —
+  a allowlist da API (`APP_ORIGINS_PERMITIDAS`) cobre as origens do
+  Capacitor empacotado (`capacitor://localhost`, etc.), não
+  `http://localhost:5173` (porta incluída no `Origin`). | Configurar um
+  proxy no `vite.config.ts` (`server.proxy: { '/api': { target: '<API
+  real>', changeOrigin: true } }`) e chamar sempre caminhos relativos
+  (`/api/...`) em dev — o browser deixa de ver um pedido cross-origin, o
+  Vite é que reencaminha server-side. Em produção (`.env.production`
+  com `VITE_API_BASE` absoluto) a app fala direto com a API, já dentro
+  da allowlist real.
+- [2026-08-12] | O template atual do `npm create vite -- --template
+  react-ts` vem com TypeScript 6 e a flag `erasableSyntaxOnly` ativa —
+  rejeita sintaxe só-TypeScript que não é "apagável" 1:1 para JS, como
+  parameter properties (`constructor(public status: number)`), mesmo
+  sendo válida em todos os `tsconfig` anteriores. | Em projetos Vite
+  novos, evitar parameter properties nos construtores — declarar o campo
+  à parte (`status: number;` + `this.status = status` no construtor).
+- [2026-08-12] | Sem `chromium-cli` nem Playwright com browsers próprios
+  instalados, testar a UI de uma app nova (login, formulário, submissão
+  real) parecia exigir uma instalação pesada. | O Chrome/Edge do próprio
+  Windows já servem: `npm install -D playwright` (só a lib, sem baixar
+  browsers) e `chromium.launch({ executablePath: "C:/Program
+  Files/Google/Chrome/Application/chrome.exe" })` — controla o Chrome
+  já instalado, sem download nenhum. Combinado com injetar a sessão
+  diretamente no `localStorage` (mesma chave que o
+  `@capacitor/preferences` usa no browser: `CapacitorStorage.<chave>`),
+  dá para testar ecrãs autenticados sem saber o PIN real.
+
 - [2026-08-12] | A diagnosticar um 403 da API da TollGuru, o 1º pedido direto
   (fora da app) teve sucesso; pedidos seguintes passaram todos a dar 403.
   Concluí (errado) que era o `User-Agent` do fetch do Node — troquei o UA
