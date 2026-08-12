@@ -1,9 +1,19 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, readSessionValue, type Perfil, type Sessao } from "@/lib/auth";
 
-/** Lê e valida (HMAC) a sessão completa server-side. Devolve {perfil, id} ou null. */
+/**
+ * Lê e valida (HMAC) a sessão completa server-side. Devolve {perfil, id} ou null.
+ * Aceita tanto a cookie (browser/WebView, mesma origem) como um token Bearer no
+ * header Authorization (apps nativas de origem diferente, ex. Motorista offline)
+ * — é o mesmo valor assinado nos dois casos, só muda o transporte.
+ */
 export function getSessaoInfo(): Sessao | null {
+  const auth = headers().get("authorization");
+  if (auth?.startsWith("Bearer ")) {
+    const viaToken = readSessionValue(auth.slice(7));
+    if (viaToken) return viaToken;
+  }
   const value = cookies().get(SESSION_COOKIE)?.value;
   return readSessionValue(value);
 }

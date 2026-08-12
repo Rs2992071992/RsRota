@@ -36,6 +36,10 @@ export async function POST(req: Request) {
   const res = NextResponse.json({
     ok: true,
     destino: perfil === "ESCRITORIO" ? "/escritorio/dashboard" : "/motorista/registo",
+    // Para apps nativas (origem diferente do site, ex. Motorista offline): mesma
+    // credencial da cookie, mas para guardar em storage seguro e enviar como
+    // "Authorization: Bearer <token>". O browser ignora este campo.
+    token: createSessionValue(perfil, user.id),
   });
   res.cookies.set(SESSION_COOKIE, createSessionValue(perfil, user.id), {
     httpOnly: true,

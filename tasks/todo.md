@@ -234,11 +234,36 @@ implementar — isto é só o plano, nada foi codificado.
   `platforms;android-35`, `build-tools;35.0.0`, licenças aceites. Ver
   gotchas em `tasks/lessons.md` (2026-08-11): `local.properties` tem de
   usar `/`, não `\`, no `sdk.dir`.
-- [ ] `lib/session.ts`/API: emitir token assinado no login + CORS — **só
-  necessário para a app Motorista** (Fase 2, offline, chama a API a partir
-  de origem `capacitor://` diferente). A app Administração usa WebView
-  remoto (mesma origem do site, cookie funciona normalmente, sem XHR
-  cross-origin) — não precisa disto.
+- [x] `lib/session.ts`/API: token assinado no login + CORS (2026-08-12,
+  plano `humble-fluttering-tide.md`). O "token" é o mesmo valor assinado
+  já usado na cookie (`createSessionValue`/`readSessionValue`,
+  `lib/auth.ts`) — sem formato novo, sem dependência nova, só outro
+  transporte. `getSessaoInfo()` (`lib/session.ts`) passa a aceitar
+  `Authorization: Bearer <token>` além da cookie, ponto único usado por
+  `getSessao()`/`getMotoristaId()` em toda a API (29 ficheiros) — nenhuma
+  rota individual foi tocada. `POST /api/auth/login` devolve `token` no
+  JSON ao lado de `ok`/`destino` (cookie continua a ser definida na
+  mesma, browser ignora o campo novo). `middleware.ts` ganhou CORS para
+  `/api/*` (preflight `OPTIONS` + cabeçalhos na resposta), origens
+  permitidas por env var nova `APP_ORIGINS_PERMITIDAS` (default cobre as
+  origens típicas de uma WebView Capacitor — ajustável sem deploy quando a
+  app Motorista existir e a origem real for conhecida). Lógica de páginas
+  (`/login`, `/escritorio`, `/motorista`) 100% inalterada — só o CORS de
+  `/api/*` é código novo.
+  - **Trade-off aceite conscientemente**: o token não expira sozinho (só
+    o `AUTH_SECRET` global o invalida, tal como já acontecia com o valor
+    da cookie) — para um motorista offline é a UX pretendida (não
+    reautenticar sempre que a rede volta); não há revogação individual.
+  - Testado de ponta a ponta contra o servidor local (`curl`): login
+    devolve `token`; Bearer válido sem cookie nenhuma → 200; Bearer com
+    assinatura errada → 403; `OPTIONS` com origem permitida → CORS
+    refletido; `OPTIONS` com origem fora da lista → sem cabeçalhos CORS;
+    cookie antiga continua 200 (compatibilidade); páginas
+    `/escritorio`/`/login` com e sem sessão continuam com o mesmo
+    comportamento de sempre
+  - Fora de âmbito (fica para quando a app Motorista for construída):
+    nenhum código da app em si, nenhum endpoint de logout novo, ajustar a
+    allowlist ao valor real
 - [x] Keystore de assinatura Android gerado (2026-08-11):
   `app-administracao-android\release-key.jks` (RSA 2048, validade
   ~27 anos, alias `logisticaadmin`), password aleatória forte guardada em
