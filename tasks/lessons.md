@@ -2,6 +2,19 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-12] | 2ª vez que um cabeçalho com nome+separadores+"Sair" numa
+  única linha (`flex justify-between`, sem quebra) corta o botão Sair em
+  ecrãs estreitos — a 1ª foi o menu do escritório (corrigido com
+  hambúrguer), agora o do motorista a 320px (só 3 separadores + nome já
+  chegava para cortar). Desta vez apanhado ANTES de o Ricardo reportar,
+  testando a 320/360px com Playwright antes de dar a feature como
+  pronta. | Sempre que um cabeçalho `max-w-md`/mobile-first ganha mais um
+  separador (nav link, botão), testar a 320px explicitamente — é a
+  largura mínima realista (não assumir que "cabe" só porque cabe no
+  ecrã de desenvolvimento). Layout de 2 linhas (identidade+ação numa,
+  navegação na outra) resolve de forma duradoura, sem precisar de
+  hambúrguer para só 3-4 itens.
+
 - [2026-08-12] | Ao gerar o keystore novo do projeto `app-motorista-android`
   (`keytool -genkeypair`), (1) um `-dname` com campos vazios
   (`L=,, S=,,`) rebenta com `IOException: empty AVA in RDN`; (2) o

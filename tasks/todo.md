@@ -361,6 +361,24 @@ reescrita, o offline entra por cima desta mesma base.
   assinado (`app-release.apk`, 8,5 MB) gerados com sucesso; assinatura
   confirmada por `apksigner verify --print-certs` (CN=Ricardo Silva,
   mesma organização/alias do keystore novo)
+- [x] **4º ecrã: "Perfil" — motorista muda o seu próprio PIN** (pedido
+  do Ricardo, 2026-08-12, ao rever a entrega: "falta a opção de alterar
+  o PIN do perfil do motorista"). `PATCH /api/auth/pin` já existia
+  (self-service do escritório) mas estava trancado a `ESCRITORIO` — a
+  lógica já era genérica (muda o PIN do próprio `sessao.id`), só faltou
+  deixar de bloquear `MOTORISTA`. Componente
+  `AlterarPinEscritorio.tsx` generalizado para
+  `components/AlterarPinProprio.tsx`, partilhado por Parâmetros
+  (escritório) e pela nova página `/motorista/perfil` (site) + novo
+  separador "Perfil" na app Capacitor. Testado de ponta a ponta (PIN
+  atual errado → 401, sem sessão → 403, ciclo mudar→confirmar
+  login→repor original, nos dois lados — site e app)
+- [x] De caminho, corrigido um **overflow horizontal real** descoberto ao
+  testar a 320px: com 3 separadores + nome + "Sair" na mesma linha, o
+  botão Sair ficava cortado (inacessível) em telemóveis mais estreitos.
+  Cabeçalho passa a 2 linhas (nome+Sair em cima, separadores em baixo)
+  no site e na app — testado a 320px/360px nos dois, sem overflow.
+  Aplicado proativamente na app antes de aparecer o mesmo bug lá
 - [ ] **⚠️ Ação do Ricardo**: copiar `release-key.jks` +
   a password de `keystore.properties` (novo projeto
   `app-motorista-android`) para um local seguro com backup — mesmo
