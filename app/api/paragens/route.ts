@@ -74,8 +74,11 @@ export async function POST(req: Request) {
 }
 
 // GET /api/paragens — lista completa (só escritório) ou, para o motorista,
-// só as suas próprias paragens de UMA rota (?idRota=) — usado no registo para
-// mostrar o que já foi introduzido nessa rota e evitar duplicar noites/alimentação.
+// as suas próprias paragens: de UMA rota (?idRota=, usado no registo para
+// mostrar o que já foi introduzido nessa rota e evitar duplicar noites/
+// alimentação) ou, sem esse parâmetro, TODAS as suas paragens (mesma query
+// que app/motorista/historico/page.tsx já faz server-side — usado por
+// clientes que não podem renderizar no servidor, ex. app nativa).
 export async function GET(req: Request) {
   const sessao = getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
@@ -86,11 +89,9 @@ export async function GET(req: Request) {
   }
 
   const idRota = new URL(req.url).searchParams.get("idRota");
-  if (!idRota) return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
-
   const paragens = await prisma.paragem.findMany({
-    where: { motoristaId: sessao.id, idRota },
-    orderBy: { id: "asc" },
+    where: idRota ? { motoristaId: sessao.id, idRota } : { motoristaId: sessao.id },
+    orderBy: idRota ? { id: "asc" } : [{ data: "desc" }, { id: "desc" }],
   });
   return NextResponse.json({ paragens });
 }
