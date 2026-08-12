@@ -132,8 +132,8 @@ export const alterarPinMotoristaSchema = z.object({
   pin: z.string().trim().min(4, "O PIN deve ter pelo menos 4 dígitos."),
 });
 
-/** Escritório muda o seu próprio PIN — exige o PIN atual como confirmação de identidade. */
-export const alterarPinEscritorioSchema = z.object({
+/** Um utilizador (escritório ou motorista) muda o seu próprio PIN — exige o PIN atual como confirmação de identidade. */
+export const alterarPinProprioSchema = z.object({
   pinAtual: z.string().trim().min(1, "Indique o PIN atual."),
   pinNovo: z.string().trim().min(4, "O novo PIN deve ter pelo menos 4 dígitos."),
 });

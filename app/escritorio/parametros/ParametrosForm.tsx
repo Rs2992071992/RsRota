@@ -6,7 +6,7 @@ import { derivarCustos } from "@/lib/calc/params";
 import type { ParametrosCusto, PneuItem } from "@/lib/calc/types";
 import { fmtEuro, fmtNum2 } from "@/lib/format";
 import TiposPaleteEditor, { type TipoPaleteBD } from "./TiposPaleteEditor";
-import AlterarPinEscritorio from "./AlterarPinEscritorio";
+import AlterarPinProprio from "@/components/AlterarPinProprio";
 
 type ParamsBD = ParametrosCusto & { id: number; atualizadoEm: Date };
 type Pneu = { eixo: string; custo: number; km: number };
@@ -147,7 +147,7 @@ export default function ParametrosForm({
         página de Veículos.
       </p>
 
-      <AlterarPinEscritorio />
+      <AlterarPinProprio titulo="Segurança — Alterar PIN do Escritório" />
 
       {/* Valores derivados (validação) */}
       <div className="card border-brand/30 bg-brand/5">

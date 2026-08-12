@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
-import { alterarPinEscritorioSchema } from "@/lib/validacao";
+import { alterarPinProprioSchema } from "@/lib/validacao";
 
-// PATCH /api/auth/pin — o escritório muda o seu próprio PIN (exige o PIN atual).
+// PATCH /api/auth/pin — qualquer utilizador autenticado (escritório ou
+// motorista) muda o seu próprio PIN (exige o PIN atual).
 export async function PATCH(req: Request) {
   const sessao = getSessaoInfo();
-  if (!sessao || sessao.perfil !== "ESCRITORIO") {
+  if (!sessao) {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
-  const parsed = alterarPinEscritorioSchema.safeParse(body);
+  const parsed = alterarPinProprioSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { erro: parsed.error.issues[0]?.message ?? "Dados inválidos." },

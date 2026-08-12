@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-export default function AlterarPinEscritorio() {
+/** Formulário para o utilizador autenticado (escritório ou motorista) mudar o seu próprio PIN. */
+export default function AlterarPinProprio({ titulo = "Alterar o meu PIN" }: { titulo?: string }) {
   const [pinAtual, setPinAtual] = useState("");
   const [pinNovo, setPinNovo] = useState("");
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "ok" | "erro">("idle");
@@ -35,7 +36,7 @@ export default function AlterarPinEscritorio() {
 
   return (
     <div className="card space-y-3">
-      <h3 className="font-semibold">Segurança — Alterar PIN do Escritório</h3>
+      <h3 className="font-semibold">{titulo}</h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="label">PIN atual</label>

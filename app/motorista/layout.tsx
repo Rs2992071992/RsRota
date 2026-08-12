@@ -18,30 +18,36 @@ export default async function MotoristaLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto max-w-md px-4 py-3">
+          <div className="flex items-center justify-between">
             <span className="font-bold text-brand">🚚 {nome}</span>
-            <nav className="flex gap-1">
-              <Link
-                href="/motorista/registo"
-                className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
-                Registar
-              </Link>
-              <Link
-                href="/motorista/historico"
-                className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
-                Histórico
-              </Link>
-            </nav>
+            <form action="/api/auth/logout" method="post">
+              <button className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                <LogOut size={16} strokeWidth={2} />
+                Sair
+              </button>
+            </form>
           </div>
-          <form action="/api/auth/logout" method="post">
-            <button className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
-              <LogOut size={16} strokeWidth={2} />
-              Sair
-            </button>
-          </form>
+          <nav className="mt-2 flex gap-1">
+            <Link
+              href="/motorista/registo"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Registar
+            </Link>
+            <Link
+              href="/motorista/historico"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Histórico
+            </Link>
+            <Link
+              href="/motorista/perfil"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Perfil
+            </Link>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-md p-4">{children}</main>
