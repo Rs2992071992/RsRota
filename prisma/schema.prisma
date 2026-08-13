@@ -7,8 +7,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime (app): connection pooling da Neon (pgbouncer) — evita esgotar
+  // ligações diretas em serverless (Vercel), cada invocação abre a sua própria.
+  url       = env("DATABASE_URL")
+  // Migrações (`prisma db push`/`migrate`): ligação direta — DDL não passa
+  // de forma fiável pelo pooler em modo transaction.
+  directUrl = env("DIRECT_URL")
 }
 
 /// Parâmetros de custo (§3.4). Singleton: existe sempre uma linha com id = 1.
