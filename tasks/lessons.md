@@ -2,6 +2,23 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-13] | `DATABASE_URL` em produção (Vercel) apontava desde sempre para a
+  ligação **direta** da Neon (hostname sem `-pooler`), nunca para a "Pooled
+  connection". Sintoma real reportado pelo Ricardo: erro 500 ao registar uma
+  paragem pela app Motorista — e ao tentar de novo, a paragem **já estava
+  gravada** (a escrita chegou a completar-se na BD, mas a função serverless da
+  Vercel não conseguiu devolver a resposta a tempo/de forma fiável). Não
+  reproduzido por `tsc`/testes/build — só visível em produção, sob a
+  ligação direta, que esgota/atrasa em serverless porque cada invocação da
+  Vercel abre a sua própria ligação à Neon. | Em qualquer stack
+  Next.js/Prisma + Vercel (serverless) + Neon, `DATABASE_URL` (runtime) TEM de
+  ser a connection string com **pooling** (pgbouncer, hostname `-pooler`,
+  com `pgbouncer=true&connection_limit=1`); a ligação direta só deve ser usada
+  em `directUrl` no `datasource` do `schema.prisma`, exclusiva para
+  `prisma db push`/`migrate` (DDL não passa de forma fiável pelo pooler em
+  modo transaction). Validado com 3 pedidos reais seguidos contra a produção
+  (todos 201) depois da troca — dados de teste apagados a seguir.
+
 - [2026-08-12] | 2ª vez que um cabeçalho com nome+separadores+"Sair" numa
   única linha (`flex justify-between`, sem quebra) corta o botão Sair em
   ecrãs estreitos — a 1ª foi o menu do escritório (corrigido com

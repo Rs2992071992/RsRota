@@ -2,6 +2,34 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🐛 Fix: erro 500 ao registar paragem (app Motorista) — ligação direta à Neon em serverless (2026-08-13)
+
+Reportado pelo Ricardo ao testar a Fase 3 (validação real da app Motorista no
+telemóvel): erro 500 a registar uma paragem com paletes (rota nova); ao
+tentar de novo, a paragem já estava gravada — a escrita chegava a completar-
+se na BD, mas a resposta falhava. Reproduzido localmente com o payload exato
+da app (funcionou sempre) — a diferença estava na configuração da ligação à
+BD em produção, não no código do endpoint. Ver detalhe em `tasks/lessons.md`.
+
+- [x] Diagnóstico: `DATABASE_URL` na Vercel usava a ligação **direta** da
+  Neon (sem `-pooler`) — em serverless, cada invocação abre a sua própria
+  ligação, esgotando o limite da Neon / sofrendo o "acordar" do compute
+  suspenso, causando 500 intermitentes mesmo com a escrita já efetuada
+- [x] `prisma/schema.prisma`: `datasource db` ganha `directUrl` (nova env
+  var `DIRECT_URL`, só para `prisma db push`/`migrate`); `DATABASE_URL`
+  passa a ser a "Pooled connection" da Neon (`pgbouncer=true&connection_limit=1`)
+- [x] `.env` local e `.env.example` atualizados com as 2 variáveis e a
+  explicação de qual é qual
+- [x] Vercel: `DIRECT_URL` adicionada (valor = antiga ligação direta),
+  `DATABASE_URL` trocada para a pooled — feito pelo Ricardo no dashboard
+- [x] Testado: `prisma db push` continua a funcionar (confirma que usa a
+  ligação direta); query real via `DATABASE_URL` pooled funciona; 114
+  testes verdes, `tsc --noEmit` limpo, `next build` OK
+- [x] **Confirmado em produção real** depois do deploy: 3 pedidos seguidos
+  de `POST /api/paragens` (payload idêntico ao que a app Motorista envia,
+  paletes + rota nova) — todos `201`, sem nenhum 500. Dados de teste
+  apagados a seguir (`RIC-TesteProducaoPoolFix`/`2`/`3`)
+
 ## 🔐 Alterar PIN (escritório + motorista) (2026-08-11)
 
 Pedido do Ricardo: rever "o que falta" de segurança/config. Confirmado por
