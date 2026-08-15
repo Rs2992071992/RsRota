@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import ParagemEditor, { type ParagemEditavel, type VeiculoOpcao } from "@/components/ParagemEditor";
+import DespesasIcones from "@/components/DespesasIcones";
 import { fmtData, fmtEuro, fmtNum } from "@/lib/format";
 
 export type ParagemHist = ParagemEditavel;
@@ -76,7 +77,10 @@ export default function HistoricoMotorista({ paragens, zonas, veiculos, clientes
               {ps.map((p) => (
                 <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                   <div>
-                    <p className="font-medium">{p.cliente || "(sem cliente)"}</p>
+                    <p className="font-medium">
+                      {p.cliente || "(sem cliente)"}
+                      <DespesasIcones raw={p} />
+                    </p>
                     <p className="text-xs text-gray-500">
                       {fmtData(p.data)} · {p.tipoVeiculo} · {fmtNum(p.kmFinal - p.kmInicial)} km
                       {p.kgCarregados > 0 ? ` · ${fmtNum(p.kgCarregados)} kg` : ""}

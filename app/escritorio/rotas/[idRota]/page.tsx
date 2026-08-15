@@ -10,6 +10,7 @@ import ParagemAcoes from "@/components/ParagemAcoes";
 import PagoToggle from "@/components/PagoToggle";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
 import RotaCombustivelOverride from "@/components/RotaCombustivelOverride";
+import DespesasIcones from "@/components/DespesasIcones";
 import type { ParagemEditavel } from "@/components/ParagemEditor";
 
 export const dynamic = "force-dynamic";
@@ -304,53 +305,6 @@ function Item({ label, valor }: { label: string; valor: number }) {
 
 function raw(paragens: { id: number; receitaPaga: number }[], id: number): number {
   return paragens.find((p) => p.id === id)?.receitaPaga ?? 0;
-}
-
-/** Dados de despesas adicionais de uma paragem, para os ícones de aviso rápido. */
-type ParagemDespesas = {
-  litrosEspanha: number | null;
-  custoEspanha: number | null;
-  noitesFora: number;
-  alimentacao: number;
-  horasExtra: number;
-  portagensExtra: number;
-};
-
-/**
- * Ícones pequenos junto ao nome do cliente que sinalizam despesas extra
- * introduzidas nessa paragem (combustível Espanha, noites, alimentação,
- * horas extra, portagens), para identificar de relance quem tem valores a
- * conferir sem abrir paragem a paragem.
- */
-function DespesasIcones({ raw }: { raw: ParagemDespesas | undefined }) {
-  if (!raw) return null;
-  const itens: { icone: string; titulo: string }[] = [];
-  if ((raw.litrosEspanha ?? 0) > 0 || (raw.custoEspanha ?? 0) > 0) {
-    itens.push({
-      icone: "⛽🇪🇸",
-      titulo: `Combustível em Espanha: ${fmtNum2(raw.litrosEspanha ?? 0)} L / ${fmtEuro(raw.custoEspanha ?? 0)}`,
-    });
-  }
-  if (raw.noitesFora > 0) {
-    itens.push({ icone: "🌙", titulo: `Noites fora: ${raw.noitesFora}` });
-  }
-  if (raw.alimentacao > 0) {
-    itens.push({ icone: "🍽️", titulo: `Alimentação: ${fmtEuro(raw.alimentacao)}` });
-  }
-  if (raw.horasExtra > 0) {
-    itens.push({ icone: "⏱️", titulo: `Horas extra: ${fmtNum2(raw.horasExtra)}` });
-  }
-  if (raw.portagensExtra > 0) {
-    itens.push({ icone: "🛣️", titulo: `Portagens extra: ${fmtEuro(raw.portagensExtra)}` });
-  }
-  if (itens.length === 0) return null;
-  return (
-    <span className="ml-1 inline-flex gap-0.5 align-middle text-xs" title={itens.map((i) => i.titulo).join(" · ")}>
-      {itens.map((i, idx) => (
-        <span key={idx}>{i.icone}</span>
-      ))}
-    </span>
-  );
 }
 
 /** Linha de cobrança (subconjunto de Paragem necessário para o estado de pagamento). */
