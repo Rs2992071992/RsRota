@@ -20,6 +20,7 @@ export default function RotaCombustivelOverride({ idRota, valorAtual, precoParam
   const router = useRouter();
   const [valor, setValor] = useState(valorAtual != null ? String(valorAtual) : "");
   const [aGravar, setAGravar] = useState(false);
+  const [guardado, setGuardado] = useState(false);
 
   async function gravar() {
     const texto = valor.trim();
@@ -41,6 +42,8 @@ export default function RotaCombustivelOverride({ idRota, valorAtual, precoParam
         return;
       }
       router.refresh();
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 2000);
     } catch {
       alert("Erro de ligação.");
     } finally {
@@ -60,11 +63,14 @@ export default function RotaCombustivelOverride({ idRota, valorAtual, precoParam
           className="input w-40"
           value={valor}
           disabled={aGravar}
-          onChange={(e) => setValor(e.target.value)}
+          onChange={(e) => {
+            setValor(e.target.value);
+            setGuardado(false);
+          }}
         />
       </div>
       <button type="button" onClick={gravar} disabled={aGravar} className="btn-secondary">
-        {aGravar ? "A gravar…" : "Guardar"}
+        {aGravar ? "A gravar…" : guardado ? "Guardado" : "Guardar"}
       </button>
     </div>
   );

@@ -37,6 +37,17 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
   const overrideRotaAtual = overridesRota.length === 1 ? overridesRota[0] : null;
   const totalKgCarregados = paragensRaw.reduce((a, p) => a + p.kgCarregados, 0);
   const totalKgDescarregados = paragensRaw.reduce((a, p) => a + p.kgDescarregados, 0);
+  const datasParagens = paragensRaw.map((p) => p.data);
+  const dataRotaLabel =
+    datasParagens.length === 0
+      ? null
+      : (() => {
+          const min = new Date(Math.min(...datasParagens.map((d) => d.getTime())));
+          const max = new Date(Math.max(...datasParagens.map((d) => d.getTime())));
+          const minStr = fmtData(min);
+          const maxStr = fmtData(max);
+          return minStr === maxStr ? minStr : `${minStr} – ${maxStr}`;
+        })();
   const editavel = (id: number): ParagemEditavel | null => {
     const p = paragensRaw.find((x) => x.id === id);
     if (!p) return null;
@@ -72,7 +83,10 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
           <Link href="/escritorio/rotas" className="text-sm text-gray-500 hover:underline">
             ← Rotas
           </Link>
-          <h1 className="text-2xl font-bold">Rota {rota.idRota}</h1>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-bold">Rota {rota.idRota}</h1>
+            {dataRotaLabel && <span className="text-sm font-normal text-gray-500">{dataRotaLabel}</span>}
+          </div>
         </div>
         <AlertaBadge alerta={rota.alerta} />
       </div>
