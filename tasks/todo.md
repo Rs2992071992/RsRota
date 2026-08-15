@@ -2,6 +2,21 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ⛽ Link para preços de referência ENSE (rota + motorista) (2026-08-15)
+
+Pedido do Ricardo: botão com o link oficial da ENSE
+(ense-epe.pt/precos-de-referencia) no detalhe da rota (onde já se corrige
+o preço de referência), e um sítio discreto para o motorista consultar
+o preço quando precisa dele para preencher uma guia.
+
+- [x] `/escritorio/rotas/[idRota]`: link "⛽ Ver preços de referência
+  (ENSE) ↗" no cartão "Combustível desta rota"
+- [x] `components/LinkPrecoReferencia.tsx` (novo): botão flutuante
+  discreto (ícone ⛽), montado em `app/motorista/layout.tsx` ao lado da
+  Calculadora já existente — posicionado `fixed`, não mexe no
+  cabeçalho de navegação (evita o overflow a 320px já corrigido antes)
+- [x] `tsc --noEmit` limpo, 114 testes verdes, `next build` OK
+
 ## ⛽ Poupança combustível Espanha — relatório no dashboard (2026-08-13)
 
 Pedido do Ricardo: um "apanhado" do combustível abastecido em Espanha —
