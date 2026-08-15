@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { carregarContexto } from "@/lib/contexto";
-import { calcularParagem } from "@/lib/calc/perStop";
+import { calcularParagem, efetivos } from "@/lib/calc/perStop";
 import { calcularRotas } from "@/lib/calc/perRoute";
 import { valorPortagem } from "@/lib/calc/lookups";
 import type { RotaCalc } from "@/lib/calc/types";
@@ -78,6 +78,79 @@ function despesasPorRota(rotas: RotaCalc[]): DespesaPorRota[] {
 export async function carregarDespesasDetalhe(): Promise<DespesaPorRota[]> {
   const { ctx, inputs } = await carregarBase();
   return despesasPorRota(calcularRotas(inputs, ctx));
+}
+
+export interface PoupancaEspanhaDia {
+  idRota: string;
+  cliente: string;
+  data: Date;
+  litros: number;
+  custoEspanha: number;
+  precoCombRef: number;
+  poupanca: number;
+}
+
+export interface PoupancaEspanhaMes {
+  mes: string; // "YYYY-MM"
+  litros: number;
+  poupanca: number;
+}
+
+export interface PoupancaEspanhaData {
+  porDia: PoupancaEspanhaDia[];
+  porMes: PoupancaEspanhaMes[];
+  litrosTotal: number;
+  totalGeral: number;
+  totalUltimos12Meses: number;
+}
+
+/**
+ * Poupança de combustível abastecido em Espanha vs. preço de referência —
+ * puramente informativo (já assim no motor: `poupancaEspanha` nunca entra em
+ * nenhum custo/rateio). Esta função só agrega o que `calcularParagem` já
+ * devolve por paragem; não introduz nenhuma fórmula nova.
+ */
+export async function carregarPoupancaEspanha(): Promise<PoupancaEspanhaData> {
+  const { paragensRaw, ctx, inputs } = await carregarBase();
+
+  const porDia: PoupancaEspanhaDia[] = [];
+  for (let i = 0; i < paragensRaw.length; i++) {
+    const p = paragensRaw[i];
+    if (!p.litrosEspanha || p.litrosEspanha <= 0) continue;
+    const calc = calcularParagem(inputs[i], ctx);
+    porDia.push({
+      idRota: p.idRota,
+      cliente: p.cliente,
+      data: p.data,
+      litros: calc.litrosEspanha,
+      custoEspanha: p.custoEspanha || 0,
+      precoCombRef: efetivos(inputs[i], ctx).precoCombRef,
+      poupanca: calc.poupancaEspanha,
+    });
+  }
+  porDia.sort((a, b) => b.data.getTime() - a.data.getTime());
+
+  const porMesMap = new Map<string, { litros: number; poupanca: number }>();
+  for (const d of porDia) {
+    const mes = `${d.data.getFullYear()}-${String(d.data.getMonth() + 1).padStart(2, "0")}`;
+    const at = porMesMap.get(mes) ?? { litros: 0, poupanca: 0 };
+    at.litros += d.litros;
+    at.poupanca += d.poupanca;
+    porMesMap.set(mes, at);
+  }
+  const porMes = Array.from(porMesMap.entries())
+    .map(([mes, v]) => ({ mes, ...v }))
+    .sort((a, b) => b.mes.localeCompare(a.mes));
+
+  const litrosTotal = porDia.reduce((a, d) => a + d.litros, 0);
+  const totalGeral = porDia.reduce((a, d) => a + d.poupanca, 0);
+  const ha12Meses = new Date();
+  ha12Meses.setMonth(ha12Meses.getMonth() - 12);
+  const totalUltimos12Meses = porDia
+    .filter((d) => d.data >= ha12Meses)
+    .reduce((a, d) => a + d.poupanca, 0);
+
+  return { porDia, porMes, litrosTotal, totalGeral, totalUltimos12Meses };
 }
 
 export async function carregarDashboard(): Promise<DashboardData> {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { carregarDashboard } from "@/lib/dashboard-service";
+import { carregarDashboard, carregarPoupancaEspanha } from "@/lib/dashboard-service";
 import { fmtEuro, fmtNum } from "@/lib/format";
 import {
   GraficoCustoReceita,
@@ -11,7 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const d = await carregarDashboard();
+  const [d, espanha] = await Promise.all([carregarDashboard(), carregarPoupancaEspanha()]);
 
   if (d.kpis.nRotas === 0) {
     return (
@@ -72,6 +72,33 @@ export default async function DashboardPage() {
           <GraficoRanking dados={d.rankingMenosRentaveis} />
         </div>
       </div>
+
+      {/* Poupança combustível Espanha (informativo) — só aparece se houver dados */}
+      {espanha.litrosTotal > 0 && (
+        <Link
+          href="/escritorio/dashboard/espanha"
+          className="card block transition hover:shadow-md"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">💡 Poupança combustível — Espanha</h2>
+            <span className="text-xs text-brand underline">Ver detalhe →</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-gray-500">Últimos 12 meses</p>
+              <p className={`text-lg font-bold ${espanha.totalUltimos12Meses < 0 ? "text-red-600" : "text-green-600"}`}>
+                {fmtEuro(espanha.totalUltimos12Meses)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total acumulado</p>
+              <p className={`text-lg font-bold ${espanha.totalGeral < 0 ? "text-red-600" : "text-green-600"}`}>
+                {fmtEuro(espanha.totalGeral)}
+              </p>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Rentabilidade por cliente */}
       <div className="card scroll-fade-x overflow-x-auto">
