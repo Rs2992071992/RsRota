@@ -56,10 +56,13 @@ export default async function DashboardPage() {
           <h2 className="mb-3 font-semibold">Evolução mensal</h2>
           <GraficoEvolucao dados={d.evolucaoMensal} />
         </div>
-        <div className="card">
-          <h2 className="mb-3 font-semibold">Estrutura de custos</h2>
+        <Link href="/escritorio/dashboard/despesas" className="card block transition hover:shadow-md">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold">Estrutura de custos</h2>
+            <span className="text-xs text-brand underline">Ver detalhe por rota →</span>
+          </div>
           <GraficoEstrutura dados={d.estruturaCustos} />
-        </div>
+        </Link>
         <div className="card">
           <h2 className="mb-3 font-semibold">Custo vs. receita por rota</h2>
           <GraficoCustoReceita dados={d.custoVsReceita} />

@@ -3,8 +3,20 @@ import { carregarContexto } from "@/lib/contexto";
 import { calcularParagem } from "@/lib/calc/perStop";
 import { calcularRotas } from "@/lib/calc/perRoute";
 import { valorPortagem } from "@/lib/calc/lookups";
+import type { RotaCalc } from "@/lib/calc/types";
 import { paragemToInput, includeRelacoes } from "@/lib/rotas-service";
 import { carregarBaseSnapshot } from "@/lib/snapshot-service";
+
+export interface DespesaPorRota {
+  idRota: string;
+  combustivel: number;
+  motorista: number;
+  veiculo: number;
+  portagens: number;
+  adblue: number;
+  extras: number;
+  total: number;
+}
 
 export interface DashboardData {
   kpis: {
@@ -23,15 +35,53 @@ export interface DashboardData {
   estruturaCustos: { nome: string; valor: number }[];
 }
 
-export async function carregarDashboard(): Promise<DashboardData> {
+/** Base partilhada: paragens + contexto + inputs com snapshot efetivo. */
+async function carregarBase() {
   const [paragensRaw, ctx, baseSnap] = await Promise.all([
     prisma.paragem.findMany({ orderBy: { data: "asc" }, include: includeRelacoes }),
     carregarContexto(),
     carregarBaseSnapshot(),
   ]);
-
-  // Input (com snapshot efetivo) calculado uma vez e reutilizado em todos os agregados.
   const inputs = paragensRaw.map((p) => paragemToInput(p, baseSnap));
+  return { paragensRaw, ctx, inputs };
+}
+
+/**
+ * Estrutura de custos discriminada por rota (soma das 6 categorias = estruturaCustos).
+ * Deriva de `RotaCalc` (não recalcula por paragem) para herdar o `pesoEmTransito`
+ * já aplicado por `calcularRotas` — Σ total desta função = Σ `custoTotalRota` (KPI).
+ */
+function despesasPorRota(rotas: RotaCalc[]): DespesaPorRota[] {
+  return rotas
+    .map((r) => {
+      const combustivel = r.paragens.reduce((a, p) => a + p.custoCombustivel, 0);
+      const motorista = r.paragens.reduce((a, p) => a + p.custoMotorista, 0);
+      const veiculo = r.paragens.reduce((a, p) => a + p.custoVeiculo, 0);
+      const adblue = r.paragens.reduce((a, p) => a + p.custoAdblue, 0);
+      const portagens = r.paragens.reduce((a, p) => a + p.portagensExtra, 0) + r.somaPortagensTabela;
+      const extras = r.somaNoites + r.somaAlimentacao + r.somaHorasExtraValor;
+      return {
+        idRota: r.idRota,
+        combustivel,
+        motorista,
+        veiculo,
+        portagens,
+        adblue,
+        extras,
+        total: combustivel + motorista + veiculo + portagens + adblue + extras,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+/** Página de detalhe da "Estrutura de custos" — todas as rotas, discriminadas por categoria. */
+export async function carregarDespesasDetalhe(): Promise<DespesaPorRota[]> {
+  const { ctx, inputs } = await carregarBase();
+  return despesasPorRota(calcularRotas(inputs, ctx));
+}
+
+export async function carregarDashboard(): Promise<DashboardData> {
+  const { paragensRaw, ctx, inputs } = await carregarBase();
   const rotas = calcularRotas(inputs, ctx);
 
   // KPIs
@@ -98,23 +148,14 @@ export async function carregarDashboard(): Promise<DashboardData> {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([mes, v]) => ({ mes, custo: v.custo, receita: v.receita, lucro: v.receita - v.custo }));
 
-  // Estrutura de custos (agregada sobre todas as paragens)
-  let combustivel = 0,
-    motorista = 0,
-    veiculo = 0,
-    adblue = 0,
-    portagens = 0,
-    extras = 0;
-  for (let i = 0; i < paragensRaw.length; i++) {
-    const p = paragensRaw[i];
-    const c = calcularParagem(inputs[i], ctx);
-    combustivel += c.custoCombustivel;
-    motorista += c.custoMotorista;
-    veiculo += c.custoVeiculo;
-    adblue += c.custoAdblue;
-    portagens += c.portagensExtra + valorPortagem(p.zonaPortagem, ctx.tabelaPortagens).valor;
-    extras += p.noitesFora + p.alimentacao + p.horasExtra * ctx.params.valorHoraExtra;
-  }
+  // Estrutura de custos (agregada sobre todas as rotas — mesma base da página de detalhe).
+  const porRota = despesasPorRota(rotas);
+  const combustivel = porRota.reduce((a, r) => a + r.combustivel, 0);
+  const motorista = porRota.reduce((a, r) => a + r.motorista, 0);
+  const veiculo = porRota.reduce((a, r) => a + r.veiculo, 0);
+  const adblue = porRota.reduce((a, r) => a + r.adblue, 0);
+  const portagens = porRota.reduce((a, r) => a + r.portagens, 0);
+  const extras = porRota.reduce((a, r) => a + r.extras, 0);
   const estruturaCustos = [
     { nome: "Combustível", valor: combustivel },
     { nome: "Motorista", valor: motorista },

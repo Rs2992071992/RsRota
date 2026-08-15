@@ -8,8 +8,6 @@ import {
   Legend,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -57,22 +55,17 @@ export function GraficoCustoReceita({ dados }: { dados: DashboardData["custoVsRe
 export function GraficoEstrutura({ dados }: { dados: DashboardData["estruturaCustos"] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <PieChart>
-        <Pie
-          data={dados}
-          dataKey="valor"
-          nameKey="nome"
-          cx="50%"
-          cy="50%"
-          outerRadius={90}
-          label={(e) => e.nome}
-        >
+      <BarChart data={dados}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+        <XAxis dataKey="nome" fontSize={12} />
+        <YAxis fontSize={12} tickFormatter={eur} width={70} />
+        <Tooltip formatter={(v: number) => eur(v)} />
+        <Bar dataKey="valor" name="Custo">
           {dados.map((_, i) => (
             <Cell key={i} fill={CORES[i % CORES.length]} />
           ))}
-        </Pie>
-        <Tooltip formatter={(v: number) => eur(v)} />
-      </PieChart>
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   );
 }
