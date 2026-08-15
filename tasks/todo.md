@@ -2,6 +2,34 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📊 Dashboard: "Estrutura de custos" em barras + página de detalhe por rota (2026-08-13)
+
+Pedido do Ricardo: o gráfico de despesas no dashboard passa de pizza para
+barras; clicar nele abre uma página com tabela discriminando tudo.
+
+- [x] `Charts.tsx`: `GraficoEstrutura` passa de `PieChart` para `BarChart`
+  (mesmo estilo dos outros gráficos de barras do dashboard)
+- [x] `app/escritorio/dashboard/page.tsx`: cartão "Estrutura de custos"
+  passa a `<Link>` para `/escritorio/dashboard/despesas`
+- [x] `app/escritorio/dashboard/despesas/page.tsx` (novo): tabela com uma
+  linha por rota × as 6 categorias (Combustível/Motorista/Veículo/
+  Portagens/AdBlue/Noites-Alim.-Horas) + linha de totais; cada rota liga
+  para `/escritorio/rotas/[idRota]`
+- [x] `lib/dashboard-service.ts`: nova `carregarDespesasDetalhe()` +
+  `despesasPorRota()` (privada, partilhada com `carregarDashboard`)
+- [x] **Bug real encontrado e corrigido de caminho**: a "Estrutura de
+  custos" original recalculava o custo por paragem isoladamente
+  (`calcularParagem` direto), sem o ajuste de `pesoEmTransito` que
+  `calcularRotas()` aplica (rotas multi-paragem no mesmo dia/direção) —
+  o total da estrutura de custos não batia com o KPI "Custo total"
+  (diferença real de ~1 286 € encontrada nos dados de produção).
+  `despesasPorRota()` passou a derivar de `RotaCalc` (já calculado por
+  `calcularRotas`) em vez de recalcular — Σ tabela = KPI ao cêntimo agora
+- [x] 114 testes verdes, `tsc --noEmit` limpo, `next build` OK
+- [x] Testado contra a BD de produção real (sessão forjada por HMAC): as
+  duas páginas devolvem 200; confirmado que o total da tabela nova
+  (21 491,15 €) bate exatamente com o KPI "Custo total" do dashboard
+
 ## 🐛 Fix: erro 500 ao registar paragem (app Motorista) — ligação direta à Neon em serverless (2026-08-13)
 
 Reportado pelo Ricardo ao testar a Fase 3 (validação real da app Motorista no
