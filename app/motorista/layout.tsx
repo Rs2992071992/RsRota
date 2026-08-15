@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { exigirPerfil, getSessaoInfo } from "@/lib/session";
 import Calculadora from "@/components/Calculadora";
+import LinkPrecoReferencia from "@/components/LinkPrecoReferencia";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function MotoristaLayout({ children }: { children: React.Re
         </div>
       </header>
       <main className="mx-auto max-w-md p-4">{children}</main>
+      <LinkPrecoReferencia />
       <Calculadora />
     </div>
   );

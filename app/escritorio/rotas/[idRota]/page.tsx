@@ -129,7 +129,17 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
 
       {/* Correção do preço de ref. combustível desta rota */}
       <div className="card">
-        <h2 className="mb-1 font-semibold">Combustível desta rota</h2>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">Combustível desta rota</h2>
+          <a
+            href="https://www.ense-epe.pt/precos-de-referencia/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-brand underline"
+          >
+            ⛽ Ver preços de referência (ENSE) ↗
+          </a>
+        </div>
         <p className="mb-3 text-xs text-gray-500">
           Corrige o preço de referência do combustível para todas as paragens desta rota de uma vez.
           Deixe vazio para usar o valor de Parâmetros ({fmtNum2(precoCombRef)} €/L).
