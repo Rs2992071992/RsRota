@@ -521,6 +521,27 @@ testes de sincronização em cenários reais). Vale a pena fazer em 2
 entregas separadas (Administração primeiro, valida o processo de build/
 assinatura/distribuição; Motorista depois).
 
+### Manutenção — ícones de despesas no Histórico (2026-08-16)
+- [x] `components/DespesasIcones.tsx` (site) criado e reaproveitado em
+  `app/escritorio/rotas/[idRota]/page.tsx` (tabela Paragens) e
+  `app/motorista/historico/HistoricoMotorista.tsx` (lista "As minhas
+  rotas") — ícones ⛽🇪🇸 🌙 🍽️ ⏱️ 🛣️ junto ao nome do cliente quando essa
+  paragem tem combustível Espanha/noites/alimentação/horas extra/
+  portagens extra preenchidos, com tooltip a detalhar os valores.
+- [x] Portado à mão para `app-motorista-android/src/components/
+  DespesasIcones.tsx` (não pode importar do site — bundle local próprio)
+  e aplicado em `src/screens/Historico.tsx`. `fmtNum2` adicionado a
+  `src/lib/format.ts` (só tinha `fmtNum`/`fmtEuro`/`fmtData`).
+- [x] `npx cap sync android` + `gradlew assembleRelease` corridos de
+  novo — novo `app-release.apk` assinado (mesmo certificado CN=Ricardo
+  Silva, OU=RsRota), pronto a instalar por cima da versão anterior.
+- **Lembrete**: a app Motorista tem bundle local embutido no `.apk` (ao
+  contrário da Administração, que é WebView remoto) — qualquer alteração
+  a ecrãs partilhados (Histórico/Registar/Perfil) tem de ser portada à
+  mão para `app-motorista-android/src/` E o `.apk` tem de ser
+  regenerado/reinstalado; só código do `/escritorio` (Administração)
+  atualiza sozinho ao reabrir a app.
+
 ## 🌙 Resumo da rota em curso — evitar sobreposição de noites/alimentação (2026-08-06)
 
 Pedido do Ricardo: o motorista regista uma paragem de cada vez (mesma
