@@ -9,6 +9,7 @@ import { carregarBaseSnapshot } from "@/lib/snapshot-service";
 
 export interface DespesaPorRota {
   idRota: string;
+  data: Date;
   combustivel: number;
   motorista: number;
   veiculo: number;
@@ -52,26 +53,25 @@ async function carregarBase() {
  * já aplicado por `calcularRotas` — Σ total desta função = Σ `custoTotalRota` (KPI).
  */
 function despesasPorRota(rotas: RotaCalc[]): DespesaPorRota[] {
-  return rotas
-    .map((r) => {
-      const combustivel = r.paragens.reduce((a, p) => a + p.custoCombustivel, 0);
-      const motorista = r.paragens.reduce((a, p) => a + p.custoMotorista, 0);
-      const veiculo = r.paragens.reduce((a, p) => a + p.custoVeiculo, 0);
-      const adblue = r.paragens.reduce((a, p) => a + p.custoAdblue, 0);
-      const portagens = r.paragens.reduce((a, p) => a + p.portagensExtra, 0) + r.somaPortagensTabela;
-      const extras = r.somaNoites + r.somaAlimentacao + r.somaHorasExtraValor;
-      return {
-        idRota: r.idRota,
-        combustivel,
-        motorista,
-        veiculo,
-        portagens,
-        adblue,
-        extras,
-        total: combustivel + motorista + veiculo + portagens + adblue + extras,
-      };
-    })
-    .sort((a, b) => b.total - a.total);
+  return rotas.map((r) => {
+    const combustivel = r.paragens.reduce((a, p) => a + p.custoCombustivel, 0);
+    const motorista = r.paragens.reduce((a, p) => a + p.custoMotorista, 0);
+    const veiculo = r.paragens.reduce((a, p) => a + p.custoVeiculo, 0);
+    const adblue = r.paragens.reduce((a, p) => a + p.custoAdblue, 0);
+    const portagens = r.paragens.reduce((a, p) => a + p.portagensExtra, 0) + r.somaPortagensTabela;
+    const extras = r.somaNoites + r.somaAlimentacao + r.somaHorasExtraValor;
+    return {
+      idRota: r.idRota,
+      data: r.dataInicio,
+      combustivel,
+      motorista,
+      veiculo,
+      portagens,
+      adblue,
+      extras,
+      total: combustivel + motorista + veiculo + portagens + adblue + extras,
+    };
+  });
 }
 
 /** Página de detalhe da "Estrutura de custos" — todas as rotas, discriminadas por categoria. */
