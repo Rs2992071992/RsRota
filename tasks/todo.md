@@ -2,6 +2,30 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ⛽ Poupança combustível Espanha — relatório no dashboard (2026-08-13)
+
+Pedido do Ricardo: um "apanhado" do combustível abastecido em Espanha —
+por dia, quanto se poupou vs. preço de referência, e o total ao longo dos
+meses. Só comparação/relatório, sem tocar em nenhuma fórmula de custo (os
+campos `litrosEspanha`/`custoEspanha`/`poupancaEspanha` já existiam,
+puramente informativos, desde 2026-06).
+
+- [x] `lib/dashboard-service.ts`: `carregarPoupancaEspanha()` — agrega o
+  `poupancaEspanha` que `calcularParagem()` já devolve por paragem, por
+  dia e por mês; total "últimos 12 meses" calculado sobre a janela
+  móvel a partir de hoje
+- [x] `app/escritorio/dashboard/espanha/page.tsx` (novo): tabela "Por
+  mês" + tabela "Por abastecimento" (data/rota/cliente/litros/preço
+  ref./custo pago/poupança); valores negativos a vermelho (abastecimento
+  que saiu mais caro que a referência — apanhado num teste real)
+- [x] Cartão no dashboard principal (só aparece se houver dados) com KPI
+  "últimos 12 meses"/"total acumulado" e link para o detalhe
+- [x] 114 testes verdes, `tsc --noEmit` limpo, `next build` OK
+- [x] Testado contra a BD de produção real: dados reais existentes
+  (876,06 € nos últimos 12 meses, meses de Maio–Agosto 2026 discriminados
+  corretamente, incl. uma linha negativa real detetada e corrigida a
+  vermelho)
+
 ## 📊 Dashboard: "Estrutura de custos" em barras + página de detalhe por rota (2026-08-13)
 
 Pedido do Ricardo: o gráfico de despesas no dashboard passa de pizza para
