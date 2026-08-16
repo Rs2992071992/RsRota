@@ -15,15 +15,23 @@ const patchSchema = paragemSchema.innerType().partial();
  */
 async function paragemAutorizada(id: number) {
   const sessao = getSessaoInfo();
-  if (!sessao) return { erro: 401 as const, paragem: null };
+  if (!sessao) return { erro: 401 as const, paragem: null, sessao: null };
   const paragem = await prisma.paragem.findUnique({ where: { id } });
-  if (!paragem) return { erro: 404 as const, paragem: null };
-  if (sessao.perfil === "ESCRITORIO") return { erro: null, paragem };
+  if (!paragem) return { erro: 404 as const, paragem: null, sessao: null };
+  if (sessao.perfil === "ESCRITORIO") return { erro: null, paragem, sessao };
   if (sessao.perfil === "MOTORISTA" && paragem.motoristaId === sessao.id) {
-    return { erro: null, paragem };
+    return { erro: null, paragem, sessao };
   }
-  return { erro: 403 as const, paragem: null };
+  return { erro: 403 as const, paragem: null, sessao: null };
 }
+
+/**
+ * Campos de faturação/cobrança — decisão do escritório, nunca do motorista
+ * (mesmo que a paragem seja dele). A UI já os esconde do motorista, mas isso
+ * é só cosmético: sem este filtro, um PATCH direto (fora da UI) conseguia
+ * alterá-los à mesma.
+ */
+const CAMPOS_ESCRITORIO = ["pago", "dataPagamento", "receitaPaga", "faturarCliente"] as const;
 
 // PATCH /api/paragens/[id]
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -44,6 +52,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     );
   }
   const d = parsed.data;
+  if (auth.sessao?.perfil !== "ESCRITORIO") {
+    for (const campo of CAMPOS_ESCRITORIO) delete d[campo];
+  }
   const data: Record<string, unknown> = { ...d };
   if (d.data) data.data = new Date(d.data);
   if (d.faturarCliente !== undefined) data.faturarCliente = d.faturarCliente?.trim() || null;

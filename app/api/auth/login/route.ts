@@ -11,6 +11,12 @@ const schema = z.object({
   pin: z.string().min(1),
 });
 
+// Proteção contra força bruta do PIN: ao fim de N falhas seguidas na mesma
+// conta, bloqueia-a durante um período — mesmo um PIN de 4 dígitos (10 000
+// combinações) deixa de ser viável de adivinhar por tentativa e erro.
+const LIMITE_TENTATIVAS = 5;
+const BLOQUEIO_MINUTOS = 15;
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -26,11 +32,38 @@ export async function POST(req: Request) {
   }
 
   const user = await prisma.utilizador.findUnique({ where: { codigo: codigoLogin } });
+
+  if (user?.bloqueadoAte && user.bloqueadoAte > new Date()) {
+    const minutos = Math.ceil((user.bloqueadoAte.getTime() - Date.now()) / 60000);
+    return NextResponse.json(
+      { erro: `Demasiadas tentativas falhadas. Tente novamente daqui a ${minutos} min.` },
+      { status: 429 },
+    );
+  }
+
   if (!user || user.perfil !== perfil || !bcrypt.compareSync(pin, user.pinHash)) {
+    if (user) {
+      const tentativas = user.tentativasFalhadas + 1;
+      const atingiuLimite = tentativas >= LIMITE_TENTATIVAS;
+      await prisma.utilizador.update({
+        where: { id: user.id },
+        data: {
+          tentativasFalhadas: atingiuLimite ? 0 : tentativas,
+          bloqueadoAte: atingiuLimite ? new Date(Date.now() + BLOQUEIO_MINUTOS * 60000) : null,
+        },
+      });
+    }
     return NextResponse.json(
       { erro: perfil === "MOTORISTA" ? "ID ou PIN incorretos." : "PIN incorreto." },
       { status: 401 },
     );
+  }
+
+  if (user.tentativasFalhadas > 0 || user.bloqueadoAte) {
+    await prisma.utilizador.update({
+      where: { id: user.id },
+      data: { tentativasFalhadas: 0, bloqueadoAte: null },
+    });
   }
 
   const res = NextResponse.json({

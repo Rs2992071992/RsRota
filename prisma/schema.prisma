@@ -304,6 +304,11 @@ model Utilizador {
   perfil  String // "ESCRITORIO" | "MOTORISTA"
   pinHash String
 
+  // Bloqueio por força bruta no PIN (ver POST /api/auth/login): incrementa a
+  // cada falha, bloqueia a conta durante BLOQUEIO_MINUTOS ao atingir o limite.
+  tentativasFalhadas Int       @default(0)
+  bloqueadoAte       DateTime?
+
   // Parâmetros salariais próprios de cada motorista (defaults = valores atuais §3.4).
   salarioMensal    Float @default(1345)
   seguroMensal     Float @default(30)
