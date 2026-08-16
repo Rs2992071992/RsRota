@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 import { fmtEuro } from "@/lib/format";
+import Autocomplete from "@/components/Autocomplete";
 
 export interface VeiculoOpcao {
   id: number;
@@ -447,17 +448,11 @@ export default function RegistoForm({
         ) : (
           <div>
             <label className="label">Cliente / Local</label>
-            <input
-              list="clientes"
-              className="input"
+            <Autocomplete
               value={f.cliente}
-              onChange={(e) => set("cliente", e.target.value)}
+              onChange={(v) => set("cliente", v)}
+              opcoes={clientes}
             />
-            <datalist id="clientes">
-              {clientes.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
             {erros.cliente && <p className="mt-1 text-xs text-red-600">{erros.cliente}</p>}
           </div>
         )}
@@ -496,17 +491,11 @@ export default function RegistoForm({
       <div className="card space-y-3">
         <div>
           <label className="label">Zona Portagem</label>
-          <input
-            list="zonas"
-            className="input"
+          <Autocomplete
             value={f.zonaPortagem}
-            onChange={(e) => set("zonaPortagem", e.target.value)}
+            onChange={(v) => set("zonaPortagem", v)}
+            opcoes={zonas}
           />
-          <datalist id="zonas">
-            {zonas.map((z) => (
-              <option key={z} value={z} />
-            ))}
-          </datalist>
           {zonasJaUsadas.length > 0 && (
             <p className="mt-1 text-xs text-blue-600">
               Já {zonasJaUsadas.length === 1 ? "foi usada" : "foram usadas"}: {listarComE(zonasJaUsadas)} nesta
