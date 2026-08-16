@@ -2,6 +2,58 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🗺️ Vamos ao dia de ontem — roteiro geral (2026-08-16)
+
+Levantamento pedido pelo Ricardo ("o que falta fazer nesta app"), a partir de
+uma leitura completa deste ficheiro. A esmagadora maioria do que falta já não
+é código — é dados/configuração da parte dele. Artefacto publicado:
+https://claude.ai/code/artifact/7fdf773c-38bc-475f-9c24-a0d0117506e9
+
+### Agora — risco ativo
+- [ ] Trocar os PINs por defeito em produção (escritório `1234`, motorista
+  `0000`) — a funcionalidade já existe (`/escritorio/parametros` e
+  `/escritorio/motoristas/[id]`), só falta usá-la (ver também linha ~1061
+  abaixo, o mesmo item já estava por fazer desde 2026-08-11)
+
+### Dados/configuração pendente (ação do Ricardo, sem código)
+- [ ] Marcar "Blo-Synergy" com "Faturar esta recolha a → Blowtec" em
+  `/escritorio/rotas/RIC-Tec-eurored`
+- [ ] Marcar Tec-masterferro, Tec-A2 e Blo-Synergy como "Recolha para
+  entregar a outro cliente" na mesma rota
+- [ ] Preencher dimensões (mm) dos veículos reais em `/escritorio/veiculos`
+  e registar os reboques reais em `/escritorio/reboques`
+- [ ] Ajustar capacidade/peso médio por palete em `/escritorio/parametros`
+  (grupo "Paletes") se os defaults não forem os reais
+- [ ] Sincronizar a tabela de portagens por zona com a folha
+  `Tabela_ConsPort` do Excel, em `/escritorio/parametros`
+- [ ] (Opcional) `TOLLGURU_API_KEY` na Vercel, só se quiser portagens
+  automáticas por rota em vez da tabela fixa
+- [ ] Instalar o novo `app-release.apk` da app Motorista (ícones de
+  despesas de 2026-08-16); copiar os 2 keystores Android + passwords para
+  backup seguro
+
+### Engenharia por construir
+- [ ] App Motorista Android — sincronização offline (Fase 2, Entrega 2:
+  SQLite + fila de paragens por sincronizar) — maior bloco de trabalho
+  pendente no projeto Android, ver secção própria abaixo
+- [ ] Fase 3 — distribuição das apps Android (validar Motorista num
+  telemóvel real, processo de partilha do `.apk`)
+- [ ] Upgrade major do Next.js (14→16) — corrige as CVEs restantes de
+  DoS/SSRF/cache poisoning, mas exige React 19 e teste dedicado (adiado na
+  auditoria de segurança de 2026-08-16, ver `tasks/lessons.md`)
+- [ ] Substituir o pacote `xlsx` (prototype pollution/ReDoS sem correção),
+  usado em `/api/importar` — troca de biblioteca merece teste próprio
+  contra ficheiros reais antes de produção
+- [ ] Multi-tenant, se decidir vender a app a outras empresas — 0%
+  começado: `empresaId` no schema Prisma propagado a todas as queries,
+  sessão a resolver a empresa, billing por cima, onboarding self-service
+
+### Opcionais menores
+- [ ] Logo/ícone próprio para a app Motorista (hoje reaproveita o da
+  Administração)
+- [ ] Personalizar o cabeçalho da empresa no PDF de orçamentos (constante
+  `EMPRESA` em `lib/pdf/DevisDocument.tsx`)
+
 ## ⛽ Link para preços de referência ENSE (rota + motorista) (2026-08-15)
 
 Pedido do Ricardo: botão com o link oficial da ENSE
