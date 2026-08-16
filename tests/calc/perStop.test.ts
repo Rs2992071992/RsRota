@@ -156,4 +156,16 @@ describe("colunas Espanha — informativas, poupança", () => {
     // 100 × 1,834 − 150 = 33,4
     expect(r.poupancaEspanha).toBeCloseTo(33.4, 4);
   });
+
+  it("com preço de referência corrigido por rota, a poupança usa esse preço (não o de Parâmetros)", () => {
+    const p = paragemBase({
+      kmFinal: 100,
+      litrosEspanha: 100,
+      custoEspanha: 150,
+      precoCombRefOverride: 2,
+    });
+    const r = calcularParagem(p, ctx);
+    // 100 × 2 (override da rota, não os 1,834 de Parâmetros) − 150 = 50
+    expect(r.poupancaEspanha).toBeCloseTo(50, 4);
+  });
 });

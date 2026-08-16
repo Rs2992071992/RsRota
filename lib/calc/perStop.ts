@@ -122,11 +122,13 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // Preço por kg (evita divisão por zero).
   const precoPorKg = peso > 0 ? custoParagem / peso : 0;
 
-  // Espanha (informativo): poupança vs preço de referência.
+  // Espanha (informativo): poupança vs preço de referência desta rota
+  // (precoCombUsado já aplica o override por rota se existir, senão o
+  // parâmetro global — mesmo preço usado para custoCombustivel acima).
   const litrosEspanha = p.litrosEspanha || 0;
   const custoEspanha = p.custoEspanha || 0;
   const poupancaEspanha =
-    litrosEspanha > 0 ? litrosEspanha * eff.precoCombRef - custoEspanha : 0;
+    litrosEspanha > 0 ? litrosEspanha * precoCombUsado - custoEspanha : 0;
 
   return {
     id: p.id,

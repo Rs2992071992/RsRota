@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { carregarContexto } from "@/lib/contexto";
-import { calcularParagem, efetivos } from "@/lib/calc/perStop";
+import { calcularParagem } from "@/lib/calc/perStop";
 import { calcularRotas } from "@/lib/calc/perRoute";
 import { valorPortagem } from "@/lib/calc/lookups";
 import type { RotaCalc } from "@/lib/calc/types";
@@ -124,7 +124,10 @@ export async function carregarPoupancaEspanha(): Promise<PoupancaEspanhaData> {
       data: p.data,
       litros: calc.litrosEspanha,
       custoEspanha: p.custoEspanha || 0,
-      precoCombRef: efetivos(inputs[i], ctx).precoCombRef,
+      // Preço efetivamente usado nesta rota (override da rota, se existir,
+      // senão o de Parâmetros) — o mesmo que calc.poupancaEspanha já usa,
+      // para a coluna "preço ref" bater sempre com a poupança ao lado.
+      precoCombRef: calc.precoCombUsado,
       poupanca: calc.poupancaEspanha,
     });
   }
