@@ -85,28 +85,15 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f2035] p-4">
-      {/* Fundo do ecrã de autenticação: gradiente da marca + traçado de rota
-          subtil, só para dar profundidade a este ecrã (o resto da app fica
-          inalterado, continua em fundo claro para as tabelas de dados). */}
+      {/* Fundo do ecrã de autenticação: mapa-mundo com rotas, só para dar
+          profundidade a este ecrã (o resto da app fica inalterado, continua
+          em fundo claro para as tabelas de dados). */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(44,82,130,0.65),transparent_55%),radial-gradient(circle_at_85%_90%,rgba(30,58,95,0.55),transparent_50%)]"
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url(/login-bg.jpg)" }}
       />
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.08]"
-        preserveAspectRatio="none"
-        viewBox="0 0 1200 800"
-      >
-        <path
-          d="M -50 620 C 220 520, 340 720, 560 560 S 860 320, 1060 420 S 1260 300, 1350 220"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="3"
-          strokeDasharray="2 16"
-          strokeLinecap="round"
-        />
-      </svg>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#0f2035]/50" />
 
       <div className="card relative w-full max-w-sm border-0 shadow-2xl">
         <div className="mb-1 flex items-center gap-2">
