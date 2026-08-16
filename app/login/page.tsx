@@ -84,9 +84,37 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="card w-full max-w-sm">
-        <h1 className="mb-1 text-xl font-bold text-brand">RsRota</h1>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f2035] p-4">
+      {/* Fundo do ecrã de autenticação: gradiente da marca + traçado de rota
+          subtil, só para dar profundidade a este ecrã (o resto da app fica
+          inalterado, continua em fundo claro para as tabelas de dados). */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(44,82,130,0.65),transparent_55%),radial-gradient(circle_at_85%_90%,rgba(30,58,95,0.55),transparent_50%)]"
+      />
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.08]"
+        preserveAspectRatio="none"
+        viewBox="0 0 1200 800"
+      >
+        <path
+          d="M -50 620 C 220 520, 340 720, 560 560 S 860 320, 1060 420 S 1260 300, 1350 220"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="3"
+          strokeDasharray="2 16"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      <div className="card relative w-full max-w-sm border-0 shadow-2xl">
+        <div className="mb-1 flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm text-white">
+            🚚
+          </span>
+          <h1 className="text-xl font-bold tracking-tight text-brand">RsRota</h1>
+        </div>
         <p className="mb-6 text-sm text-gray-500">A tua rota, os teus custos, sob controlo.</p>
 
         <div className="mb-4 grid grid-cols-2 gap-2">
