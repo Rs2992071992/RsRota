@@ -2,6 +2,33 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-16] | Auditoria de segurança pedida pelo Ricardo (a pensar em vender a
+  app a mais empresas) encontrou 4 falhas reais, todas corrigidas no mesmo
+  commit: (1) `PATCH /api/paragens/:id` só validava **de quem** era a
+  paragem, não **que campos** podiam ser alterados — um motorista
+  autenticado conseguia mudar `pago`/`receitaPaga`/`faturarCliente` por API
+  direta, campos que a UI só esconde do motorista por cosmética
+  (`ParagemEditor.tsx`/`PagoToggle.tsx`); (2) `/api/auth/login` sem limite de
+  tentativas, com PINs de 4 dígitos (10 000 combinações) brute-forçáveis;
+  (3) `lib/auth.ts` comparava a assinatura HMAC com `!==` (não constant-time)
+  e caía silenciosamente no segredo de dev (público no GitHub) se
+  `AUTH_SECRET` faltasse em produção; (4) `next@14.2.15` tinha o CVE-2025-29927
+  (bypass de autorização em middleware) por corrigir. | Sempre que um campo só
+  é escondido na UI por perfil (não por regra de negócio genuína), assumir
+  que a API tem de repetir essa restrição — a UI nunca é a fronteira de
+  autorização. Em qualquer login por PIN/password curto, bloqueio de conta
+  por tentativas falhadas é não-negociável, não "boa prática opcional".
+  **Trade-off aceite conscientemente**: o bloqueio de conta é por `codigo`
+  (5 falhas → 15 min), não por IP — como o escritório é uma conta única de
+  `codigo` fixo ("ESCRITORIO"), alguém que saiba isso pode manter essa conta
+  perpetuamente bloqueada só a errar o PIN de propósito a cada 15 min (nega
+  acesso ao dono, não expõe dados). Fora de âmbito nesta ronda, por
+  precisarem de teste dedicado antes de ir para produção: upgrade major do
+  Next.js (14→16, corrige as restantes CVEs mas exige React 19 + testar
+  Server Actions) e troca do pacote `xlsx` (prototype pollution/ReDoS sem
+  fix, usado em `/api/importar` — só o escritório o usa hoje, mas o risco
+  cresce se houver mais admins de mais empresas).
+
 - [2026-08-13] | `DATABASE_URL` em produção (Vercel) apontava desde sempre para a
   ligação **direta** da Neon (hostname sem `-pooler`), nunca para a "Pooled
   connection". Sintoma real reportado pelo Ricardo: erro 500 ao registar uma
