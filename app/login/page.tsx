@@ -96,7 +96,10 @@ export default function LoginPage() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#0f2035]/50" />
 
       <div className="card relative w-full max-w-sm border-0 shadow-2xl">
-        <img src="/logo-wordmark.png" alt="RsRota" className="mb-2 h-16 w-auto rounded-lg" />
+        <div className="mb-1 flex items-center gap-2">
+          <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg" />
+          <h1 className="text-xl font-bold tracking-tight text-brand">RsRota</h1>
+        </div>
         <p className="mb-6 text-sm text-gray-500">A tua rota, os teus custos, sob controlo.</p>
 
         <div className="mb-4 grid grid-cols-2 gap-2">
