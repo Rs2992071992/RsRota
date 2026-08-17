@@ -21,10 +21,8 @@ export default async function EscritorioLayout({ children }: { children: React.R
       <header className="relative border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-brand">RsRota</span>
-              <span className="text-xs text-gray-500">Gestão de Rotas</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-manager.png" alt="RsRota Manager" className="h-14 w-auto rounded-lg py-1" />
             <NavLinks vencidos={vencidos} />
           </div>
           <form action="/api/auth/logout" method="post">
