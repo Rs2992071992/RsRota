@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Truck, Building2 } from "lucide-react";
 
 type Perfil = "ESCRITORIO" | "MOTORISTA";
 type Modo = "entrar" | "criar";
@@ -106,24 +107,26 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => trocarPerfil("MOTORISTA")}
-            className={`rounded-lg border px-3 py-3 text-sm font-medium ${
+            className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-3 text-sm font-medium ${
               perfil === "MOTORISTA"
                 ? "border-brand bg-brand text-white"
                 : "border-gray-300 bg-white text-gray-600"
             }`}
           >
-            🚚 Motorista
+            <Truck size={17} strokeWidth={2} />
+            Motorista
           </button>
           <button
             type="button"
             onClick={() => trocarPerfil("ESCRITORIO")}
-            className={`rounded-lg border px-3 py-3 text-sm font-medium ${
+            className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-3 text-sm font-medium ${
               perfil === "ESCRITORIO"
                 ? "border-brand bg-brand text-white"
                 : "border-gray-300 bg-white text-gray-600"
             }`}
           >
-            🏢 Escritório
+            <Building2 size={17} strokeWidth={2} />
+            Escritório
           </button>
         </div>
 
