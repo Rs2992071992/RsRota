@@ -386,6 +386,30 @@ o que cala o aviso até ao próximo prazo.
   checkbox volta a ficar desmarcada (e o aviso reaparece se dentro dos 45
   dias)
 
+## 🚪 Ícone de "Sair" em falta na app Motorista Android (2026-08-19)
+
+Reportado pelo Ricardo: a app Motorista Android não tinha o ícone junto ao
+botão "Sair" que a Administração já tem (`LogOut` do `lucide-react`, ao
+lado do texto — ver `app/motorista/layout.tsx`/`app/escritorio/layout.tsx`
+no site). Confirma o que já estava documentado: a Administração é WebView
+direto ao site (ganha tudo automaticamente), a Motorista tem bundle
+próprio (`app-motorista-android/src/App.tsx`) que não herda alterações do
+site — precisa de porte manual + rebuild do `.apk` (ver
+`android_apps_status` na memória).
+
+- [x] `app-motorista-android/package.json`: `npm install lucide-react`
+  (não estava listado como dependência; site usa `^1.25.0`, instalado
+  `^1.33.0`)
+- [x] `app-motorista-android/src/App.tsx`: botão "Sair" ganha `<LogOut
+  size={16} strokeWidth={2} />` antes do texto, igual ao site
+- [x] `npm run build` (tsc -b && vite build) limpo, `npx cap sync
+  android`, `./gradlew assembleRelease` — novo `app-release.apk` gerado
+  em `android/app/build/outputs/apk/release/` (assinado com o keystore
+  existente)
+- [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
+  telemóvel do motorista para o ícone aparecer — a Play Protect vai
+  avisar, é esperado (app fora da Play Store)
+
 ## 📱 2 apps Android (Motorista / Administração) — plano (2026-08-06)
 
 Pedido do Ricardo: transformar isto em 2 apps Android separadas — uma para
