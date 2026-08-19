@@ -45,8 +45,16 @@ motorista); e implementar já nos dois sítios — o site **e** a app Android
   (`android/app/build/outputs/apk/release/`)
 - [x] Commit + push do site (Vercel build automático, confirmado
   `/api/avarias` a responder em produção)
+- [x] **Extra (mesmo dia)**: botão "Enviar email" (mailto: com
+  assunto/corpo pré-preenchidos, mesmo padrão do `EnviarOrcamento.tsx`) —
+  em cada linha de `/escritorio/veiculos/avarias` e após o motorista
+  reportar em `/motorista/avarias`; sem destinatário fixo (app não tem
+  email de oficina guardado). Portado também para a app Android
+  (`Avarias.tsx`) e `.apk` regerado. Testado: href do mailto confirmado
+  com assunto/corpo corretos nos dois lados do site (Playwright), dados
+  de teste apagados
 - [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
-  telemóvel do motorista para a aba "Avarias" aparecer
+  telemóvel do motorista para a aba "Avarias" (+ email) aparecer
 
 ## 🧾 PDF de pagamentos dos clientes (2026-08-19)
 
