@@ -55,7 +55,7 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes }
         <h1 className="text-2xl font-bold">Veículos</h1>
         <div className="flex items-center gap-4">
           <Link href="/escritorio/veiculos/avarias" className="text-sm font-medium text-brand hover:underline">
-            Pedido Manutenção
+            Ped. Manutenção
             {avariasPendentes > 0 && (
               <span className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
                 {avariasPendentes}
