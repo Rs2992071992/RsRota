@@ -2,6 +2,52 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔧 Separador "Avarias" (motorista reporta → escritório vê/resolve) (2026-08-19)
+
+Pedido do Ricardo: no motorista, um separador novo para reportar avarias
+(data + veículo/matrícula + descrição do problema); aparece do lado da
+administração em Veículos → Avarias. Confirmado com ele: modelo `Avaria`
+novo e separado de `Manutencao` (essa alimenta o motor de custo do
+veículo — valor/dias —, não deve misturar-se com sinalização informal do
+motorista); e implementar já nos dois sítios — o site **e** a app Android
+"Motorista" (bundle próprio, precisa de porte manual). Plano completo em
+`C:\Users\Ricardo\.claude\plans\rustling-jumping-bird.md`.
+
+- [x] `prisma/schema.prisma`: novo `model Avaria` (data, descricao,
+  veiculoId→Veiculo, reportadoPorId→Utilizador opcional, resolvida,
+  resolvidaEm) + relações inversas em `Veiculo`/`Utilizador`; `db push`
+  aplicado em produção (aditivo, sem perda de dados)
+- [x] `lib/validacao.ts`: `avariaSchema`/`avariaUpdateSchema`
+- [x] `app/api/avarias/route.ts` (GET qualquer sessão, filtro
+  `?resolvida=`; POST qualquer sessão, grava `reportadoPorId`) e
+  `app/api/avarias/[id]/route.ts` (PATCH/DELETE só ESCRITORIO)
+- [x] `/motorista/avarias` (nova aba na nav, a seguir a Histórico):
+  formulário data/veículo/descrição + lista de avarias pendentes do
+  veículo selecionado (evita reportes duplicados) — testado a 320px,
+  sem overflow na nav (4 abas cabem exatamente como as 3 anteriores)
+- [x] `/escritorio/veiculos/avarias`: tabela com marcar
+  resolvida/reabrir/apagar; link "Avarias" com badge do nº pendentes no
+  cabeçalho de `/escritorio/veiculos`
+- [x] `tsc --noEmit` e `next build` limpos no site; testado ponta a ponta
+  contra a BD de produção (sessão forjada por HMAC): POST como
+  motorista, GET pendentes, PATCH resolvida e DELETE como escritório,
+  401/403 confirmados nos casos sem permissão, dados de teste apagados
+- [x] App Android Motorista (`app-motorista-android`, sem git):
+  `src/lib/types.ts`/`api.ts` (novo `Avaria`/`criarAvaria`/
+  `carregarAvariasPendentes`), `src/screens/Avarias.tsx` (novo, espelha
+  `Registar.tsx`), `src/App.tsx` (nova aba) — `npm run build` limpo,
+  testado ponta a ponta contra a API de produção real via proxy do Vite
+  dev (sessão forjada por HMAC injetada em `localStorage` como
+  `@capacitor/preferences` faz no browser): reportar avaria → 201,
+  aparece na lista de pendentes do veículo, dados de teste apagados a
+  seguir
+- [x] Novo `app-release.apk` assinado gerado
+  (`android/app/build/outputs/apk/release/`)
+- [x] Commit + push do site (Vercel build automático, confirmado
+  `/api/avarias` a responder em produção)
+- [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
+  telemóvel do motorista para a aba "Avarias" aparecer
+
 ## 🧾 PDF de pagamentos dos clientes (2026-08-19)
 
 Pedido do Ricardo: tal como já existe "Descarregar PDF" no orçamento
