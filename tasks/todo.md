@@ -2,6 +2,49 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🧾 PDF de pagamentos dos clientes (2026-08-19)
+
+Pedido do Ricardo: tal como já existe "Descarregar PDF" no orçamento
+(`/api/devis/[id]/pdf` + `EnviarOrcamento.tsx`), fazer o mesmo para os
+pagamentos/cobranças dos clientes. Confirmado com o Ricardo: **ambos** —
+(1) extrato por cliente (paragens em dívida desse cliente + total, pronto
+a enviar como cobrança) e (2) exportação em PDF da tabela inteira "Contas
+a receber".
+
+- [x] `lib/pdf/empresa.ts` (novo): extrai a constante `EMPRESA` de
+  `DevisDocument.tsx` para ficheiro partilhado (usada pelos 2 documentos
+  novos também) — puramente um refactor, sem mudar o PDF do orçamento
+- [x] `lib/cobrancas-service.ts` (novo): extrai a query+mapeamento que hoje
+  vive só em `app/escritorio/cobrancas/page.tsx` para uma função
+  `carregarCobrancas()` reutilizável (página + rota da API do PDF);
+  `LinhaCobranca` passa a viver aqui (não duplicado em `CobrancasTabela.tsx`)
+- [x] `lib/pdf/CobrancasDocument.tsx` (novo): PDF da tabela "Contas a
+  receber" inteira (todas as linhas, tal como a página) + resumo (por
+  receber/vencido)
+- [x] `lib/pdf/ExtratoClienteDocument.tsx` (novo): PDF "extrato de conta"
+  de um cliente (só as paragens por pagar + total/vencido) — mesmo estilo
+  visual do `DevisDocument.tsx`
+- [x] `app/api/cobrancas/pdf/route.ts` (novo): GET, só ESCRITORIO, gera o
+  PDF da tabela inteira
+- [x] `app/api/clientes/[nome]/pdf/route.ts` (novo): GET, só ESCRITORIO,
+  gera o extrato de um cliente (nome vem da URL, `decodeURIComponent`;
+  `Content-Disposition` sanitizado + `filename*` RFC 5987 para acentos)
+- [x] `components/DescarregarPdfBotao.tsx` (novo): botão cliente
+  genérico (fetch blob + download), reutilizado nos 2 sítios em vez de
+  duplicar a lógica que já existe em `EnviarOrcamento.tsx`
+- [x] `app/escritorio/cobrancas/page.tsx`: usa `carregarCobrancas()` +
+  botão "Descarregar PDF" da tabela inteira (só aparece com linhas)
+- [x] `app/escritorio/clientes/page.tsx`: botão "Descarregar extrato
+  (PDF)" no detalhe do cliente selecionado, junto ao cartão "Pagamentos"
+- [x] `tsc --noEmit` limpo, `next build` OK (2 rotas novas confirmadas no
+  output: `/api/cobrancas/pdf`, `/api/clientes/[nome]/pdf`)
+- [x] Testados os 2 PDFs contra a BD de produção real (sessão forjada por
+  HMAC, `next dev` local): tabela inteira (25 paragens reais, todas pagas)
+  → 200, `%PDF-1.3`; extrato por cliente com saldo real 0 → 200, ramo
+  "sem valores"; extrato com 1 paragem de teste por pagar (250 €, criada e
+  apagada a seguir) → 200, PDF maior (ramo da tabela populada exercido)
+- [x] Commit + push (Vercel builda automaticamente)
+
 ## 🗺️ Vamos ao dia de ontem — roteiro geral (2026-08-16)
 
 Levantamento pedido pelo Ricardo ("o que falta fazer nesta app"), a partir de

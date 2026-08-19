@@ -6,6 +6,7 @@ import ContatoCliente from "@/components/ContatoCliente";
 import EditarNomeCliente from "@/components/EditarNomeCliente";
 import ClienteGrafico from "@/components/ClienteGrafico";
 import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
+import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
 
 export const dynamic = "force-dynamic";
 
@@ -184,14 +185,24 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
               </div>
 
               {/* Pagamentos (informativo) */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Kpi rotulo="Já pago" valor={fmtEuro(detalhe.jaPago)} cor="text-green-700" />
-                <Kpi rotulo="Por pagar" valor={fmtEuro(detalhe.porPagar)} cor="text-amber-700" />
-                <Kpi
-                  rotulo="Vencido (+90 d)"
-                  valor={fmtEuro(detalhe.vencido)}
-                  cor={detalhe.vencido > 0 ? "text-red-700" : undefined}
-                />
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700">Pagamentos</h3>
+                  <DescarregarPdfBotao
+                    url={`/api/clientes/${encodeURIComponent(detalhe.nome)}/pdf`}
+                    nomeFicheiro={`extrato-${detalhe.nome}`}
+                    label="Descarregar extrato (PDF)"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <Kpi rotulo="Já pago" valor={fmtEuro(detalhe.jaPago)} cor="text-green-700" />
+                  <Kpi rotulo="Por pagar" valor={fmtEuro(detalhe.porPagar)} cor="text-amber-700" />
+                  <Kpi
+                    rotulo="Vencido (+90 d)"
+                    valor={fmtEuro(detalhe.vencido)}
+                    cor={detalhe.vencido > 0 ? "text-red-700" : undefined}
+                  />
+                </div>
               </div>
 
               {/* Viagens */}

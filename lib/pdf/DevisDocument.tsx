@@ -1,14 +1,7 @@
 import React from "react";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { LinhaDevis } from "@/lib/calc/orcamento";
-
-// Dados do prestador (transportadora). Editar aqui para personalizar o cabeçalho
-// do PDF — propositadamente uma constante simples (não há tabela de empresa na BD).
-const EMPRESA = {
-  nome: "Transportes",
-  detalhe: "Serviços de logística e transporte rodoviário de mercadorias",
-  contacto: "",
-};
+import { EMPRESA } from "@/lib/pdf/empresa";
 
 const eur = new Intl.NumberFormat("pt-PT", {
   style: "currency",

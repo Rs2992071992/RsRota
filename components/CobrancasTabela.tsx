@@ -4,19 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { fmtEuro, fmtData } from "@/lib/format";
 import type { EstadoPagamento } from "@/lib/calc/pagamentos";
+import type { LinhaCobranca } from "@/lib/cobrancas-service";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
 import PagoToggle from "@/components/PagoToggle";
-
-export interface LinhaCobranca {
-  id: number;
-  idRota: string;
-  cliente: string;
-  valor: number;
-  pago: boolean;
-  estado: EstadoPagamento;
-  diasRestantes: number;
-  dataVencimento: string; // ISO
-}
 
 type Coluna = "idRota" | "cliente" | "valor" | "vence" | "estado";
 type Dir = "asc" | "desc";
