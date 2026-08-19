@@ -31,6 +31,9 @@ export default function AvariaForm({
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
+  const [ultimaAvaria, setUltimaAvaria] = useState<{ veiculo: string; data: string; descricao: string } | null>(
+    null,
+  );
 
   const pendentesDoVeiculo = useMemo(
     () => avariasPendentes.filter((a) => String(a.veiculoId) === veiculoId),
@@ -63,12 +66,24 @@ export default function AvariaForm({
         return;
       }
       setMsg({ tipo: "ok", texto: "Avaria reportada. O escritório vai vê-la em Veículos → Avarias." });
+      const veiculo = veiculos.find((v) => String(v.id) === veiculoId);
+      setUltimaAvaria({
+        veiculo: veiculo ? veiculo.nome + (veiculo.matricula ? ` (${veiculo.matricula})` : "") : "",
+        data,
+        descricao: descricao.trim(),
+      });
       setDescricao("");
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
       setAGravar(false);
     }
+  }
+
+  function mailtoAvaria(a: { veiculo: string; data: string; descricao: string }): string {
+    const assunto = `Avaria — ${a.veiculo}`;
+    const corpo = `Veículo: ${a.veiculo}\nData: ${fmtData(a.data)}\n\nDescrição:\n${a.descricao}`;
+    return `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   }
 
   return (
@@ -79,7 +94,12 @@ export default function AvariaForm({
             msg.tipo === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"
           }`}
         >
-          {msg.texto}
+          <p>{msg.texto}</p>
+          {msg.tipo === "ok" && ultimaAvaria && (
+            <a href={mailtoAvaria(ultimaAvaria)} className="mt-1 inline-block font-medium underline">
+              Enviar email sobre esta avaria
+            </a>
+          )}
         </div>
       )}
 

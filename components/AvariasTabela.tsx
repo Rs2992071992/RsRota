@@ -56,6 +56,16 @@ export default function AvariasTabela({ linhas }: { linhas: LinhaAvaria[] }) {
     }
   }
 
+  function mailtoAvaria(l: LinhaAvaria): string {
+    const assunto = `Avaria — ${l.veiculo}`;
+    const corpo =
+      `Veículo: ${l.veiculo}\n` +
+      `Data: ${fmtData(l.data)}\n` +
+      `Reportado por: ${l.reportadoPor || "—"}\n\n` +
+      `Descrição:\n${l.descricao}`;
+    return `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  }
+
   return (
     <div className="overflow-x-auto">
       {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
@@ -89,6 +99,9 @@ export default function AvariasTabela({ linhas }: { linhas: LinhaAvaria[] }) {
                 )}
               </td>
               <td className="td whitespace-nowrap text-right">
+                <a href={mailtoAvaria(l)} className="mr-3 text-sm font-medium text-brand hover:underline">
+                  Enviar email
+                </a>
                 <button
                   onClick={() => alternarResolvida(l.id, !l.resolvida)}
                   disabled={aAtualizar === l.id}
