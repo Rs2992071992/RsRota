@@ -53,8 +53,17 @@ motorista); e implementar já nos dois sítios — o site **e** a app Android
   (`Avarias.tsx`) e `.apk` regerado. Testado: href do mailto confirmado
   com assunto/corpo corretos nos dois lados do site (Playwright), dados
   de teste apagados
+- [x] **Extra (mesmo dia)**: nome visível trocado para "Pedido
+  Manutenção" (títulos, botões, mensagens, assunto do email) — a pedido
+  do Ricardo, só o texto (rotas `/motorista/avarias`, o modelo Prisma
+  `Avaria` e nomes de ficheiros/variáveis continuam "avaria" no código,
+  decisão explícita). Rótulo mais comprido cortava "Perfil" na nav do
+  motorista a 320px — nav passou a `flex-wrap` (quebra para 2 linhas em
+  vez de cortar), confirmado sem overflow a 320px e 390px. Portado
+  também para a app Android, `.apk` regerado outra vez
 - [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
-  telemóvel do motorista para a aba "Avarias" (+ email) aparecer
+  telemóvel do motorista para a aba "Pedido Manutenção" (+ email)
+  aparecer
 
 ## 🧾 PDF de pagamentos dos clientes (2026-08-19)
 
