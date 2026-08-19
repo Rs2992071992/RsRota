@@ -113,6 +113,19 @@ export const manutencaoUpdateSchema = manutencaoSchema.partial();
 
 export type ManutencaoForm = z.infer<typeof manutencaoSchema>;
 
+/** Schema de uma avaria reportada pelo motorista (sinalização, sem custo). */
+export const avariaSchema = z.object({
+  veiculoId: z.number().int().positive(),
+  data: z.string().min(1, "Data obrigatória"),
+  descricao: z.string().trim().min(1, "Descrição obrigatória").max(500),
+});
+
+export const avariaUpdateSchema = z.object({
+  descricao: z.string().trim().min(1).max(500).optional(),
+  data: z.string().min(1).optional(),
+  resolvida: z.boolean().optional(),
+});
+
 /** Schema dos parâmetros salariais próprios de um motorista. */
 export const motoristaParamsSchema = z.object({
   nome: z.string().trim().nullable().optional(),

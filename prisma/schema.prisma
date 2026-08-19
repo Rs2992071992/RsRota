@@ -116,6 +116,7 @@ model Veiculo {
   pneus         Pneu[]
   paragens      Paragem[]
   manutencoes   Manutencao[]
+  avarias       Avaria[]
   carregamentos Carregamento[]
 
   criadoEm     DateTime @default(now())
@@ -134,6 +135,29 @@ model Manutencao {
 
   veiculoId Int
   veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@index([veiculoId])
+}
+
+/// Reporte informal de avaria por um motorista (data + descrição do
+/// problema). Deliberadamente separado de Manutencao: essa alimenta o motor
+/// de custo do veículo (valor/dias), esta é só sinalização operacional —
+/// nunca entra em nenhum cálculo.
+model Avaria {
+  id        Int      @id @default(autoincrement())
+  data      DateTime
+  descricao String
+
+  veiculoId Int
+  veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  reportadoPorId Int?
+  reportadoPor   Utilizador? @relation(fields: [reportadoPorId], references: [id])
+
+  resolvida   Boolean   @default(false)
+  resolvidaEm DateTime?
 
   criadoEm DateTime @default(now())
 
@@ -319,6 +343,7 @@ model Utilizador {
   fatorAnualizacao Float @default(14)
 
   paragens Paragem[]
+  avarias  Avaria[]
 
   criadoEm DateTime @default(now())
 }

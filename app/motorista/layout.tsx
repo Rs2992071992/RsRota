@@ -43,6 +43,12 @@ export default async function MotoristaLayout({ children }: { children: React.Re
               Histórico
             </Link>
             <Link
+              href="/motorista/avarias"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Avarias
+            </Link>
+            <Link
               href="/motorista/perfil"
               className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >

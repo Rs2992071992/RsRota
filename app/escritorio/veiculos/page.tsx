@@ -4,7 +4,7 @@ import VeiculosManager, { type VeiculoBD } from "./VeiculosManager";
 export const dynamic = "force-dynamic";
 
 export default async function VeiculosPage() {
-  const [veiculos, params, pneusGlobais] = await Promise.all([
+  const [veiculos, params, pneusGlobais, avariasPendentes] = await Promise.all([
     prisma.veiculo.findMany({
       orderBy: { criadoEm: "asc" },
       include: {
@@ -15,6 +15,7 @@ export default async function VeiculosPage() {
     }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
+    prisma.avaria.count({ where: { resolvida: false } }),
   ]);
 
   // Template (valores por defeito) para pré-preencher um veículo novo.
@@ -66,5 +67,5 @@ export default async function VeiculosPage() {
     })),
   }));
 
-  return <VeiculosManager veiculos={lista} template={template} />;
+  return <VeiculosManager veiculos={lista} template={template} avariasPendentes={avariasPendentes} />;
 }

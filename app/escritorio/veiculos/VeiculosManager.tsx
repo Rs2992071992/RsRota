@@ -42,9 +42,10 @@ type Template = Omit<VeiculoBD, "id" | "ativo" | "nParagens" | "manutencoes"> & 
 interface Props {
   veiculos: VeiculoBD[];
   template: Template;
+  avariasPendentes: number;
 }
 
-export default function VeiculosManager({ veiculos, template }: Props) {
+export default function VeiculosManager({ veiculos, template, avariasPendentes }: Props) {
   const router = useRouter();
   const [criarAberto, setCriarAberto] = useState(false);
 
@@ -52,9 +53,19 @@ export default function VeiculosManager({ veiculos, template }: Props) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Veículos</h1>
-        <button onClick={() => setCriarAberto(true)} className="btn">
-          + Novo veículo
-        </button>
+        <div className="flex items-center gap-4">
+          <Link href="/escritorio/veiculos/avarias" className="text-sm font-medium text-brand hover:underline">
+            Avarias
+            {avariasPendentes > 0 && (
+              <span className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                {avariasPendentes}
+              </span>
+            )}
+          </Link>
+          <button onClick={() => setCriarAberto(true)} className="btn">
+            + Novo veículo
+          </button>
+        </div>
       </div>
 
       {veiculos.length === 0 ? (
