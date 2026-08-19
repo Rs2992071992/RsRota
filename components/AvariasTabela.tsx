@@ -41,7 +41,7 @@ export default function AvariasTabela({ linhas }: { linhas: LinhaAvaria[] }) {
   }
 
   async function apagar(id: number) {
-    if (!confirm("Apagar esta avaria?")) return;
+    if (!confirm("Apagar este pedido de manutenção?")) return;
     setErro("");
     try {
       const res = await fetch(`/api/avarias/${id}`, { method: "DELETE" });
@@ -57,7 +57,7 @@ export default function AvariasTabela({ linhas }: { linhas: LinhaAvaria[] }) {
   }
 
   function mailtoAvaria(l: LinhaAvaria): string {
-    const assunto = `Avaria — ${l.veiculo}`;
+    const assunto = `Pedido de Manutenção — ${l.veiculo}`;
     const corpo =
       `Veículo: ${l.veiculo}\n` +
       `Data: ${fmtData(l.data)}\n` +

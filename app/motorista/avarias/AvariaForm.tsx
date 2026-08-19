@@ -65,7 +65,10 @@ export default function AvariaForm({
         setMsg({ tipo: "erro", texto: resposta.erro || "Erro ao gravar." });
         return;
       }
-      setMsg({ tipo: "ok", texto: "Avaria reportada. O escritório vai vê-la em Veículos → Avarias." });
+      setMsg({
+        tipo: "ok",
+        texto: "Pedido de manutenção reportado. O escritório vai vê-lo em Veículos → Pedido Manutenção.",
+      });
       const veiculo = veiculos.find((v) => String(v.id) === veiculoId);
       setUltimaAvaria({
         veiculo: veiculo ? veiculo.nome + (veiculo.matricula ? ` (${veiculo.matricula})` : "") : "",
@@ -81,7 +84,7 @@ export default function AvariaForm({
   }
 
   function mailtoAvaria(a: { veiculo: string; data: string; descricao: string }): string {
-    const assunto = `Avaria — ${a.veiculo}`;
+    const assunto = `Pedido de Manutenção — ${a.veiculo}`;
     const corpo = `Veículo: ${a.veiculo}\nData: ${fmtData(a.data)}\n\nDescrição:\n${a.descricao}`;
     return `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   }
@@ -97,7 +100,7 @@ export default function AvariaForm({
           <p>{msg.texto}</p>
           {msg.tipo === "ok" && ultimaAvaria && (
             <a href={mailtoAvaria(ultimaAvaria)} className="mt-1 inline-block font-medium underline">
-              Enviar email sobre esta avaria
+              Enviar email sobre este pedido de manutenção
             </a>
           )}
         </div>
@@ -145,7 +148,9 @@ export default function AvariaForm({
 
       {pendentesDoVeiculo.length > 0 && (
         <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="mb-1 font-medium">Já há avarias por resolver reportadas para este veículo:</p>
+          <p className="mb-1 font-medium">
+            Já há pedidos de manutenção por resolver reportados para este veículo:
+          </p>
           <ul className="list-inside list-disc space-y-1">
             {pendentesDoVeiculo.map((a) => (
               <li key={a.id}>
@@ -157,7 +162,7 @@ export default function AvariaForm({
       )}
 
       <button type="submit" disabled={aGravar} className="btn w-full">
-        {aGravar ? "A gravar…" : "Reportar avaria"}
+        {aGravar ? "A gravar…" : "Reportar pedido de manutenção"}
       </button>
     </form>
   );

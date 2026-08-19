@@ -28,11 +28,11 @@ export default async function AvariasPage() {
         ← Veículos
       </Link>
 
-      <h1 className="text-2xl font-bold">Avarias</h1>
+      <h1 className="text-2xl font-bold">Pedidos de Manutenção</h1>
 
       <div className="card scroll-fade-x overflow-x-auto">
         {linhas.length === 0 ? (
-          <p className="text-sm text-gray-500">Sem avarias reportadas.</p>
+          <p className="text-sm text-gray-500">Sem pedidos de manutenção reportados.</p>
         ) : (
           <AvariasTabela linhas={linhas} />
         )}

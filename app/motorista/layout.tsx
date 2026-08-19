@@ -29,7 +29,7 @@ export default async function MotoristaLayout({ children }: { children: React.Re
               </button>
             </form>
           </div>
-          <nav className="mt-2 flex gap-1">
+          <nav className="mt-2 flex flex-wrap gap-1">
             <Link
               href="/motorista/registo"
               className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
@@ -46,7 +46,7 @@ export default async function MotoristaLayout({ children }: { children: React.Re
               href="/motorista/avarias"
               className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >
-              Avarias
+              Pedido Manutenção
             </Link>
             <Link
               href="/motorista/perfil"
