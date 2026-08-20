@@ -113,17 +113,23 @@ export const manutencaoUpdateSchema = manutencaoSchema.partial();
 
 export type ManutencaoForm = z.infer<typeof manutencaoSchema>;
 
-/** Schema de uma avaria reportada pelo motorista (sinalização, sem custo). */
+/** Schema de um pedido de manutenção reportado pelo motorista (sinalização, sem custo). */
 export const avariaSchema = z.object({
   veiculoId: z.number().int().positive(),
   data: z.string().min(1, "Data obrigatória"),
-  descricao: z.string().trim().min(1, "Descrição obrigatória").max(500),
+  itens: z.array(z.string().trim().min(1)).min(1, "Adicione pelo menos uma situação"),
+  observacoes: z.string().trim().max(1000).nullable().optional(),
 });
 
+/** PATCH /api/avarias/[id] — só campos administrativos (só escritório). */
 export const avariaUpdateSchema = z.object({
-  descricao: z.string().trim().min(1).max(500).optional(),
+  observacoes: z.string().trim().max(1000).nullable().optional(),
   data: z.string().min(1).optional(),
-  resolvida: z.boolean().optional(),
+});
+
+/** PATCH /api/avarias/[id]/itens/[itemId] — toggle de 1 item (qualquer sessão). */
+export const avariaItemUpdateSchema = z.object({
+  resolvido: z.boolean(),
 });
 
 /** Schema dos parâmetros salariais próprios de um motorista. */

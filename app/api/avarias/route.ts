@@ -38,9 +38,15 @@ export async function POST(req: Request) {
   const veiculo = await prisma.veiculo.findUnique({ where: { id: parsed.data.veiculoId } });
   if (!veiculo) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
 
-  const { veiculoId, data, descricao } = parsed.data;
+  const { veiculoId, data, itens, observacoes } = parsed.data;
   const avaria = await prisma.avaria.create({
-    data: { veiculoId, data: new Date(data), descricao, reportadoPorId: sessao.id },
+    data: {
+      veiculoId,
+      data: new Date(data),
+      itens: itens.map((texto, id) => ({ id, texto, resolvido: false })),
+      observacoes: observacoes || null,
+      reportadoPorId: sessao.id,
+    },
   });
   return NextResponse.json({ ok: true, avaria }, { status: 201 });
 }

@@ -17,7 +17,8 @@ export default async function AvariasPage() {
     id: a.id,
     veiculo: a.veiculo.nome + (a.veiculo.matricula ? ` (${a.veiculo.matricula})` : ""),
     data: a.data.toISOString(),
-    descricao: a.descricao,
+    itens: a.itens as unknown as { id: number; texto: string; resolvido: boolean }[],
+    observacoes: a.observacoes,
     reportadoPor: a.reportadoPor?.nome || a.reportadoPor?.codigo || null,
     resolvida: a.resolvida,
   }));

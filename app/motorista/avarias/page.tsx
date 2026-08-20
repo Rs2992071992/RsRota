@@ -13,7 +13,7 @@ export default async function AvariasPage() {
     prisma.avaria.findMany({
       where: { resolvida: false },
       orderBy: { data: "desc" },
-      select: { id: true, veiculoId: true, data: true, descricao: true },
+      select: { id: true, veiculoId: true, data: true, itens: true, observacoes: true },
     }),
   ]);
 
@@ -21,8 +21,11 @@ export default async function AvariasPage() {
     <AvariaForm
       veiculos={veiculos}
       avariasPendentes={avariasPendentes.map((a) => ({
-        ...a,
+        id: a.id,
+        veiculoId: a.veiculoId,
         data: a.data.toISOString(),
+        itens: a.itens as unknown as { id: number; texto: string; resolvido: boolean }[],
+        observacoes: a.observacoes,
       }))}
     />
   );

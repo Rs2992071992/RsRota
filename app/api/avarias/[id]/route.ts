@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { getSessao } from "@/lib/session";
 import { avariaUpdateSchema } from "@/lib/validacao";
 
-// PATCH /api/avarias/[id] — atualiza descrição/data/estado (só escritório).
+// PATCH /api/avarias/[id] — atualiza observações/data (só escritório). O
+// toggle de itens individuais é em /api/avarias/[id]/itens/[itemId] — o
+// estado "resolvida" é sempre derivado dos itens, não se edita aqui.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   if (getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
@@ -23,16 +25,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const existe = await prisma.avaria.findUnique({ where: { id } });
   if (!existe) return NextResponse.json({ erro: "Avaria não encontrada." }, { status: 404 });
 
-  const { descricao, data, resolvida } = parsed.data;
+  const { observacoes, data } = parsed.data;
   const avaria = await prisma.avaria.update({
     where: { id },
     data: {
-      ...(descricao !== undefined && { descricao }),
+      ...(observacoes !== undefined && { observacoes }),
       ...(data !== undefined && { data: new Date(data) }),
-      ...(resolvida !== undefined && {
-        resolvida,
-        resolvidaEm: resolvida ? new Date() : null,
-      }),
     },
   });
   return NextResponse.json({ ok: true, avaria });

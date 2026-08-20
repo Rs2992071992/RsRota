@@ -9,11 +9,18 @@ export interface VeiculoOpcao {
   matricula: string | null;
 }
 
+export interface ItemAvaria {
+  id: number;
+  texto: string;
+  resolvido: boolean;
+}
+
 export interface AvariaPendente {
   id: number;
   veiculoId: number;
   data: string; // ISO
-  descricao: string;
+  itens: ItemAvaria[];
+  observacoes: string | null;
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -27,24 +34,34 @@ export default function AvariaForm({
 }) {
   const [veiculoId, setVeiculoId] = useState(veiculos.length === 1 ? String(veiculos[0].id) : "");
   const [data, setData] = useState(hoje());
-  const [descricao, setDescricao] = useState("");
+  const [situacoes, setSituacoes] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [erros, setErros] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
-  const [ultimaAvaria, setUltimaAvaria] = useState<{ veiculo: string; data: string; descricao: string } | null>(
+  const [ultimoPedido, setUltimoPedido] = useState<{ veiculo: string; data: string; itens: string[] } | null>(
     null,
   );
+  const [pendentes, setPendentes] = useState(avariasPendentes);
+  const [aAtualizar, setAAtualizar] = useState<number | null>(null);
 
   const pendentesDoVeiculo = useMemo(
-    () => avariasPendentes.filter((a) => String(a.veiculoId) === veiculoId),
-    [avariasPendentes, veiculoId],
+    () => pendentes.filter((a) => String(a.veiculoId) === veiculoId),
+    [pendentes, veiculoId],
   );
+
+  function linhas(): string[] {
+    return situacoes
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+  }
 
   function validar(): boolean {
     const e: Record<string, string> = {};
     if (!veiculoId) e.veiculoId = "Escolha o veículo";
     if (!data) e.data = "Obrigatório";
-    if (!descricao.trim()) e.descricao = "Descreva o problema";
+    if (linhas().length === 0) e.situacoes = "Escreva pelo menos uma situação";
     setErros(e);
     return Object.keys(e).length === 0;
   }
@@ -55,10 +72,16 @@ export default function AvariaForm({
     if (!validar()) return;
     setAGravar(true);
     try {
+      const itensTexto = linhas();
       const res = await fetch("/api/avarias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ veiculoId: Number(veiculoId), data, descricao: descricao.trim() }),
+        body: JSON.stringify({
+          veiculoId: Number(veiculoId),
+          data,
+          itens: itensTexto,
+          observacoes: observacoes.trim() || undefined,
+        }),
       });
       const resposta = await res.json();
       if (!res.ok) {
@@ -70,12 +93,23 @@ export default function AvariaForm({
         texto: "Pedido de manutenção reportado. O escritório vai vê-lo em Veículos → Pedido Manutenção.",
       });
       const veiculo = veiculos.find((v) => String(v.id) === veiculoId);
-      setUltimaAvaria({
+      setUltimoPedido({
         veiculo: veiculo ? veiculo.nome + (veiculo.matricula ? ` (${veiculo.matricula})` : "") : "",
         data,
-        descricao: descricao.trim(),
+        itens: itensTexto,
       });
-      setDescricao("");
+      setPendentes((prev) => [
+        {
+          id: resposta.avaria.id,
+          veiculoId: Number(veiculoId),
+          data: resposta.avaria.data,
+          itens: resposta.avaria.itens,
+          observacoes: resposta.avaria.observacoes,
+        },
+        ...prev,
+      ]);
+      setSituacoes("");
+      setObservacoes("");
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -83,9 +117,32 @@ export default function AvariaForm({
     }
   }
 
-  function mailtoAvaria(a: { veiculo: string; data: string; descricao: string }): string {
-    const assunto = `Pedido de Manutenção — ${a.veiculo}`;
-    const corpo = `Veículo: ${a.veiculo}\nData: ${fmtData(a.data)}\n\nDescrição:\n${a.descricao}`;
+  async function alternarItem(avariaId: number, item: ItemAvaria) {
+    setAAtualizar(item.id + avariaId * 100000);
+    try {
+      const res = await fetch(`/api/avarias/${avariaId}/itens/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolvido: !item.resolvido }),
+      });
+      if (!res.ok) return;
+      setPendentes((prev) =>
+        prev.map((a) =>
+          a.id !== avariaId
+            ? a
+            : { ...a, itens: a.itens.map((i) => (i.id === item.id ? { ...i, resolvido: !item.resolvido } : i)) },
+        ),
+      );
+    } finally {
+      setAAtualizar(null);
+    }
+  }
+
+  function mailtoPedido(p: { veiculo: string; data: string; itens: string[] }): string {
+    const assunto = `Pedido de Manutenção — ${p.veiculo}`;
+    const corpo =
+      `Veículo: ${p.veiculo}\nData: ${fmtData(p.data)}\n\nSituações:\n` +
+      p.itens.map((i) => `- ${i}`).join("\n");
     return `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   }
 
@@ -98,8 +155,8 @@ export default function AvariaForm({
           }`}
         >
           <p>{msg.texto}</p>
-          {msg.tipo === "ok" && ultimaAvaria && (
-            <a href={mailtoAvaria(ultimaAvaria)} className="mt-1 inline-block font-medium underline">
+          {msg.tipo === "ok" && ultimoPedido && (
+            <a href={mailtoPedido(ultimoPedido)} className="mt-1 inline-block font-medium underline">
               Enviar email sobre este pedido de manutenção
             </a>
           )}
@@ -134,30 +191,59 @@ export default function AvariaForm({
         </div>
 
         <div>
-          <label className="label">Descrição do problema</label>
+          <label className="label">Situações a resolver (uma por linha)</label>
           <textarea
             className="input"
-            rows={4}
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            placeholder="Ex.: travões a fazer ruído, luz avaria no painel…"
+            rows={5}
+            value={situacoes}
+            onChange={(e) => setSituacoes(e.target.value)}
+            placeholder={"Ex.:\ntravões a fazer ruído\nluz avaria no painel\ntrocar pneu direito"}
           />
-          {erros.descricao && <p className="mt-1 text-xs text-red-600">{erros.descricao}</p>}
+          {erros.situacoes && <p className="mt-1 text-xs text-red-600">{erros.situacoes}</p>}
+        </div>
+
+        <div>
+          <label className="label">Observações (opcional)</label>
+          <textarea
+            className="input"
+            rows={2}
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            placeholder="Alguma nota extra que não seja uma situação a marcar…"
+          />
         </div>
       </div>
 
       {pendentesDoVeiculo.length > 0 && (
         <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="mb-1 font-medium">
-            Já há pedidos de manutenção por resolver reportados para este veículo:
+          <p className="mb-2 font-medium">
+            Já há pedidos de manutenção por resolver reportados para este veículo — vá confirmando o que já
+            foi feito:
           </p>
-          <ul className="list-inside list-disc space-y-1">
+          <div className="space-y-3">
             {pendentesDoVeiculo.map((a) => (
-              <li key={a.id}>
-                {fmtData(a.data)} — {a.descricao}
-              </li>
+              <div key={a.id} className="rounded-md bg-white/60 p-2">
+                <p className="mb-1 text-xs font-medium text-amber-700">{fmtData(a.data)}</p>
+                <ul className="space-y-1">
+                  {a.itens.map((item) => (
+                    <li key={item.id}>
+                      <label className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={item.resolvido}
+                          disabled={aAtualizar === item.id + a.id * 100000}
+                          onChange={() => alternarItem(a.id, item)}
+                        />
+                        <span className={item.resolvido ? "text-gray-400 line-through" : ""}>{item.texto}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {a.observacoes && <p className="mt-1 text-xs italic text-amber-700">Obs.: {a.observacoes}</p>}
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 

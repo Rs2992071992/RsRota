@@ -146,9 +146,10 @@ model Manutencao {
 /// de custo do veículo (valor/dias), esta é só sinalização operacional —
 /// nunca entra em nenhum cálculo.
 model Avaria {
-  id        Int      @id @default(autoincrement())
-  data      DateTime
-  descricao String
+  id          Int      @id @default(autoincrement())
+  data        DateTime
+  itens       Json // Array<{ id: number; texto: string; resolvido: boolean }>
+  observacoes String?
 
   veiculoId Int
   veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)

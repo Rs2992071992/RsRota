@@ -449,6 +449,68 @@ o que cala o aviso até ao próximo prazo.
   checkbox volta a ficar desmarcada (e o aviso reaparece se dentro dos 45
   dias)
 
+## ☑️ Checklist no Pedido de Manutenção (2026-08-20)
+
+Pedido do Ricardo (com screenshot): o campo "Descrição do problema" era
+texto livre; várias situações escritas linha a linha. Passa a ter uma
+checklist real — cada linha vira um item marcável, motorista **e**
+escritório podem ir confirmando o que já foi resolvido, item a item.
+Confirmado por leitura direta da BD que já havia 1 pedido real em
+produção (id 7, veículo AO-33-PJ, 6 linhas) — migrado sem perder dados
+antes de alterar o schema (mesmo cuidado da migração "Noites" em
+2026-06-07).
+
+- [x] `prisma/schema.prisma`: `Avaria.descricao` (String) → `itens`
+  (`Json`, array `{id, texto, resolvido}`) + `observacoes` (`String?`,
+  novo). Sequência: 1) `db push` aditivo (itens/observacoes opcionais,
+  descricao mantida) 2) script único a dividir `descricao` por linha e
+  gravar em `itens` 3) confirmado por leitura direta 4) `db push` final
+  (`itens` obrigatório, `descricao` removida) — avaria real id 7
+  confirmada intacta com os 6 itens no fim
+- [x] `lib/validacao.ts`: `avariaSchema` passa a exigir `itens: string[]`
+  (mín. 1) + `observacoes` opcional; `avariaUpdateSchema` fica só com
+  `observacoes`/`data` (campos administrativos); novo
+  `avariaItemUpdateSchema` (`resolvido: boolean`)
+- [x] `app/api/avarias/[id]/itens/[itemId]/route.ts` (novo): `PATCH`,
+  **qualquer sessão autenticada** (motorista ou escritório — pedido
+  explícito do Ricardo), alterna 1 item dentro do array `itens` e
+  recalcula `resolvida`/`resolvidaEm` sempre a partir de todos os itens
+  (nunca editado à parte)
+- [x] `app/api/avarias/route.ts` (POST): constrói `itens` a partir do
+  array de textos enviado; `app/api/avarias/[id]/route.ts` (PATCH): só
+  ESCRITORIO, só `observacoes`/`data` agora
+- [x] `app/motorista/avarias/AvariaForm.tsx`: textarea existente
+  reetiquetada "Situações a resolver (uma por linha)" — mesma UX de
+  escrever tudo de uma vez, dividida em `itens` no submit; novo textarea
+  "Observações (opcional)"; lista de pendentes do veículo passa a
+  checklist com checkboxes toggleáveis (chama o novo endpoint)
+- [x] `components/AvariasTabela.tsx` (escritório): coluna "Situações"
+  com checkboxes por item (toggle individual, sem `router.refresh()`
+  completo); removido o botão único "Marcar resolvida" (estado 100%
+  derivado dos itens); observações mostradas por baixo da lista
+- [x] `mailtoAvaria`/`mailtoPedido` (site, 2 sítios): corpo do email
+  passa a listar itens com `[x]`/`[ ]` + observações
+- [x] App Android (`app-motorista-android`, mesmo padrão espelhado):
+  `lib/types.ts` (`ItemAvaria`, `Avaria.itens/observacoes`,
+  `NovaAvariaPayload.itens[]`), `lib/api.ts`
+  (`atualizarItemAvaria`), `screens/Avarias.tsx` (mesmas mudanças do
+  `AvariaForm.tsx`)
+- [x] `tsc --noEmit` e `next build` limpos (site); `npm run build` limpo
+  (Android)
+- [x] Testado ponta a ponta com sessão forjada por HMAC: `POST`
+  `itens[]`+`observacoes`; `PATCH .../itens/:itemId` como MOTORISTA → 200
+  (antes seria 403); `PATCH /api/avarias/:id` com `observacoes` como
+  MOTORISTA → 403, como ESCRITORIO → 200; `resolvida` confirmado a
+  passar a `true` sozinho ao resolver o último item; `DELETE` só
+  ESCRITORIO. Dados de teste apagados, avaria real id 7 preservada
+- [x] Screenshots Playwright confirmam a checklist real (6 itens de
+  Ricardo) a aparecer corretamente nos dois lados (motorista e
+  escritório)
+- [x] Novo `.apk` assinado gerado em
+  `app-motorista-android/android/app/build/outputs/apk/release/`
+- [ ] **Ação do utilizador**: reinstalar o `.apk` novo no telemóvel do
+  motorista
+
 ## 🚪 Ícone de "Sair" em falta na app Motorista Android (2026-08-19)
 
 Reportado pelo Ricardo: a app Motorista Android não tinha o ícone junto ao
