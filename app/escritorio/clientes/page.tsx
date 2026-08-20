@@ -49,6 +49,9 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
           <Link href="/escritorio/clientes/agrupar" className="text-sm font-medium text-brand hover:underline">
             Agrupar clientes
           </Link>
+          <Link href="/escritorio/clientes/empresas" className="text-sm font-medium text-brand hover:underline">
+            Atribuir empresa
+          </Link>
         </div>
       </div>
 

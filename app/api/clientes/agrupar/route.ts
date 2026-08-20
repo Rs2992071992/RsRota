@@ -64,6 +64,7 @@ export async function POST(req: Request) {
         email: canonico.email ?? fichasVariantes.find((f) => f.email)?.email ?? null,
         morada: canonico.morada ?? fichasVariantes.find((f) => f.morada)?.morada ?? null,
         notas: canonico.notas ?? fichasVariantes.find((f) => f.notas)?.notas ?? null,
+        empresaId: canonico.empresaId ?? fichasVariantes.find((f) => f.empresaId)?.empresaId ?? null,
       };
       await tx.cliente.update({ where: { nome: nomeCanonico }, data: fundido });
 

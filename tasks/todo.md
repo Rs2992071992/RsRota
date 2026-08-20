@@ -449,6 +449,66 @@ o que cala o aviso até ao próximo prazo.
   checkbox volta a ficar desmarcada (e o aviso reaparece se dentro dos 45
   dias)
 
+## 🏢 Agrupar Cobranças por empresa-mãe (2026-08-20)
+
+Pedido do Ricardo: trabalha para 4-5 empresas (Tecfil, Blowtec, Plasgal,
+Sacofilme, Gesplast) — os clientes finais onde entrega pertencem a uma
+delas, e é a essa empresa que se cobra. Os nomes de cliente já trazem um
+prefixo informal (`Tec-`, `Blo-`, `Plas-`, `Sac-`, `Ges-`), mas
+inconsistente (confirmado por leitura direta dos ~80 nomes distintos em
+produção — espaços variáveis, erros como "Blow-egiquimica" em vez de
+"Blo-"). Decisão do Ricardo: atribuição **explícita** por cliente (não
+adivinhada automaticamente em runtime), numa ferramenta nova; Cobranças
+passa a agrupar com subtotal por empresa, sem clique-para-ordenar (trade-
+off aceite).
+
+- [x] `prisma/schema.prisma`: novo modelo `Empresa` (nome único) +
+  `Cliente.empresaId` opcional (`Cliente.nome` já é a chave única que
+  corresponde a `Paragem.cliente`) — `db push` aditivo, sem risco
+- [x] Semeadas as 5 empresas conhecidas (Tecfil, Blowtec, Plasgal,
+  Sacofilme, Gesplast) — só isto; nenhum cliente atribuído
+  automaticamente por mim (evita classificar mal casos ambíguos como
+  "Base"/"Gaudêncio"/"carga A2", que não batem com nenhum prefixo)
+- [x] `lib/empresas-service.ts` (novo): `listarEmpresas()`,
+  `mapaClienteEmpresa()`
+- [x] `app/api/empresas/route.ts` (novo): GET (qualquer sessão), POST
+  (criar empresa nova, só escritório)
+- [x] `app/api/clientes/empresas/route.ts` (novo): POST
+  `{nomes[], empresaId}` — atribuição em massa, só escritório, upsert de
+  `Cliente` (mesmo padrão já usado em `/api/clientes/agrupar`)
+- [x] `app/api/clientes/agrupar/route.ts`: `empresaId` passa a fazer
+  parte da fusão de fichas (mesma lógica "primeiro valor não-nulo
+  vence" já usada para contato/telefone/email) — uma variante já
+  classificada não perde a empresa ao ser fundida no nome canónico
+  (testado: variante com Tecfil fundida num nome novo → canónico ficou
+  com Tecfil)
+- [x] `app/escritorio/clientes/empresas/page.tsx` +
+  `components/AtribuirEmpresa.tsx` (novos, clonados de
+  `AgruparClientes.tsx`): lista com busca + checkboxes, mostra a
+  empresa já atribuída por cliente, dropdown de empresa + "+ Criar"
+  inline, botão "Sugerir por prefixo" (client-side, só pré-marca para
+  revisão — nunca atribui sozinho); link "Atribuir empresa" em
+  `/escritorio/clientes`
+- [x] `lib/cobrancas-service.ts`: `LinhaCobranca` ganha `empresa: string
+  | null`; `components/CobrancasTabela.tsx` reescrito para agrupar por
+  empresa com subtotal "por receber" + nº vencidas por grupo ("Sem
+  empresa atribuída" sempre por último); mantém a pesquisa, perde o
+  clique-para-ordenar por coluna (confirmado com o Ricardo)
+- [x] `tsc --noEmit` e `next build` limpos
+- [x] Testado ponta a ponta com sessão forjada por HMAC: `POST
+  /api/clientes/empresas` como MOTORISTA → 403, como ESCRITORIO → 200;
+  atribuídos 2 clientes reais (Tec-junqueira, Tec-A2 → Tecfil) e
+  confirmado por leitura direta; Cobranças confirmada visualmente
+  (Playwright) a agrupar sob "Tecfil" com subtotal, resto em "Sem
+  empresa atribuída"; fusão de variante com empresa testada e limpa a
+  seguir
+- [x] Deixadas as 2 atribuições reais (Tec-junqueira/Tec-A2 → Tecfil)
+  como exemplo de trabalho — não são dados de teste, são classificação
+  real correta
+- [ ] **Ação do utilizador**: usar `/escritorio/clientes/empresas` para
+  classificar os restantes ~78 nomes de cliente pelas 5 empresas (ou
+  criar mais, se houver)
+
 ## ☑️ Checklist no Pedido de Manutenção (2026-08-20)
 
 Pedido do Ricardo (com screenshot): o campo "Descrição do problema" era

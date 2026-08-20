@@ -268,10 +268,26 @@ model Cliente {
   morada   String?
   notas    String?
 
+  // A quem cobrar por este cliente (ex.: "Tec-junqueira" -> empresa "Tecfil").
+  // Atribuído explicitamente em /escritorio/clientes/empresas — nunca adivinhado
+  // em runtime a partir do nome, porque o prefixo informal não é consistente
+  // (espaços, erros de escrita).
+  empresaId Int?
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+
   pedidosPalete PedidoPalete[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
+}
+
+/// Empresa-mãe a quem se cobra um grupo de clientes finais (ex.: Tecfil,
+/// Blowtec). Usada para agrupar/subtotalizar Cobranças por empresa.
+model Empresa {
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  clientes Cliente[]
+  criadoEm DateTime  @default(now())
 }
 
 /// Alias de nome de cliente: mapeia uma variante (tal como aparece nas

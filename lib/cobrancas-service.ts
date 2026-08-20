@@ -5,11 +5,14 @@
 
 import { prisma } from "@/lib/db";
 import { estadoPagamento, type EstadoPagamento } from "@/lib/calc/pagamentos";
+import { mapaClienteEmpresa } from "@/lib/empresas-service";
 
 export interface LinhaCobranca {
   id: number;
   idRota: string;
   cliente: string;
+  /** Empresa-mãe a quem se cobra este cliente (Cliente.empresaId); null = ainda não atribuída. */
+  empresa: string | null;
   valor: number;
   pago: boolean;
   estado: EstadoPagamento;
@@ -23,10 +26,13 @@ const PRIORIDADE: Record<EstadoPagamento, number> = { VENCIDO: 0, A_AGUARDAR: 1,
 
 /** Todas as linhas de cobrança (paragens com receitaPaga > 0), ordenadas por urgência. */
 export async function carregarCobrancas(): Promise<LinhaCobranca[]> {
-  const paragens = await prisma.paragem.findMany({
-    where: { receitaPaga: { gt: 0 } },
-    select: { id: true, idRota: true, cliente: true, data: true, receitaPaga: true, pago: true },
-  });
+  const [paragens, mapaEmpresa] = await Promise.all([
+    prisma.paragem.findMany({
+      where: { receitaPaga: { gt: 0 } },
+      select: { id: true, idRota: true, cliente: true, data: true, receitaPaga: true, pago: true },
+    }),
+    mapaClienteEmpresa(),
+  ]);
 
   return paragens
     .map((p) => {
@@ -35,6 +41,7 @@ export async function carregarCobrancas(): Promise<LinhaCobranca[]> {
         id: p.id,
         idRota: p.idRota,
         cliente: p.cliente,
+        empresa: mapaEmpresa.get(p.cliente) ?? null,
         valor: p.receitaPaga,
         pago: p.pago,
         estado: info.estado,

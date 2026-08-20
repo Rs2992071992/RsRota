@@ -178,6 +178,17 @@ export const agruparClientesSchema = z.object({
 
 export type AgruparClientesForm = z.infer<typeof agruparClientesSchema>;
 
+/** Criar uma empresa-mãe nova (a quem se cobra um grupo de clientes). */
+export const empresaSchema = z.object({
+  nome: z.string().trim().min(1, "Nome obrigatório").max(100),
+});
+
+/** Atribuir um grupo de clientes a uma empresa-mãe. */
+export const atribuirEmpresaSchema = z.object({
+  nomes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome"),
+  empresaId: z.number().int().positive(),
+});
+
 /** Estados possíveis de um orçamento. */
 export const ESTADOS_DEVIS = ["RASCUNHO", "ENVIADO", "ACEITE", "RECUSADO"] as const;
 

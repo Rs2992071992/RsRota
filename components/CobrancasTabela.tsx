@@ -1,33 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { fmtEuro, fmtData } from "@/lib/format";
-import type { EstadoPagamento } from "@/lib/calc/pagamentos";
 import type { LinhaCobranca } from "@/lib/cobrancas-service";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
 import PagoToggle from "@/components/PagoToggle";
 
-type Coluna = "idRota" | "cliente" | "valor" | "vence" | "estado";
-type Dir = "asc" | "desc";
+const SEM_EMPRESA = "Sem empresa atribuída";
 
-// Urgência crescente: vencido (mais atrasado) primeiro, pago por último.
-const PRIORIDADE: Record<EstadoPagamento, number> = { VENCIDO: 0, A_AGUARDAR: 1, PAGO: 2 };
+interface Grupo {
+  empresa: string;
+  linhas: LinhaCobranca[];
+  porReceber: number;
+  nVencidas: number;
+}
+
+/** Agrupa por empresa (ordem alfabética; "Sem empresa atribuída" sempre por último). */
+function agrupar(linhas: LinhaCobranca[]): Grupo[] {
+  const mapa = new Map<string, LinhaCobranca[]>();
+  for (const l of linhas) {
+    const chave = l.empresa ?? SEM_EMPRESA;
+    if (!mapa.has(chave)) mapa.set(chave, []);
+    mapa.get(chave)!.push(l);
+  }
+  const grupos = [...mapa.entries()].map(([empresa, ls]) => ({
+    empresa,
+    linhas: ls,
+    porReceber: ls.filter((l) => !l.pago).reduce((a, l) => a + l.valor, 0),
+    nVencidas: ls.filter((l) => l.estado === "VENCIDO").length,
+  }));
+  grupos.sort((a, b) => {
+    if (a.empresa === SEM_EMPRESA) return 1;
+    if (b.empresa === SEM_EMPRESA) return -1;
+    return a.empresa.localeCompare(b.empresa, "pt");
+  });
+  return grupos;
+}
 
 export default function CobrancasTabela({ linhas }: { linhas: LinhaCobranca[] }) {
-  // coluna null = ordem por defeito vinda do servidor (vencidos primeiro).
-  const [coluna, setColuna] = useState<Coluna | null>(null);
-  const [dir, setDir] = useState<Dir>("asc");
   const [busca, setBusca] = useState("");
-
-  function ordenarPor(c: Coluna) {
-    if (coluna === c) {
-      setDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setColuna(c);
-      setDir("asc");
-    }
-  }
 
   const termo = busca.trim().toLowerCase();
   const filtradas = termo
@@ -35,7 +47,7 @@ export default function CobrancasTabela({ linhas }: { linhas: LinhaCobranca[] })
         (l) => l.cliente.toLowerCase().includes(termo) || l.idRota.toLowerCase().includes(termo),
       )
     : linhas;
-  const ordenadas = coluna === null ? filtradas : [...filtradas].sort(comparar(coluna, dir));
+  const grupos = useMemo(() => agrupar(filtradas), [filtradas]);
 
   return (
     <div className="overflow-x-auto">
@@ -49,109 +61,68 @@ export default function CobrancasTabela({ linhas }: { linhas: LinhaCobranca[] })
         />
         {termo && (
           <span className="text-xs text-gray-500">
-            {ordenadas.length} resultado{ordenadas.length === 1 ? "" : "s"}
+            {filtradas.length} resultado{filtradas.length === 1 ? "" : "s"}
           </span>
         )}
       </div>
-      <table className="min-w-full divide-y divide-gray-200 text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <Th c="idRota" label="Rota" coluna={coluna} dir={dir} onClick={ordenarPor} />
-            <Th c="cliente" label="Cliente" coluna={coluna} dir={dir} onClick={ordenarPor} />
-            <Th c="valor" label="Valor" coluna={coluna} dir={dir} onClick={ordenarPor} align="right" />
-            <Th c="vence" label="Vence" coluna={coluna} dir={dir} onClick={ordenarPor} />
-            <Th c="estado" label="Estado" coluna={coluna} dir={dir} onClick={ordenarPor} />
-            <th className="th text-right">Pago</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {ordenadas.length === 0 && (
-            <tr>
-              <td colSpan={6} className="td text-center text-gray-500">
-                Sem resultados para “{busca.trim()}”.
-              </td>
-            </tr>
-          )}
-          {ordenadas.map((l) => (
-            <tr key={l.id} className={l.estado === "VENCIDO" ? "bg-red-50/40" : ""}>
-              <td className="td">
-                <Link
-                  href={`/escritorio/rotas/${encodeURIComponent(l.idRota)}`}
-                  className="font-medium text-brand hover:underline"
-                >
-                  {l.idRota}
-                </Link>
-              </td>
-              <td className="td">{l.cliente}</td>
-              <td className="td text-right">{fmtEuro(l.valor)}</td>
-              <td className="td">{fmtData(l.dataVencimento)}</td>
-              <td className="td">
-                <EstadoPagamentoBadge estado={l.estado} dias={l.diasRestantes} />
-              </td>
-              <td className="td text-right">
-                <PagoToggle paragemId={l.id} pago={l.pago} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      {grupos.length === 0 && (
+        <p className="py-4 text-center text-sm text-gray-500">Sem resultados para “{busca.trim()}”.</p>
+      )}
+
+      <div className="space-y-6">
+        {grupos.map((g) => (
+          <div key={g.empresa}>
+            <div className="mb-1 flex items-baseline justify-between">
+              <h3 className="text-sm font-semibold text-gray-800">
+                {g.empresa}
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  {g.linhas.length} linha{g.linhas.length === 1 ? "" : "s"}
+                </span>
+              </h3>
+              <p className="text-xs text-gray-600">
+                Por receber: <span className="font-semibold text-amber-700">{fmtEuro(g.porReceber)}</span>
+                {g.nVencidas > 0 && <span className="ml-2 font-semibold text-red-700">{g.nVencidas} vencida(s)</span>}
+              </p>
+            </div>
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="th">Rota</th>
+                  <th className="th">Cliente</th>
+                  <th className="th text-right">Valor</th>
+                  <th className="th">Vence</th>
+                  <th className="th">Estado</th>
+                  <th className="th text-right">Pago</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {g.linhas.map((l) => (
+                  <tr key={l.id} className={l.estado === "VENCIDO" ? "bg-red-50/40" : ""}>
+                    <td className="td">
+                      <Link
+                        href={`/escritorio/rotas/${encodeURIComponent(l.idRota)}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {l.idRota}
+                      </Link>
+                    </td>
+                    <td className="td">{l.cliente}</td>
+                    <td className="td text-right">{fmtEuro(l.valor)}</td>
+                    <td className="td">{fmtData(l.dataVencimento)}</td>
+                    <td className="td">
+                      <EstadoPagamentoBadge estado={l.estado} dias={l.diasRestantes} />
+                    </td>
+                    <td className="td text-right">
+                      <PagoToggle paragemId={l.id} pago={l.pago} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
     </div>
-  );
-}
-
-/** Comparador por coluna; aplica a direção no fim. */
-function comparar(coluna: Coluna, dir: Dir) {
-  const sinal = dir === "asc" ? 1 : -1;
-  return (a: LinhaCobranca, b: LinhaCobranca): number => {
-    let r = 0;
-    switch (coluna) {
-      case "idRota":
-        r = a.idRota.localeCompare(b.idRota, "pt");
-        break;
-      case "cliente":
-        r = a.cliente.localeCompare(b.cliente, "pt");
-        break;
-      case "valor":
-        r = a.valor - b.valor;
-        break;
-      case "vence":
-        r = new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime();
-        break;
-      case "estado":
-        // Por urgência: estado e, dentro do mesmo, dias restantes (mais atrasado primeiro).
-        r = PRIORIDADE[a.estado] - PRIORIDADE[b.estado] || a.diasRestantes - b.diasRestantes;
-        break;
-    }
-    return r * sinal;
-  };
-}
-
-function Th({
-  c,
-  label,
-  coluna,
-  dir,
-  onClick,
-  align = "left",
-}: {
-  c: Coluna;
-  label: string;
-  coluna: Coluna | null;
-  dir: Dir;
-  onClick: (c: Coluna) => void;
-  align?: "left" | "right";
-}) {
-  const ativo = coluna === c;
-  return (
-    <th className={`th ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => onClick(c)}
-        className={`inline-flex items-center gap-1 hover:text-gray-900 ${ativo ? "text-gray-900" : ""}`}
-      >
-        {label}
-        <span className="text-gray-400">{ativo ? (dir === "asc" ? "▲" : "▼") : "↕"}</span>
-      </button>
-    </th>
   );
 }
