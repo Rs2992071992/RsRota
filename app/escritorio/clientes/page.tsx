@@ -4,6 +4,7 @@ import { carregarClientes, carregarCliente } from "@/lib/clientes-service";
 import { fmtEuro, fmtPct, fmtData } from "@/lib/format";
 import ContatoCliente from "@/components/ContatoCliente";
 import EditarNomeCliente from "@/components/EditarNomeCliente";
+import AdicionarCliente from "@/components/AdicionarCliente";
 import ClienteGrafico from "@/components/ClienteGrafico";
 import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
 import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
@@ -46,6 +47,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
         <h1 className="text-2xl font-bold">Clientes</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500">{clientes.length} cliente(s)</span>
+          <AdicionarCliente />
           <Link href="/escritorio/clientes/agrupar" className="text-sm font-medium text-brand hover:underline">
             Agrupar clientes
           </Link>

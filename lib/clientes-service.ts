@@ -173,6 +173,10 @@ export async function carregarClientes(): Promise<ResumoCliente[]> {
     if (!c.ultimaData || p.data > c.ultimaData) c.ultimaData = p.data;
   }
 
+  // Clientes só com ficha de contacto (sem nenhuma paragem ainda, ex.: acabados
+  // de adicionar) entram também na lista, com os totais a zero.
+  for (const c of contactos) obter(c.nome);
+
   const comContacto = new Set(contactos.map((c) => c.nome));
   for (const c of map.values()) {
     c.lucro = c.receita - c.custo;
@@ -215,7 +219,10 @@ export async function carregarCliente(nome: string): Promise<DetalheCliente | nu
       pago: pagoPorRota.get(rota.idRota) ?? false,
     });
   }
-  if (voyages.length === 0) return null;
+  // Sem nenhuma viagem nem ficha de contacto: nome desconhecido da app, não há
+  // nada a mostrar. Com ficha (mesmo sem viagens ainda, ex.: cliente acabado
+  // de adicionar) devolve na mesma, com os totais a zero.
+  if (voyages.length === 0 && !contacto) return null;
   voyages.sort((a, b) => b.data.getTime() - a.data.getTime());
 
   // Série mensal (lucro atribuído), ordenada cronologicamente.
