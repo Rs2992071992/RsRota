@@ -33,6 +33,8 @@ export interface VeiculoBD {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   nParagens: number;
   pneus: PneuForm[];
   manutencoes: ManutencaoBD[];

@@ -65,6 +65,8 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       kmFinal: p.kmFinal,
       kgCarregados: p.kgCarregados,
       kgDescarregados: p.kgDescarregados,
+      volume: p.volume,
+      tipoPalete: p.tipoPalete,
       nPaletes: p.nPaletes,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,

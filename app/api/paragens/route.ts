@@ -53,6 +53,8 @@ export async function POST(req: Request) {
       kmFinal: d.kmFinal,
       kgCarregados: d.kgCarregados,
       kgDescarregados: d.kgDescarregados,
+      volume: d.volume,
+      tipoPalete: d.volume ? (d.tipoPalete ?? null) : null,
       nPaletes: d.nPaletes,
       litrosAbastecidos: d.litrosAbastecidos,
       custoAbastecido: d.custoAbastecido,

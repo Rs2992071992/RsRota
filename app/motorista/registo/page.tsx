@@ -35,6 +35,8 @@ export default async function RegistoPage({
           capacidadeReboque: true,
           capacidadePaleteA: true,
           capacidadePaleteB: true,
+          capacidadePaleteACamiao: true,
+          capacidadePaleteBCamiao: true,
           dataLimiteInspecao: true,
           inspecaoVerificada: true,
         },
@@ -83,6 +85,8 @@ export default async function RegistoPage({
       capacidadeReboque={params?.capacidadeReboque ?? 24000}
       capacidadePaleteA={params?.capacidadePaleteA ?? 38}
       capacidadePaleteB={params?.capacidadePaleteB ?? 28}
+      capacidadePaleteACamiao={params?.capacidadePaleteACamiao ?? 18}
+      capacidadePaleteBCamiao={params?.capacidadePaleteBCamiao ?? 14}
       valorNoite={params?.valorNoite ?? 70}
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}

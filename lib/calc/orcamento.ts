@@ -19,7 +19,10 @@ export interface LinhaDevis {
   km: number;
   pesoKg: number;
   tipoVeiculo: string;
-  /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
+  /** Carga por volume (paletes) em vez de peso — ver tipoPalete/nPaletes. */
+  volume?: boolean;
+  tipoPalete?: string | null;
+  /** Nº de paletes (só relevante se volume=true). */
   nPaletes: number;
   zonaPortagem: string | null;
   /** Nº de noites fora do motorista (opcional; ausente em linhas antigas). */
@@ -37,6 +40,8 @@ export interface EstimarLinhaInput {
   km: number;
   pesoKg: number;
   tipoVeiculo: string;
+  volume?: boolean;
+  tipoPalete?: string | null;
   nPaletes?: number;
   zonaPortagem?: string | null;
   /** Portagens extra fixas (opcional; somam-se ao custo). */
@@ -115,6 +120,8 @@ export function estimarLinha(
       kmFinal: input.km || 0,
       kgCarregados: input.pesoKg || 0,
       kgDescarregados: 0,
+      volume: input.volume || false,
+      tipoPalete: input.tipoPalete ?? null,
       nPaletes: input.nPaletes || 0,
       zonaPortagem: input.zonaPortagem || "",
       portagensExtra: input.portagensExtra || 0,

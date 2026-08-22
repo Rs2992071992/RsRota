@@ -68,10 +68,12 @@ const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = 
     ],
   },
   {
-    titulo: "Paletes (tipo veículo = Palete 120×80 / 120×100)",
+    titulo: "Paletes (carga por Volume, 120×80 / 120×100)",
     campos: [
-      ["capacidadePaleteA", "Capacidade paletes 120×80cm (nº por camião)"],
-      ["capacidadePaleteB", "Capacidade paletes 120×100cm (nº por camião)"],
+      ["capacidadePaleteA", "Capacidade paletes 120×80cm, camião+reboque (nº)"],
+      ["capacidadePaleteB", "Capacidade paletes 120×100cm, camião+reboque (nº)"],
+      ["capacidadePaleteACamiao", "Capacidade paletes 120×80cm, só camião (nº)"],
+      ["capacidadePaleteBCamiao", "Capacidade paletes 120×100cm, só camião (nº)"],
     ],
   },
 ];

@@ -2,6 +2,33 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-22] | `capacidadePaleteA`/`B` (ocupação de paletes) só tinham UM
+  valor por veículo, calibrado a pensar em camião+reboque — ao contrário
+  do peso, que já distingue `capacidadeCamiao` vs `capacidadeReboque`
+  consoante o Tipo Veículo escolhido. Um motorista a ir só de camião (sem
+  reboque) carregado de paletes tinha a ocupação sistematicamente
+  subestimada (18 paletes num camião sozinho, a 100% da capacidade real,
+  calculava 18/38≈47%). Só foi apanhado porque o Ricardo deu um exemplo
+  concreto ("fui só com o camião... 18 e 14 pl") e se perguntou se a
+  percentagem batia certo — não havia teste nenhum a cobrir esta
+  combinação porque `PALETE_120X80`/`PALETE_120X100` eram valores do
+  próprio `tipoVeiculo`, sem forma de o cruzar com "tem ou não reboque". |
+  Sempre que um par capacidade-A/capacidade-B (ou equivalente) for
+  introduzido para um tipo de carga alternativo (paletes, volume, etc.),
+  perguntar explicitamente se essa capacidade muda consoante outra
+  dimensão já existente no modelo (aqui: se leva reboque) — não assumir
+  que um único número chega só porque "funcionou até agora". A correção
+  ficou mais simples por já existir o precedente exato a copiar
+  (`capacidadeCamiao`/`capacidadeReboque`): tornar o novo atributo
+  ortogonal ao existente (`Paragem.volume`+`tipoPalete`, em vez de
+  `tipoVeiculo=PALETE_*` a substituir o tipo de veículo real) em vez de
+  inventar mais um valor de enum, e migrar dados antigos com um fallback
+  de compatibilidade no motor (não só um script) para o deploy do código
+  e o backfill poderem correr em qualquer ordem sem janela de cálculo
+  errado. Verificado com snapshot antes/depois via `carregarRota()` nas 7
+  rotas reais afetadas — zero diferenças, antes de sequer tocar em dados
+  de produção com o `updateMany`.
+
 - [2026-08-16] | Auditoria de segurança pedida pelo Ricardo (a pensar em vender a
   app a mais empresas) encontrou 4 falhas reais, todas corrigidas no mesmo
   commit: (1) `PATCH /api/paragens/:id` só validava **de quem** era a

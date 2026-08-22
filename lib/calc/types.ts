@@ -1,12 +1,8 @@
 // Tipos do motor de cálculo. Puro TypeScript, sem dependências de framework/DB.
 
 export type TipoViagem = "Ida" | "Volta";
-export type TipoVeiculo =
-  | "CAMIAO"
-  | "CAMIAO+REBOQUE"
-  | "VAZIO"
-  | "PALETE_120X80"
-  | "PALETE_120X100";
+export type TipoVeiculo = "CAMIAO" | "CAMIAO+REBOQUE" | "VAZIO";
+export type TipoPalete = "PALETE_120X80" | "PALETE_120X100";
 
 /** Parâmetros de custo editáveis (§3.4), em forma plana. */
 export interface ParametrosCusto {
@@ -39,11 +35,15 @@ export interface ParametrosCusto {
   valorNoite: number; // € por noite fora
   capacidadeCamiao: number;
   capacidadeReboque: number;
-  // Paletes (tipoVeiculo = PALETE_120X80 | PALETE_120X100): ocupação por nº
-  // de paletes, não por peso — o peso não entra no registo nem no cálculo
-  // (consumo tratado sempre como vazio, ver calcularParagem).
+  // Paletes (Paragem.volume=true): ocupação por nº de paletes, não por peso —
+  // o peso não entra no registo nem no cálculo (consumo tratado sempre como
+  // vazio, ver calcularParagem). Par "A/B" para tipoVeiculo=CAMIAO+REBOQUE,
+  // par "ACamiao/BCamiao" para tipoVeiculo=CAMIAO (mesma distinção que já
+  // existe para peso em capacidadeCamiao/capacidadeReboque).
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
 }
 
 export interface PneuItem {
@@ -94,6 +94,8 @@ export interface ParagemSnapshot {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   precoCombRef: number;
   consumoAdblue: number;
   precoAdblue: number;
@@ -127,7 +129,11 @@ export interface ParagemInput {
    * agrupam paragens).
    */
   pesoEmTransito?: number;
-  /** Nº de paletes (só relevante para tipoVeiculo PALETE_120X80|PALETE_120X100). */
+  /** Carga por volume (paletes) em vez de peso — ver tipoPalete/nPaletes. */
+  volume?: boolean;
+  /** Tamanho da palete (PALETE_120X80|PALETE_120X100), só relevante se volume=true. */
+  tipoPalete?: string | null;
+  /** Nº de paletes (só relevante se volume=true). */
   nPaletes?: number;
   zonaPortagem: string;
   portagensExtra: number;
@@ -160,7 +166,10 @@ export interface ParagemCalc {
   recolha: boolean;
   faturarCliente: string | null;
   pesoTransportado: number;
-  /** Nº de paletes (passthrough; só relevante para tipos de palete). */
+  /** Passthrough — ver ParagemInput.volume / .tipoPalete. */
+  volume: boolean;
+  tipoPalete: string | null;
+  /** Nº de paletes (passthrough; só relevante quando volume=true). */
   nPaletes: number;
   kmFeitos: number;
   /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
@@ -220,6 +229,6 @@ export interface RotaCalc {
   kmTotais: number;
   totalKgCarregados: number;
   totalKgDescarregados: number;
-  /** Soma de nPaletes só das paragens de tipo palete (PALETE_120X80 | PALETE_120X100). */
+  /** Soma de nPaletes só das paragens de volume (Paragem.volume=true). */
   totalPaletes: number;
 }

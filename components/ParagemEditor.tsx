@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
-
-const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
+import { ROTULOS_TIPO_PALETE, TIPOS_PALETE, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 
 /** Campos editáveis de uma paragem (subconjunto do modelo Prisma). */
 export interface VeiculoOpcao {
@@ -25,6 +23,8 @@ export interface ParagemEditavel {
   kmFinal: number;
   kgCarregados: number;
   kgDescarregados: number;
+  volume: boolean;
+  tipoPalete: string | null;
   nPaletes: number;
   zonaPortagem: string;
   portagensExtra: number;
@@ -78,19 +78,29 @@ export default function ParagemEditor({
     setF((prev) => ({ ...prev, [k]: v }));
   }
 
-  const ehPalete = f.tipoVeiculo === "PALETE_120X80" || f.tipoVeiculo === "PALETE_120X100";
+  const ehPalete = f.volume;
 
-  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
-  // tratado sempre como vazio) — trocar de/para um tipo de palete limpa os
-  // campos que deixam de fazer sentido.
+  // VAZIO: não há carga nenhuma — força volume=false ao escolher.
   function setTipoVeiculo(v: string) {
-    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
-      nPaletes: eDePalete ? prev.nPaletes : 0,
-      kgCarregados: eDePalete ? 0 : prev.kgCarregados,
-      kgDescarregados: eDePalete ? 0 : prev.kgDescarregados,
+      volume: v === "VAZIO" ? false : prev.volume,
+      tipoPalete: v === "VAZIO" ? null : prev.tipoPalete,
+    }));
+  }
+
+  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
+  // tratado sempre como vazio) — ligar/desligar limpa os campos que deixam
+  // de fazer sentido.
+  function setVolume(v: boolean) {
+    setF((prev) => ({
+      ...prev,
+      volume: v,
+      tipoPalete: v ? prev.tipoPalete : null,
+      nPaletes: v ? prev.nPaletes : 0,
+      kgCarregados: v ? 0 : prev.kgCarregados,
+      kgDescarregados: v ? 0 : prev.kgDescarregados,
     }));
   }
 
@@ -113,6 +123,8 @@ export default function ParagemEditor({
         kmFinal: Number(f.kmFinal),
         kgCarregados: Number(f.kgCarregados),
         kgDescarregados: Number(f.kgDescarregados),
+        volume: f.volume,
+        tipoPalete: f.volume ? f.tipoPalete : null,
         nPaletes: Number(f.nPaletes),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
@@ -232,7 +244,7 @@ export default function ParagemEditor({
               {/* Inclui o valor atual mesmo que já não esteja na lista (ex.: dados antigos). */}
               {Array.from(new Set([f.tipoVeiculo, ...TIPOS_VEICULO])).map((t) => (
                 <option key={t} value={t}>
-                  {ROTULOS_TIPO_VEICULO[t] ?? t}
+                  {t}
                 </option>
               ))}
             </select>
@@ -255,18 +267,47 @@ export default function ParagemEditor({
           </div>
           {campo("kmInicial", "KM Inicial")}
           {campo("kmFinal", "KM Final")}
-          {ehPalete ? (
-            <div>
-              <label className="label">Nº de paletes</label>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                className="input"
-                value={f.nPaletes}
-                onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
-              />
+          {f.tipoVeiculo !== "VAZIO" && (
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={f.volume}
+                  onChange={(e) => setVolume(e.target.checked)}
+                />
+                Volume (paletes)
+              </label>
             </div>
+          )}
+          {ehPalete ? (
+            <>
+              <div>
+                <label className="label">Tipo de palete</label>
+                <select
+                  className="input"
+                  value={f.tipoPalete ?? ""}
+                  onChange={(e) => set("tipoPalete", e.target.value as never)}
+                >
+                  <option value="">— escolher —</option>
+                  {TIPOS_PALETE.map((t) => (
+                    <option key={t} value={t}>
+                      {ROTULOS_TIPO_PALETE[t] ?? t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Nº de paletes</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  className="input"
+                  value={f.nPaletes}
+                  onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
+                />
+              </div>
+            </>
           ) : (
             <>
               {campo("kgCarregados", "KG Carregados")}

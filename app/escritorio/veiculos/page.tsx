@@ -35,6 +35,8 @@ export default async function VeiculosPage() {
     capacidadeReboque: params?.capacidadeReboque ?? 24000,
     capacidadePaleteA: params?.capacidadePaleteA ?? 38,
     capacidadePaleteB: params?.capacidadePaleteB ?? 28,
+    capacidadePaleteACamiao: params?.capacidadePaleteACamiao ?? 18,
+    capacidadePaleteBCamiao: params?.capacidadePaleteBCamiao ?? 14,
     pneus: pneusGlobais.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
   };
 
@@ -56,6 +58,8 @@ export default async function VeiculosPage() {
     capacidadeReboque: v.capacidadeReboque,
     capacidadePaleteA: v.capacidadePaleteA,
     capacidadePaleteB: v.capacidadePaleteB,
+    capacidadePaleteACamiao: v.capacidadePaleteACamiao,
+    capacidadePaleteBCamiao: v.capacidadePaleteBCamiao,
     nParagens: v._count.paragens,
     pneus: v.pneus.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
     manutencoes: v.manutencoes.map((m) => ({

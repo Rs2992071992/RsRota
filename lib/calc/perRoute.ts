@@ -107,7 +107,14 @@ export function calcularRota(
     // cliente a faturar. Qualquer outro tipo participa (mesmo com peso 0 mal
     // registado), para nunca perder um cliente realmente faturado.
     if (p.tipoVeiculo === "VAZIO") continue;
-    const coef = coeficienteReal(p.tipoVeiculo, pesoTransportado(p), effs[i], p.nPaletes || 0);
+    const coef = coeficienteReal(
+      p.tipoVeiculo,
+      pesoTransportado(p),
+      effs[i],
+      p.nPaletes || 0,
+      p.volume || false,
+      p.tipoPalete ?? null,
+    );
     // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
     // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.
     // recolha em "Tec-masterferro" faturada a "Tecfil" soma-se à quota da
@@ -139,7 +146,10 @@ export function calcularRota(
   const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
   const totalPaletes = paragens.reduce(
     (a, p) =>
-      a + (p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100" ? p.nPaletes || 0 : 0),
+      a +
+      (p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100"
+        ? p.nPaletes || 0
+        : 0),
     0,
   );
 

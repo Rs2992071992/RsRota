@@ -37,7 +37,7 @@ function custoMotoristaKm(f: MotoristaParamsBD): { porKm: number; mensal: number
     seguroAnual: 0, reparacoesAnuais: 0, revisaoAnual: 0, inspecaoAnual: 0,
     precoCombRef: 0, precoCombReal: 0, consumoAdblue: 0, precoAdblue: 0,
     margemMinima: 0, valorHoraExtra: 0, valorNoite: 0, capacidadeCamiao: 1, capacidadeReboque: 1,
-    capacidadePaleteA: 1, capacidadePaleteB: 1,
+    capacidadePaleteA: 1, capacidadePaleteB: 1, capacidadePaleteACamiao: 1, capacidadePaleteBCamiao: 1,
   };
   const d = derivarCustos(fake, []);
   return { porKm: d.custoMotoristaPorKm, mensal: d.detalhe.custoMensalMotorista };

@@ -25,6 +25,8 @@ export interface VeiculoLike {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   caixaComprimentoMm?: number | null;
   caixaLarguraMm?: number | null;
   dataLimiteInspecao?: Date | string | null;
@@ -48,6 +50,8 @@ export interface VeiculoForm {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   /** Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas). */
   caixaComprimentoMm: number | null;
   caixaLarguraMm: number | null;
@@ -73,8 +77,10 @@ export const CAMPOS_CUSTO: [keyof VeiculoForm, string][] = [
   ["inspecaoAnual", "Inspeção anual (€)"],
   ["capacidadeCamiao", "Capacidade camião (kg)"],
   ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
-  ["capacidadePaleteA", "Capacidade paletes 120x80 (nº)"],
-  ["capacidadePaleteB", "Capacidade paletes 120x100 (nº)"],
+  ["capacidadePaleteA", "Capacidade paletes 120x80, camião+reboque (nº)"],
+  ["capacidadePaleteB", "Capacidade paletes 120x100, camião+reboque (nº)"],
+  ["capacidadePaleteACamiao", "Capacidade paletes 120x80, só camião (nº)"],
+  ["capacidadePaleteBCamiao", "Capacidade paletes 120x100, só camião (nº)"],
 ];
 
 export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
@@ -94,6 +100,8 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
     capacidadeReboque: v.capacidadeReboque,
     capacidadePaleteA: v.capacidadePaleteA,
     capacidadePaleteB: v.capacidadePaleteB,
+    capacidadePaleteACamiao: v.capacidadePaleteACamiao,
+    capacidadePaleteBCamiao: v.capacidadePaleteBCamiao,
     caixaComprimentoMm: v.caixaComprimentoMm ?? null,
     caixaLarguraMm: v.caixaLarguraMm ?? null,
     dataLimiteInspecao: v.dataLimiteInspecao
@@ -117,6 +125,7 @@ export function custoVeiculoKm(f: VeiculoForm): number {
     margemMinima: 0, valorHoraExtra: 0, valorNoite: 0,
     capacidadeCamiao: f.capacidadeCamiao, capacidadeReboque: f.capacidadeReboque,
     capacidadePaleteA: f.capacidadePaleteA, capacidadePaleteB: f.capacidadePaleteB,
+    capacidadePaleteACamiao: f.capacidadePaleteACamiao, capacidadePaleteBCamiao: f.capacidadePaleteBCamiao,
   };
   return derivarCustos(fake, f.pneus as PneuItem[]).custoVeiculoPorKm;
 }

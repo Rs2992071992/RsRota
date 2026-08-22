@@ -99,17 +99,34 @@ describe("estimarLinha — portagem automática (override TollGuru)", () => {
 });
 
 describe("estimarLinha — paletes (ocupação por nº; peso não entra, consumo = vazio)", () => {
-  const input = { km: 100, pesoKg: 0, tipoVeiculo: "PALETE_120X80", nPaletes: 19, zonaPortagem: null };
+  const input = {
+    km: 100,
+    pesoKg: 0,
+    tipoVeiculo: "CAMIAO+REBOQUE",
+    volume: true,
+    tipoPalete: "PALETE_120X80",
+    nPaletes: 19,
+    zonaPortagem: null,
+  };
   const est = estimarLinha(input, ctx, snapshot);
   const vazio = estimarLinha({ km: 100, pesoKg: 0, tipoVeiculo: "VAZIO", zonaPortagem: null }, ctx, snapshot);
 
-  it("detalhe.coeficienteCarga = nPaletes/38, detalhe.nPaletes = 19", () => {
+  it("detalhe.coeficienteCarga = nPaletes/38 (camião+reboque), detalhe.nPaletes = 19", () => {
     expect(est.detalhe.nPaletes).toBe(19);
     expect(est.detalhe.coeficienteCarga).toBeCloseTo(19 / 38, 6);
   });
   it("consumo é igual ao de um trajeto vazio (paletes não pesam no cálculo)", () => {
     expect(est.detalhe.consumoL100).toBe(vazio.detalhe.consumoL100);
     expect(est.detalhe.custoCombustivel).toBeCloseTo(vazio.detalhe.custoCombustivel, 6);
+  });
+
+  it("volume + CAMIAO (sem reboque): usa a capacidade só-camião (18)", () => {
+    const semReboque = estimarLinha(
+      { km: 100, pesoKg: 0, tipoVeiculo: "CAMIAO", volume: true, tipoPalete: "PALETE_120X80", nPaletes: 15, zonaPortagem: null },
+      ctx,
+      snapshot,
+    );
+    expect(semReboque.detalhe.coeficienteCarga).toBeCloseTo(15 / 18, 6);
   });
 });
 

@@ -8,11 +8,10 @@ import {
   type LinhaDevis,
   type DetalheEstimativa,
 } from "@/lib/calc/orcamento";
-import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO } from "@/lib/validacao";
+import { ROTULOS_TIPO_PALETE, TIPOS_PALETE, TIPOS_VEICULO } from "@/lib/validacao";
 import DetalheLinha from "@/components/orcamento/DetalheLinha";
 import MoradaInput from "@/components/orcamento/MoradaInput";
 
-const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 const ESTADOS = [
   ["RASCUNHO", "Rascunho"],
   ["ENVIADO", "Enviado"],
@@ -71,6 +70,8 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
     km: 0,
     pesoKg: 0,
     tipoVeiculo: "CAMIAO",
+    volume: false,
+    tipoPalete: null,
     nPaletes: 0,
     zonaPortagem: null,
     noitesFora: 0,
@@ -166,6 +167,8 @@ export default function OrcamentoForm({
           idaVolta: l.idaVolta,
           pesoKg: l.pesoKg,
           tipoVeiculo: l.tipoVeiculo,
+          volume: l.volume,
+          tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
           noitesFora: l.noitesFora,
@@ -221,6 +224,8 @@ export default function OrcamentoForm({
           km: l.km,
           pesoKg: l.pesoKg,
           tipoVeiculo: l.tipoVeiculo,
+          volume: l.volume,
+          tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
           zonaPortagem: l.zonaPortagem,
           noitesFora: l.noitesFora,
@@ -478,31 +483,62 @@ export default function OrcamentoForm({
                 <select
                   className="input"
                   value={l.tipoVeiculo}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
-                    patchLinha(i, { tipoVeiculo: v, nPaletes: eDePalete ? l.nPaletes : 0 });
-                  }}
+                  onChange={(e) => patchLinha(i, { tipoVeiculo: e.target.value })}
                 >
                   {TIPOS_VEICULO.map((t) => (
                     <option key={t} value={t}>
-                      {ROTULOS_TIPO_VEICULO[t] ?? t}
+                      {t}
                     </option>
                   ))}
                 </select>
+                {l.tipoVeiculo !== "VAZIO" && (
+                  <label className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={l.volume}
+                      onChange={(e) => {
+                        const v = e.target.checked;
+                        patchLinha(i, {
+                          volume: v,
+                          tipoPalete: v ? l.tipoPalete : null,
+                          nPaletes: v ? l.nPaletes : 0,
+                          pesoKg: v ? 0 : l.pesoKg,
+                        });
+                      }}
+                    />
+                    Volume (paletes)
+                  </label>
+                )}
               </div>
-              {(TIPOS_PALETE as readonly string[]).includes(l.tipoVeiculo) ? (
-                <div>
-                  <label className="label">Nº de paletes</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={l.nPaletes}
-                    onChange={(e) => patchLinha(i, { nPaletes: Number(e.target.value) || 0 })}
-                  />
-                </div>
+              {l.volume ? (
+                <>
+                  <div>
+                    <label className="label">Tipo de palete</label>
+                    <select
+                      className="input"
+                      value={l.tipoPalete ?? ""}
+                      onChange={(e) => patchLinha(i, { tipoPalete: e.target.value || null })}
+                    >
+                      <option value="">— escolher —</option>
+                      {TIPOS_PALETE.map((t) => (
+                        <option key={t} value={t}>
+                          {ROTULOS_TIPO_PALETE[t] ?? t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Nº de paletes</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={l.nPaletes}
+                      onChange={(e) => patchLinha(i, { nPaletes: Number(e.target.value) || 0 })}
+                    />
+                  </div>
+                </>
               ) : (
                 <div>
                   <label className="label">Peso (kg)</label>

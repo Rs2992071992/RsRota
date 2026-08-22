@@ -1,18 +1,15 @@
 import { z } from "zod";
 
 export const TIPOS_VIAGEM = ["Ida", "Volta"] as const;
-export const TIPOS_VEICULO = [
-  "CAMIAO",
-  "CAMIAO+REBOQUE",
-  "VAZIO",
-  "PALETE_120X80",
-  "PALETE_120X100",
-] as const;
+export const TIPOS_VEICULO = ["CAMIAO", "CAMIAO+REBOQUE", "VAZIO"] as const;
 
-/** Rótulos amigáveis para os tipos de palete (capacidade por camião). */
-export const ROTULOS_TIPO_VEICULO: Record<string, string> = {
-  PALETE_120X80: "Palete 120×80cm (38/camião)",
-  PALETE_120X100: "Palete 120×100cm (28/camião)",
+/** Tamanhos de palete — carga por volume (Paragem.volume=true), não por peso. */
+export const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
+
+/** Rótulos amigáveis para os tamanhos de palete. */
+export const ROTULOS_TIPO_PALETE: Record<string, string> = {
+  PALETE_120X80: "Palete 120×80cm",
+  PALETE_120X100: "Palete 120×100cm",
 };
 
 const numNaoNeg = z.number().nonnegative("Não pode ser negativo");
@@ -32,6 +29,8 @@ export const paragemSchema = z
     kmFinal: numNaoNeg,
     kgCarregados: numNaoNeg.default(0),
     kgDescarregados: numNaoNeg.default(0),
+    volume: z.boolean().default(false),
+    tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
     nPaletes: numNaoNeg.default(0),
     litrosAbastecidos: numNaoNeg.default(0),
     custoAbastecido: numNaoNeg.default(0),
@@ -53,9 +52,21 @@ export const paragemSchema = z
     litrosEspanha: numOpcional,
     custoEspanha: numOpcional,
   })
-  .refine((d) => d.kmFinal >= d.kmInicial, {
-    message: "KM Final deve ser ≥ KM Inicial",
-    path: ["kmFinal"],
+  .superRefine((d, ctx) => {
+    if (d.kmFinal < d.kmInicial) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "KM Final deve ser ≥ KM Inicial",
+        path: ["kmFinal"],
+      });
+    }
+    if (d.volume && !d.tipoPalete) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Escolha o tipo de palete",
+        path: ["tipoPalete"],
+      });
+    }
   });
 
 export type ParagemForm = z.infer<typeof paragemSchema>;
@@ -89,6 +100,8 @@ export const veiculoSchema = z.object({
   capacidadeReboque: n.positive("Deve ser > 0"),
   capacidadePaleteA: n.positive("Deve ser > 0"),
   capacidadePaleteB: n.positive("Deve ser > 0"),
+  capacidadePaleteACamiao: n.positive("Deve ser > 0"),
+  capacidadePaleteBCamiao: n.positive("Deve ser > 0"),
   // Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas).
   caixaComprimentoMm: n.positive("Deve ser > 0").nullable().optional(),
   caixaLarguraMm: n.positive("Deve ser > 0").nullable().optional(),
@@ -208,6 +221,8 @@ export const linhaDevisSchema = z.object({
   km: numNaoNeg.default(0),
   pesoKg: numNaoNeg.default(0),
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  volume: z.boolean().default(false),
+  tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
   nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().max(120).nullable().default(null),
   noitesFora: numNaoNeg.default(0),
@@ -239,6 +254,8 @@ export const estimarDevisSchema = z.object({
   idaVolta: z.boolean().default(true),
   pesoKg: numNaoNeg.default(0),
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  volume: z.boolean().default(false),
+  tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
   nPaletes: numNaoNeg.default(0),
   zonaPortagem: z.string().trim().nullable().default(null),
   noitesFora: numNaoNeg.default(0),

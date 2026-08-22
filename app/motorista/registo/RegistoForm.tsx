@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ROTULOS_TIPO_VEICULO, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
+import { ROTULOS_TIPO_PALETE, TIPOS_PALETE, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 import { fmtEuro } from "@/lib/format";
 import Autocomplete from "@/components/Autocomplete";
 
@@ -13,14 +13,14 @@ export interface VeiculoOpcao {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   dataLimiteInspecao: string | null;
   inspecaoVerificada: boolean;
 }
 
 // 45 dias (mês e meio) antes do prazo, o motorista começa a ver o aviso.
 const DIAS_AVISO_INSPECAO = 45;
-
-const TIPOS_PALETE = ["PALETE_120X80", "PALETE_120X100"] as const;
 
 interface Props {
   zonas: string[];
@@ -29,6 +29,8 @@ interface Props {
   capacidadeReboque: number;
   capacidadePaleteA: number;
   capacidadePaleteB: number;
+  capacidadePaleteACamiao: number;
+  capacidadePaleteBCamiao: number;
   valorNoite: number;
   rotasRecentes: string[];
   clientes: string[];
@@ -62,6 +64,8 @@ const estadoBase = {
   kmFinal: "",
   kgCarregados: "",
   kgDescarregados: "",
+  volume: false,
+  tipoPalete: "",
   nPaletes: "",
   zonaPortagem: "",
   portagensExtra: "",
@@ -81,6 +85,8 @@ export default function RegistoForm({
   capacidadeReboque,
   capacidadePaleteA,
   capacidadePaleteB,
+  capacidadePaleteACamiao,
+  capacidadePaleteBCamiao,
   valorNoite,
   rotasRecentes,
   clientes,
@@ -139,29 +145,48 @@ export default function RegistoForm({
   const capReboque = veiculoSel?.capacidadeReboque ?? capacidadeReboque;
   const capPaleteA = veiculoSel?.capacidadePaleteA ?? capacidadePaleteA;
   const capPaleteB = veiculoSel?.capacidadePaleteB ?? capacidadePaleteB;
-  const capacidade = f.tipoVeiculo === "CAMIAO+REBOQUE" ? capReboque : capCamiao;
-  const ehPaleteA = f.tipoVeiculo === "PALETE_120X80";
-  const ehPaleteB = f.tipoVeiculo === "PALETE_120X100";
-  const ehPalete = ehPaleteA || ehPaleteB;
-  const capacidadePaletes = ehPaleteA ? capPaleteA : capPaleteB;
+  const capPaleteACamiao = veiculoSel?.capacidadePaleteACamiao ?? capacidadePaleteACamiao;
+  const capPaleteBCamiao = veiculoSel?.capacidadePaleteBCamiao ?? capacidadePaleteBCamiao;
+  const ehReboque = f.tipoVeiculo === "CAMIAO+REBOQUE";
+  const capacidade = ehReboque ? capReboque : capCamiao;
+  const ehPalete = f.volume;
+  // Capacidade de paletes: A/B pelo tamanho escolhido, e o par "camião+reboque"
+  // vs "só camião" pelo Tipo Veículo — mesma distinção já usada para peso.
+  const capacidadePaletes =
+    f.tipoPalete === "PALETE_120X100"
+      ? ehReboque
+        ? capPaleteB
+        : capPaleteBCamiao
+      : ehReboque
+        ? capPaleteA
+        : capPaleteACamiao;
   const custoNoites = num(f.noitesFora) * valorNoite;
 
-  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
-  // tratado sempre como vazio) — trocar de/para um tipo de palete limpa os
-  // campos que deixam de fazer sentido.
-  // VAZIO: não há cliente a faturar (repositionamento), preenche "Vazio"
-  // automaticamente para o motorista não ter de escrever nada; ao sair de
-  // VAZIO, limpa esse valor para escrever o cliente real.
+  // VAZIO: não há cliente a faturar (repositionamento) nem carga por volume,
+  // preenche "Vazio" automaticamente para o motorista não ter de escrever
+  // nada; ao sair de VAZIO, limpa esse valor para escrever o cliente real.
   function setTipoVeiculo(v: string) {
-    const eDePalete = (TIPOS_PALETE as readonly string[]).includes(v);
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
-      nPaletes: eDePalete ? prev.nPaletes : "",
-      kgCarregados: eDePalete ? "" : prev.kgCarregados,
-      kgDescarregados: eDePalete ? "" : prev.kgDescarregados,
+      volume: v === "VAZIO" ? false : prev.volume,
+      tipoPalete: v === "VAZIO" ? "" : prev.tipoPalete,
       cliente:
         v === "VAZIO" ? "Vazio" : prev.tipoVeiculo === "VAZIO" && prev.cliente === "Vazio" ? "" : prev.cliente,
+    }));
+  }
+
+  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
+  // tratado sempre como vazio) — ligar/desligar o Volume limpa os campos que
+  // deixam de fazer sentido.
+  function setVolume(v: boolean) {
+    setF((prev) => ({
+      ...prev,
+      volume: v,
+      tipoPalete: v ? prev.tipoPalete : "",
+      nPaletes: v ? prev.nPaletes : "",
+      kgCarregados: v ? "" : prev.kgCarregados,
+      kgDescarregados: v ? "" : prev.kgDescarregados,
     }));
   }
 
@@ -213,6 +238,7 @@ export default function RegistoForm({
     for (const campo of ["kmInicial", "kmFinal", "kgCarregados", "kgDescarregados", "nPaletes"] as const) {
       if (f[campo] !== "" && num(f[campo]) < 0) e[campo] = "Não pode ser negativo";
     }
+    if (f.volume && !f.tipoPalete) e.tipoPalete = "Escolha o tipo de palete";
     setErros(e);
     return Object.keys(e).length === 0;
   }
@@ -235,6 +261,8 @@ export default function RegistoForm({
         kmFinal: num(f.kmFinal),
         kgCarregados: num(f.kgCarregados),
         kgDescarregados: num(f.kgDescarregados),
+        volume: f.volume,
+        tipoPalete: f.volume ? f.tipoPalete || null : null,
         nPaletes: num(f.nPaletes),
         // O combustível usado no cálculo vem dos parâmetros (escritório); o motorista
         // não o introduz. Mantemos só o combustível "por fora" (Espanha), informativo.
@@ -300,7 +328,7 @@ export default function RegistoForm({
   }
 
   const campoNum = (
-    k: keyof Campos,
+    k: Exclude<keyof Campos, "volume">,
     label: string,
     extra?: { step?: string; placeholder?: string },
   ) => (
@@ -313,7 +341,7 @@ export default function RegistoForm({
         placeholder={extra?.placeholder}
         className="input"
         value={f[k]}
-        onChange={(e) => set(k, e.target.value as Campos[keyof Campos])}
+        onChange={(e) => set(k, e.target.value)}
       />
       {erros[k] && <p className="mt-1 text-xs text-red-600">{erros[k]}</p>}
     </div>
@@ -413,10 +441,16 @@ export default function RegistoForm({
             >
               {TIPOS_VEICULO.map((t) => (
                 <option key={t} value={t}>
-                  {ROTULOS_TIPO_VEICULO[t] ?? t}
+                  {t}
                 </option>
               ))}
             </select>
+            {f.tipoVeiculo !== "VAZIO" && (
+              <label className="mt-2 flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={f.volume} onChange={(e) => setVolume(e.target.checked)} />
+                Volume (paletes)
+              </label>
+            )}
           </div>
           <div>
             <label className="label">Veículo (camião)</label>
@@ -468,18 +502,36 @@ export default function RegistoForm({
           </label>
         </div>
         {ehPalete ? (
-          <div>
-            <label className="label">Nº de paletes</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="0"
-              className="input"
-              value={f.nPaletes}
-              onChange={(e) => set("nPaletes", e.target.value)}
-            />
-          </div>
+          <>
+            <div>
+              <label className="label">Tipo de palete</label>
+              <select
+                className="input"
+                value={f.tipoPalete}
+                onChange={(e) => set("tipoPalete", e.target.value)}
+              >
+                <option value="">— escolher —</option>
+                {TIPOS_PALETE.map((t) => (
+                  <option key={t} value={t}>
+                    {ROTULOS_TIPO_PALETE[t] ?? t}
+                  </option>
+                ))}
+              </select>
+              {erros.tipoPalete && <p className="mt-1 text-xs text-red-600">{erros.tipoPalete}</p>}
+            </div>
+            <div>
+              <label className="label">Nº de paletes</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                step="1"
+                min="0"
+                className="input"
+                value={f.nPaletes}
+                onChange={(e) => set("nPaletes", e.target.value)}
+              />
+            </div>
+          </>
         ) : (
           <>
             {campoNum("kgCarregados", "KG Carregados")}

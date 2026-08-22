@@ -21,44 +21,51 @@ model Parametros {
   id Int @id @default(1)
 
   // --- Motorista ---
-  salarioMensal     Float @default(1345)
-  seguroMensal      Float @default(30)
-  percentEncargos   Float @default(0.235) // 23,5% sobre o salário
-  alimentacaoDia    Float @default(6.4)
-  diasAlimentacao   Float @default(19)
-  kmAnuais          Float @default(95000)
-  fatorAnualizacao  Float @default(14) // 14 salários/ano em Portugal (12 + Natal + férias)
+  salarioMensal    Float @default(1345)
+  seguroMensal     Float @default(30)
+  percentEncargos  Float @default(0.235) // 23,5% sobre o salário
+  alimentacaoDia   Float @default(6.4)
+  diasAlimentacao  Float @default(19)
+  kmAnuais         Float @default(95000)
+  fatorAnualizacao Float @default(14) // 14 salários/ano em Portugal (12 + Natal + férias)
 
   // --- Veículo ---
-  valorAquisicao    Float @default(127000)
-  valorResidual     Float @default(88000)
-  vidaUtilAnos      Float @default(3)
-  iucAnual          Float @default(600)
-  taxaJuros         Float @default(0.02) // sobre o valor de aquisição
-  seguroAnual       Float @default(4000)
-  reparacoesAnuais  Float @default(1500)
-  revisaoAnual      Float @default(1200)
-  inspecaoAnual     Float @default(100)
+  valorAquisicao   Float @default(127000)
+  valorResidual    Float @default(88000)
+  vidaUtilAnos     Float @default(3)
+  iucAnual         Float @default(600)
+  taxaJuros        Float @default(0.02) // sobre o valor de aquisição
+  seguroAnual      Float @default(4000)
+  reparacoesAnuais Float @default(1500)
+  revisaoAnual     Float @default(1200)
+  inspecaoAnual    Float @default(100)
 
   // --- Combustível / AdBlue ---
-  precoCombRef      Float @default(1.834) // preço de referência (entra no cálculo)
-  precoCombReal     Float @default(1.834) // preço real médio pago (informativo)
-  consumoAdblue     Float @default(2.5)   // L / 100 km
-  precoAdblue       Float @default(0.3)    // € / L
+  precoCombRef  Float @default(1.834) // preço de referência (entra no cálculo)
+  precoCombReal Float @default(1.834) // preço real médio pago (informativo)
+  consumoAdblue Float @default(2.5) // L / 100 km
+  precoAdblue   Float @default(0.3) // € / L
 
   // --- Outros ---
   margemMinima      Float @default(1.25) // preço mínimo = custo × 1,25
   valorHoraExtra    Float @default(8)
-  valorNoite        Float @default(70)  // € por noite fora (× nº de noites)
+  valorNoite        Float @default(70) // € por noite fora (× nº de noites)
   capacidadeCamiao  Float @default(14000)
   capacidadeReboque Float @default(24000)
 
-  // --- Paletes (tipoVeiculo = PALETE_120X80 | PALETE_120X100) ---
+  // --- Paletes (Paragem.volume = true, Paragem.tipoPalete = PALETE_120X80 |
+  // PALETE_120X100) ---
   // Ocupação por nº de paletes, não por peso (uma palete leve ocupa o mesmo
   // "slot" físico) — o peso não entra no registo nem no cálculo para este
   // tipo de carga; o consumo é tratado sempre como se o veículo fosse vazio.
-  capacidadePaleteA Float @default(38) // paletes 1.2x0.8x2.7m por camião
-  capacidadePaleteB Float @default(28) // paletes 1.2x1x2.7m por camião
+  // Dois pares de capacidade por tipo de palete: "A/B" para quando a
+  // paragem tem tipoVeiculo = CAMIAO+REBOQUE (o conjunto todo), "ACamiao/
+  // BCamiao" para quando é só CAMIAO (sem reboque) — mesma distinção que já
+  // existe para peso em capacidadeCamiao/capacidadeReboque.
+  capacidadePaleteA       Float @default(38) // paletes 1.2x0.8x2.7m, camião+reboque
+  capacidadePaleteB       Float @default(28) // paletes 1.2x1x2.7m, camião+reboque
+  capacidadePaleteACamiao Float @default(18) // paletes 1.2x0.8x2.7m, só camião
+  capacidadePaleteBCamiao Float @default(14) // paletes 1.2x1x2.7m, só camião
 
   atualizadoEm DateTime @updatedAt
 }
@@ -86,19 +93,21 @@ model Veiculo {
   matricula String?
   ativo     Boolean @default(true)
 
-  valorAquisicao    Float @default(127000)
-  valorResidual     Float @default(88000)
-  vidaUtilAnos      Float @default(3)
-  iucAnual          Float @default(600)
-  taxaJuros         Float @default(0.02)
-  seguroAnual       Float @default(4000)
-  reparacoesAnuais  Float @default(1500)
-  revisaoAnual      Float @default(1200)
-  inspecaoAnual     Float @default(100)
-  capacidadeCamiao  Float @default(14000)
-  capacidadeReboque Float @default(24000)
-  capacidadePaleteA Float @default(38)
-  capacidadePaleteB Float @default(28)
+  valorAquisicao          Float @default(127000)
+  valorResidual           Float @default(88000)
+  vidaUtilAnos            Float @default(3)
+  iucAnual                Float @default(600)
+  taxaJuros               Float @default(0.02)
+  seguroAnual             Float @default(4000)
+  reparacoesAnuais        Float @default(1500)
+  revisaoAnual            Float @default(1200)
+  inspecaoAnual           Float @default(100)
+  capacidadeCamiao        Float @default(14000)
+  capacidadeReboque       Float @default(24000)
+  capacidadePaleteA       Float @default(38) // camião+reboque
+  capacidadePaleteB       Float @default(28) // camião+reboque
+  capacidadePaleteACamiao Float @default(18) // só camião
+  capacidadePaleteBCamiao Float @default(14) // só camião
 
   // --- Caixa de carga (mm) — opcional; só preenchido para veículos usados
   // no empacotamento de paletes (ver Carregamento/PedidoPalete). null =
@@ -134,7 +143,7 @@ model Manutencao {
   dias      Float?
 
   veiculoId Int
-  veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
 
   criadoEm DateTime @default(now())
 
@@ -152,7 +161,7 @@ model Avaria {
   observacoes String?
 
   veiculoId Int
-  veiculo   Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
 
   reportadoPorId Int?
   reportadoPor   Utilizador? @relation(fields: [reportadoPorId], references: [id])
@@ -185,8 +194,15 @@ model Paragem {
   idRota      String
   data        DateTime @default(now())
   tipoViagem  String // "Ida" | "Volta"
-  tipoVeiculo String // CAMIAO | CAMIAO+REBOQUE | LEVE | VAZIO | RETORNO
+  tipoVeiculo String // CAMIAO | CAMIAO+REBOQUE | VAZIO
   cliente     String
+
+  // Carga por volume (paletes) em vez de peso. Quando true, tipoPalete
+  // identifica o tamanho e nPaletes a quantidade; a capacidade usada no
+  // cálculo depende também de tipoVeiculo (camião vs camião+reboque) — ver
+  // Parametros/Veiculo.capacidadePaleteA/B/ACamiao/BCamiao.
+  volume     Boolean @default(false)
+  tipoPalete String? // PALETE_120X80 | PALETE_120X100, só relevante se volume=true
 
   // Motorista que registou a paragem (null em dados importados/antigos).
   motoristaId Int?
@@ -207,17 +223,17 @@ model Paragem {
 
   kgCarregados    Float @default(0)
   kgDescarregados Float @default(0)
-  // Nº de paletes carregadas (só relevante quando tipoVeiculo = PALETE_120X80|PALETE_120X100).
+  // Nº de paletes carregadas (só relevante quando volume=true).
   nPaletes        Float @default(0)
 
   litrosAbastecidos Float @default(0)
   custoAbastecido   Float @default(0) // € realmente pagos no abastecimento
 
-  zonaPortagem  String @default("")
-  portagensExtra Float @default(0)
-  noitesFora    Float @default(0)
-  alimentacao   Float @default(0)
-  horasExtra    Float @default(0)
+  zonaPortagem   String @default("")
+  portagensExtra Float  @default(0)
+  noitesFora     Float  @default(0)
+  alimentacao    Float  @default(0)
+  horasExtra     Float  @default(0)
 
   // Sinalização simples do motorista: "isto é uma recolha para entregar a
   // outro cliente" — não escolhe o destino (não sabe/não interessa no
@@ -339,8 +355,8 @@ model Devis {
 
 /// Utilizadores: escritório (uma linha) e N motoristas, cada um com ID + PIN.
 model Utilizador {
-  id      Int    @id @default(autoincrement())
-  codigo  String @unique // ID de login (ex.: "joao", "m01"); escritório = "ESCRITORIO"
+  id      Int     @id @default(autoincrement())
+  codigo  String  @unique // ID de login (ex.: "joao", "m01"); escritório = "ESCRITORIO"
   nome    String? // nome do motorista (null para escritório)
   perfil  String // "ESCRITORIO" | "MOTORISTA"
   pinHash String

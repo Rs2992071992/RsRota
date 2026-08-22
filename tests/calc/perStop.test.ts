@@ -99,23 +99,57 @@ describe("coeficienteReal — sem limite a 1 (sobrecarga reflete-se)", () => {
 });
 
 describe("calcularParagem — paletes (ocupação por nº, peso não entra no registo)", () => {
-  it("PALETE_120X80: coeficiente = nPaletes/38, sem peso informado (kgCarregados=0)", () => {
-    const p = paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30 });
+  it("volume + PALETE_120X80 + CAMIAO+REBOQUE: coeficiente = nPaletes/38 (capacidade do conjunto)", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      volume: true,
+      tipoPalete: "PALETE_120X80",
+      kmFinal: 100,
+      nPaletes: 30,
+    });
     const r = calcularParagem(p, ctx);
     expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
     expect(r.nPaletes).toBe(30);
+    expect(r.volume).toBe(true);
+    expect(r.tipoPalete).toBe("PALETE_120X80");
   });
 
-  it("PALETE_120X100: coeficiente = nPaletes/28, sobrecarga dá > 1", () => {
-    const p = paragemBase({ tipoVeiculo: "PALETE_120X100", kmFinal: 100, nPaletes: 35 });
+  it("volume + PALETE_120X100 + CAMIAO+REBOQUE: coeficiente = nPaletes/28, sobrecarga dá > 1", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      volume: true,
+      tipoPalete: "PALETE_120X100",
+      kmFinal: 100,
+      nPaletes: 35,
+    });
     const r = calcularParagem(p, ctx);
     expect(r.coeficienteCarga).toBeCloseTo(35 / 28, 6);
+  });
+
+  it("volume + CAMIAO (sem reboque): usa as capacidades 'só camião' (18/14), não as do conjunto", () => {
+    const a = calcularParagem(
+      paragemBase({ tipoVeiculo: "CAMIAO", volume: true, tipoPalete: "PALETE_120X80", kmFinal: 100, nPaletes: 15 }),
+      ctx,
+    );
+    expect(a.coeficienteCarga).toBeCloseTo(15 / 18, 6);
+    const b = calcularParagem(
+      paragemBase({ tipoVeiculo: "CAMIAO", volume: true, tipoPalete: "PALETE_120X100", kmFinal: 100, nPaletes: 12 }),
+      ctx,
+    );
+    expect(b.coeficienteCarga).toBeCloseTo(12 / 14, 6);
+  });
+
+  it("fallback de compatibilidade: tipoVeiculo ainda literalmente PALETE_120X80/100 (dados anteriores à migração) continua a usar a capacidade do conjunto", () => {
+    const r = calcularParagem(paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30 }), ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
+    expect(r.volume).toBe(true);
+    expect(r.tipoPalete).toBe("PALETE_120X80");
   });
 
   it("consumo de combustível = sempre como vazio, mesmo se algum peso ficar registado", () => {
     const vazio = calcularParagem(paragemBase({ tipoVeiculo: "VAZIO", kmFinal: 100 }), ctx);
     const semPeso = calcularParagem(
-      paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30 }),
+      paragemBase({ tipoVeiculo: "CAMIAO+REBOQUE", volume: true, tipoPalete: "PALETE_120X80", kmFinal: 100, nPaletes: 30 }),
       ctx,
     );
     // Mesmo com peso residual acima do 1º escalão da tabela de consumo (ex.:
@@ -124,7 +158,14 @@ describe("calcularParagem — paletes (ocupação por nº, peso não entra no re
     // se manter igual ao vazio — é uma regra explícita do motor, não uma
     // coincidência da tabela.
     const comPesoResidual = calcularParagem(
-      paragemBase({ tipoVeiculo: "PALETE_120X80", kmFinal: 100, nPaletes: 30, kgCarregados: 12000 }),
+      paragemBase({
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        volume: true,
+        tipoPalete: "PALETE_120X80",
+        kmFinal: 100,
+        nPaletes: 30,
+        kgCarregados: 12000,
+      }),
       ctx,
     );
     expect(semPeso.consumoL100).toBe(vazio.consumoL100);
@@ -133,19 +174,22 @@ describe("calcularParagem — paletes (ocupação por nº, peso não entra no re
   });
 });
 
-describe("coeficienteReal — paletes (4º parâmetro opcional, não quebra chamadas antigas)", () => {
-  it("PALETE_120X80: nPaletes/38", () => {
+describe("coeficienteReal — paletes (parâmetros novos opcionais, não quebram chamadas antigas)", () => {
+  it("volume + PALETE_120X80 + CAMIAO+REBOQUE: nPaletes/38", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, PARAMS, 19, true, "PALETE_120X80")).toBeCloseTo(0.5, 6);
+  });
+  it("volume + PALETE_120X100 + CAMIAO+REBOQUE: nPaletes/28, sobrecarga > 1", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, PARAMS, 35, true, "PALETE_120X100")).toBeCloseTo(35 / 28, 6);
+  });
+  it("volume + CAMIAO (sem reboque): nPaletes/18 (capacidade só-camião)", () => {
+    expect(coeficienteReal("CAMIAO", 0, PARAMS, 15, true, "PALETE_120X80")).toBeCloseTo(15 / 18, 6);
+  });
+  it("volume com nPaletes 0 (não informado) -> 1, não cai no branch peso<=0 genérico", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, PARAMS, 0, true, "PALETE_120X80")).toBe(1);
+  });
+  it("fallback de compatibilidade: chamada 'à moda antiga' (sem volume/tipoPalete), tipoVeiculo ainda PALETE_120X80, continua a funcionar", () => {
     expect(coeficienteReal("PALETE_120X80", 0, PARAMS, 19)).toBeCloseTo(0.5, 6);
-  });
-  it("PALETE_120X100: nPaletes/28, sobrecarga > 1", () => {
     expect(coeficienteReal("PALETE_120X100", 0, PARAMS, 35)).toBeCloseTo(35 / 28, 6);
-  });
-  it("PALETE com nPaletes 0 (não informado) -> 1, não cai no branch peso<=0 genérico", () => {
-    expect(coeficienteReal("PALETE_120X80", 0, PARAMS)).toBe(1);
-  });
-  it("peso baixo (palete leve) não é tratado como peso<=0 -> 1 genérico", () => {
-    // Mesmo com peso 0, uma palete carregada (nPaletes>0) deve refletir a ocupação real.
-    expect(coeficienteReal("PALETE_120X80", 0, PARAMS, 38)).toBeCloseTo(1, 6);
   });
 });
 

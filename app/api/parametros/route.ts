@@ -33,6 +33,8 @@ const paramsSchema = z.object({
   capacidadeReboque: n.positive(),
   capacidadePaleteA: n.positive(),
   capacidadePaleteB: n.positive(),
+  capacidadePaleteACamiao: n.positive(),
+  capacidadePaleteBCamiao: n.positive(),
 });
 
 const payloadSchema = z.object({

@@ -64,6 +64,8 @@ export async function POST(req: Request) {
       km,
       pesoKg: d.pesoKg,
       tipoVeiculo: d.tipoVeiculo,
+      volume: d.volume,
+      tipoPalete: d.tipoPalete,
       nPaletes: d.nPaletes,
       zonaPortagem: d.zonaPortagem,
       noitesFora: d.noitesFora,

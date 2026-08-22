@@ -2,6 +2,70 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📦 Paletes: capacidade "só camião" vs "camião+reboque" (2026-08-22)
+
+Pedido do Ricardo: os números de capacidade de paletes (38/28) foram
+calibrados a pensar em camião+reboque — quando um motorista vai só de
+camião (sem reboque) e carrega paletes, o sistema continuava a dividir
+pelo número do conjunto todo, subestimando a ocupação real (ex.: 18
+paletes num camião sozinho dava 18/38≈47% em vez de refletir que estava
+a 100% da capacidade real). Mesma lacuna que já tinha sido resolvida para
+peso (`capacidadeCamiao` vs `capacidadeReboque`), nunca replicada para
+paletes. Plano completo:
+`C:\Users\Ricardo\.claude\plans\groovy-giggling-noodle.md`.
+
+- [x] `PALETE_120X80`/`PALETE_120X100` deixam de ser valores de "Tipo
+  Veículo" — passam a `Paragem.volume` (boolean) + `Paragem.tipoPalete`,
+  ortogonal ao Tipo Veículo normal (Camião/Camião+Reboque/Vazio). No
+  motorista e no escritório: escolhe-se o veículo como sempre, aparece um
+  checkbox "Volume" por baixo, e só então o tipo de palete + nº de paletes
+  (substituindo os campos de KG)
+- [x] `prisma/schema.prisma`: `capacidadePaleteACamiao`/`BCamiao` novos em
+  `Parametros` e `Veiculo` (defaults 18/14 — exemplo real do Ricardo, um
+  camião sozinho a full), ao lado dos existentes `capacidadePaleteA/B`
+  (agora documentados como "camião+reboque"); `Paragem.volume`/`tipoPalete`
+  novos. Tudo aditivo — um só `db push`, sem 2ª volta de "aperto" de schema
+- [x] `lib/calc/perStop.ts`: novo par de helpers (`paleteEfetiva`,
+  `capacidadePalete`) escolhe a capacidade certa consoante tipoVeiculo ×
+  tipoPalete; `coeficienteReal` ganha 2 parâmetros novos opcionais
+  (`volume`, `tipoPalete`), nunca obrigatórios — mesma regra já aplicada a
+  `nPaletes` em 2026-07-14. Fallback de compatibilidade: `tipoVeiculo`
+  ainda literalmente `PALETE_120X80`/`100` (dados pré-migração) continua a
+  ser tratado como camião+reboque, tal como sempre foi
+- [x] 3 pontos que faziam `Paragem`→`ParagemInput`/`ParagemEditavel` campo
+  a campo (não spread) e por isso não tinham os campos novos, corrigidos:
+  `lib/rotas-service.ts::paragemToInput()`, `app/escritorio/rotas/[idRota]/
+  page.tsx::editavel()`, `app/motorista/historico/page.tsx` — sem isto os
+  campos novos nunca chegariam ao motor nem ao editor em produção
+  (encontrado ao seguir os consumidores, não estava no levantamento inicial)
+- [x] Script de backfill (`prisma/migrate-paletes-volume.ts`) corrido contra
+  a Neon de produção: 13 paragens reais migradas (`PALETE_120X80`→9,
+  `PALETE_120X100`→4) para `tipoVeiculo=CAMIAO+REBOQUE, volume=true,
+  tipoPalete=<valor antigo>`. Verificado por snapshot antes/depois das 7
+  rotas afetadas via `carregarRota()` (custoTotalRota, coeficienteCarga,
+  custoParagem por paragem, rateio) — **zero diferenças, histórico
+  preservado ao cêntimo**
+- [x] 119 testes verdes (`tests/calc/perStop.test.ts`,
+  `perRoute.test.ts`, `orcamento.test.ts`, `snapshot.test.ts` atualizados
+  para o novo formato + casos novos: CAMIAO sem reboque usa 18/14, e o
+  fallback de compatibilidade continua a funcionar), `tsc --noEmit` e
+  `next build` limpos
+- [x] Testado ponta a ponta contra a BD de produção real (sessão forjada
+  por HMAC, `next dev` local): `POST /api/paragens` com `tipoVeiculo:
+  CAMIAO, volume:true` → coeficiente usa a capacidade "só camião" (18, não
+  38/36); com `CAMIAO+REBOQUE` → usa a capacidade do conjunto (36, valor
+  próprio deste veículo); `PATCH` a desligar `volume` → volta a peso/
+  capacidadeCamiao corretamente; `PUT /api/parametros` alterando os 2
+  campos novos → refletido no cálculo seguinte. Parâmetros globais
+  repostos aos valores originais (18/14) e dados de teste apagados a
+  seguir
+- [x] Commit + push (Vercel builda automaticamente)
+- [ ] **Ação do utilizador**: os defaults 18 (120×80) e 14 (120×100) são o
+  exemplo que o Ricardo deu (camião sozinho a full) — confirmar em
+  `/escritorio/parametros` (grupo "Paletes") e por veículo em
+  `/escritorio/veiculos` se são mesmo os números reais de cada camião, e
+  ajustar se não forem
+
 ## 🔧 Separador "Avarias" (motorista reporta → escritório vê/resolve) (2026-08-19)
 
 Pedido do Ricardo: no motorista, um separador novo para reportar avarias

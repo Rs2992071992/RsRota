@@ -142,8 +142,8 @@ describe("calcularRota — rateio multi-cliente normaliza a 100 % (cenário Espa
 describe("calcularRota — rateio misto peso + paletes normaliza a 100 %", () => {
   const mista: ParagemInput[] = [
     { idRota: "MIX01", cliente: "Cliente Peso", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, kgDescarregados: 0, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 1000 },
-    { idRota: "MIX01", cliente: "Cliente Paletes A", tipoViagem: "Ida", tipoVeiculo: "PALETE_120X80", kmInicial: 300, kmFinal: 450, kgCarregados: 1200, kgDescarregados: 0, nPaletes: 19, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 500 },
-    { idRota: "MIX01", cliente: "Cliente Paletes B", tipoViagem: "Ida", tipoVeiculo: "PALETE_120X100", kmInicial: 450, kmFinal: 550, kgCarregados: 900, kgDescarregados: 0, nPaletes: 14, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 300 },
+    { idRota: "MIX01", cliente: "Cliente Paletes A", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", volume: true, tipoPalete: "PALETE_120X80", kmInicial: 300, kmFinal: 450, kgCarregados: 1200, kgDescarregados: 0, nPaletes: 19, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 500 },
+    { idRota: "MIX01", cliente: "Cliente Paletes B", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", volume: true, tipoPalete: "PALETE_120X100", kmInicial: 450, kmFinal: 550, kgCarregados: 900, kgDescarregados: 0, nPaletes: 14, zonaPortagem: "", portagensExtra: 0, noitesFora: 0, alimentacao: 0, horasExtra: 0, receitaPaga: 300 },
   ];
   const r = calcularRota("MIX01", mista, ctx);
 

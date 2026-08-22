@@ -42,6 +42,8 @@ function veiculoParams(v: Veiculo | null): VeiculoParams | null {
     capacidadeReboque: v.capacidadeReboque,
     capacidadePaleteA: v.capacidadePaleteA,
     capacidadePaleteB: v.capacidadePaleteB,
+    capacidadePaleteACamiao: v.capacidadePaleteACamiao,
+    capacidadePaleteBCamiao: v.capacidadePaleteBCamiao,
   };
 }
 

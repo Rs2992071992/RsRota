@@ -29,6 +29,8 @@ export type VeiculoParams = Pick<
   | "capacidadeReboque"
   | "capacidadePaleteA"
   | "capacidadePaleteB"
+  | "capacidadePaleteACamiao"
+  | "capacidadePaleteBCamiao"
 >;
 
 /**
@@ -60,6 +62,8 @@ export function calcularSnapshot(
     capacidadeReboque: merged.capacidadeReboque,
     capacidadePaleteA: merged.capacidadePaleteA,
     capacidadePaleteB: merged.capacidadePaleteB,
+    capacidadePaleteACamiao: merged.capacidadePaleteACamiao,
+    capacidadePaleteBCamiao: merged.capacidadePaleteBCamiao,
     precoCombRef: base.precoCombRef,
     consumoAdblue: base.consumoAdblue,
     precoAdblue: base.precoAdblue,
