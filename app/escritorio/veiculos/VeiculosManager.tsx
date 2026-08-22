@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Wrench } from "lucide-react";
 import { fmtEuro, fmtNum, fmtNum2 } from "@/lib/format";
 import {
   REF_KM_ANUAIS,
@@ -54,10 +55,11 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes }
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Veículos</h1>
         <div className="flex items-center gap-4">
-          <Link href="/escritorio/veiculos/avarias" className="text-sm font-medium text-brand hover:underline">
+          <Link href="/escritorio/veiculos/avarias" className="btn-secondary relative gap-2">
+            <Wrench size={16} strokeWidth={2} />
             Ped. Manutenção
             {avariasPendentes > 0 && (
-              <span className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white shadow">
                 {avariasPendentes}
               </span>
             )}
