@@ -296,13 +296,16 @@ describe("pesosEmTransito", () => {
     expect(r).toEqual([1500, 600]);
   });
 
-  it("paragens VAZIO ficam de fora do agrupamento (undefined, não interferem nas outras)", () => {
+  it("paragens VAZIO cortam o grupo em segmentos (o peso não atravessa)", () => {
+    // A e B, mesma direção/dia, com um Vazio no meio: o camião esvaziou ali,
+    // por isso A e B ficam cada um sozinho no seu segmento (grupo de 1 -> sem
+    // correção, usa o peso próprio) — já não se juntam como antes.
     const r = pesosEmTransito([
       paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 1000 }),
       paragemBase({ cliente: "Vazio", tipoVeiculo: "VAZIO", kmInicial: 50, kmFinal: 150 }),
       paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 500 }),
     ]);
-    expect(r).toEqual([1500, undefined, 500]);
+    expect(r).toEqual([undefined, undefined, undefined]);
   });
 
   it("tipoViagem ou dia diferentes -> grupos separados (rota multi-dia com idRota reutilizado)", () => {
@@ -324,6 +327,42 @@ describe("pesosEmTransito", () => {
     ]);
     // índice 0 é "B" (2º na sequência física) -> 3000; índice 1 é "A" (1º) -> 8000.
     expect(r).toEqual([3000, 8000]);
+  });
+
+  it("recolhas ligadas por faturarCliente atravessam dia e direção (caso real RIC-Tec-eurored, simplificado)", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", data: "2026-01-01", tipoViagem: "Ida", kmInicial: 0, kmFinal: 10, kgCarregados: 40, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "B", data: "2026-01-01", tipoViagem: "Ida", kmInicial: 10, kmFinal: 20, kgCarregados: 1800, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "C", data: "2026-01-02", tipoViagem: "Volta", kmInicial: 20, kmFinal: 30, kgCarregados: 932, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "Tecfil", data: "2026-01-02", tipoViagem: "Volta", kmInicial: 30, kmFinal: 40, kgDescarregados: 2772 }),
+    ]);
+    // A linha começa vazia (0) e só acumula o que é apanhado — atravessa a
+    // mudança de dia e de direção sem quebra, porque faturarCliente liga
+    // as 3 recolhas à entrega na própria Tecfil.
+    expect(r).toEqual([0, 40, 1840, 2772]);
+  });
+
+  it("faturarCliente sem entrega correspondente na rota não forma linha (soma-se ao grupo normal, como sempre)", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgCarregados: 100, faturarCliente: "ClienteForaDaqui" }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, kgDescarregados: 500 }),
+    ]);
+    // "ClienteForaDaqui" nunca aparece como `cliente` nesta rota -> sem
+    // linha; A e B ficam no grupo normal (mesma direção/dia), tal como o
+    // teste "grupo misto" já cobre.
+    expect(r).toEqual([500, 600]);
+  });
+
+  it("uma linha não contamina o grupo normal do resto da rota", () => {
+    const r = pesosEmTransito([
+      // Linha Tecfil (fora do agrupamento normal por completo).
+      paragemBase({ cliente: "Fornecedor", kmInicial: 0, kmFinal: 50, kgCarregados: 200, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "Tecfil", kmInicial: 50, kmFinal: 100, kgDescarregados: 200 }),
+      // Grupo normal, sem nenhuma ligação — mesma direção/dia de sempre.
+      paragemBase({ cliente: "X", kmInicial: 100, kmFinal: 150, kgDescarregados: 1000 }),
+      paragemBase({ cliente: "Y", kmInicial: 150, kmFinal: 200, kgDescarregados: 500 }),
+    ]);
+    expect(r).toEqual([0, 200, 1500, 500]);
   });
 });
 

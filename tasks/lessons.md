@@ -2,6 +2,37 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-22] | `pesosEmTransito()` (peso em trânsito) agrupava só por
+  `tipoVeiculo+dia`, com dois efeitos indesejados encontrados ao analisar
+  a rota real `RIC-Tec-eurored` (2 dias, sem `VAZIO` entre eles): (1)
+  `VAZIO` era só excluído do grupo em que caía, não separava o que estava
+  antes/depois — duas entregas reais no mesmo dia/direção, com um `VAZIO`
+  a meio (camião esvaziou), ficavam incorretamente somadas no mesmo
+  cálculo de peso; (2) uma recolha feita num dia (ex.: Tec-junqueira, 40kg
+  faturados à Tecfil) só entregue no dia seguinte, já noutra direção
+  (Volta), ficava com o peso subestimado num troço e sobrestimado noutro,
+  porque o corte por dia/direção nunca sabe que o material continua a ser
+  da mesma remessa. Tentei corrigir (2) juntando dias/direções
+  consecutivas sem `VAZIO` entre elas — **não funciona**: infla paragens
+  de um dia com entregas de outro dia que nada têm a ver (testado à mão:
+  o peso da 1ª paragem do dia 1 subia de 13215kg certos para 18001kg
+  errados). | Tornar `VAZIO` uma fronteira real (corta o grupo em
+  segmentos, já não é só excluído) resolve (1) sem qualquer efeito
+  colateral. Para (2), a chave estava em usar um sinal que o sistema já
+  trata como verdade para a faturação — `Paragem.faturarCliente` — para
+  ligar a(s) recolha(s) à entrega correspondente numa "linha" à parte,
+  calculada ao longo de **toda a rota** (ignora dia/direção), começando
+  sempre vazia (0 kg, só o que for apanhado dentro da própria linha).
+  Nunca tentar "resolver" isto achatando `Paragem.data` para a mesma data
+  em toda a rota — a data também alimenta o prazo de pagamento (90 dias,
+  Cobranças) e os relatórios por dia, e desalinhar isso para contornar um
+  problema de estimativa de combustível troca um problema pequeno por um
+  maior. Verificado com números reais (não só os testes): a linha
+  Tec-junqueira→Tec-Viveres-ferry→Tec-masterferro→Tec-A2→Tecfil passou a
+  dar 0/40/1840/2772/3772 kg (fisicamente correto), e o resto da rota
+  ficou praticamente inalterado (diferença de 0,05 € no total, dentro do
+  mesmo escalão de consumo).
+
 - [2026-08-22] | `capacidadePaleteA`/`B` (ocupação de paletes) só tinham UM
   valor por veículo, calibrado a pensar em camião+reboque — ao contrário
   do peso, que já distingue `capacidadeCamiao` vs `capacidadeReboque`

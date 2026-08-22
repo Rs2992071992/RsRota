@@ -13,36 +13,107 @@ function chaveGrupoPeso(p: ParagemInput): string {
 /**
  * Peso realmente a bordo durante cada troço de uma rota (array paralelo a
  * `paragens`, por índice) — ver o algoritmo comentado em
- * `ParagemInput.pesoEmTransito` (lib/calc/types.ts). Agrupa por direção +
- * dia, ordena por `kmInicial` dentro do grupo (sequência física real, mesmo
- * critério de `lib/rotas-service.ts::carregarRota`), e acumula: começa na
- * soma de tudo o que vai ser descarregado no grupo e vai subtraindo o que
- * sai / somando o que entra a cada troço. Paragens `VAZIO` ficam de fora do
- * agrupamento. Grupos de 1 paragem devolvem `undefined` (sem correção —
- * `calcularParagem` cai no peso próprio da paragem, comportamento
- * inalterado — cobre a esmagadora maioria das rotas, incl. HILP01).
+ * `ParagemInput.pesoEmTransito` (lib/calc/types.ts). Dois mecanismos,
+ * aplicados por esta ordem:
+ *
+ * 1) "Linhas" recolha->entrega ligadas por `faturarCliente`: uma paragem
+ *    com `faturarCliente = X` é uma recolha para X; se X também for o
+ *    `cliente` de outra paragem desta rota (uma entrega real), essas
+ *    paragens formam uma linha só delas, calculada à parte, por
+ *    `kmInicial`, **ao longo de toda a rota — sem olhar a direção/dia**.
+ *    O material continua a ser da mesma remessa mesmo que só seja
+ *    entregue no dia seguinte ou na direção contrária (caso real
+ *    encontrado na rota RIC-Tec-eurored). Começa sempre vazia (0) — só
+ *    existe o que for apanhado dentro da própria linha.
+ * 2) O resto das paragens (fora de qualquer linha): agrupadas por direção
+ *    + dia como sempre (`chaveGrupoPeso`) — `idRota` pode ser reutilizado
+ *    em rotas multi-dia não relacionadas, por isso o dia continua a
+ *    entrar na chave. Ordena por `kmInicial` dentro do grupo (sequência
+ *    física real, mesmo critério de `lib/rotas-service.ts::carregarRota`)
+ *    e acumula: começa na soma de tudo o que vai ser descarregado no
+ *    grupo e vai subtraindo o que sai / somando o que entra a cada
+ *    troço. Uma paragem `VAZIO` corta o grupo em segmentos — é o sinal
+ *    de que o camião esvaziou ali, o peso não atravessa esse ponto.
+ *
+ * Grupos/linhas/segmentos de 1 paragem devolvem `undefined` (sem
+ * correção — `calcularParagem` cai no peso próprio da paragem,
+ * comportamento inalterado — cobre a esmagadora maioria das rotas, incl.
+ * HILP01).
  */
 export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[] {
   const resultado: (number | undefined)[] = paragens.map(() => undefined);
 
-  const grupos = new Map<string, number[]>();
+  // 1) Linhas recolha->entrega ligadas por faturarCliente.
+  const clientesEntregues = new Set(
+    paragens.filter((p) => p.tipoVeiculo !== "VAZIO").map((p) => p.cliente?.trim()),
+  );
+  const numaLinha = new Set<number>();
+  const linhas = new Map<string, number[]>();
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO") return;
-    const chave = chaveGrupoPeso(p);
-    const indices = grupos.get(chave) ?? [];
-    indices.push(i);
-    grupos.set(chave, indices);
+    const alvo = p.faturarCliente?.trim();
+    if (alvo && clientesEntregues.has(alvo)) {
+      if (!linhas.has(alvo)) linhas.set(alvo, []);
+      linhas.get(alvo)!.push(i);
+      numaLinha.add(i);
+    }
+  });
+  // Junta a própria entrega (a paragem cujo `cliente` é o alvo da linha).
+  paragens.forEach((p, i) => {
+    if (p.tipoVeiculo === "VAZIO" || p.faturarCliente?.trim()) return;
+    const nome = p.cliente?.trim();
+    if (nome && linhas.has(nome)) {
+      linhas.get(nome)!.push(i);
+      numaLinha.add(i);
+    }
   });
 
-  for (const indices of grupos.values()) {
-    if (indices.length < 2) continue; // grupo de 1 -> sem correção
+  for (const indices of linhas.values()) {
+    if (indices.length < 2) continue;
     const ordenados = [...indices].sort(
       (a, b) => (paragens[a].kmInicial || 0) - (paragens[b].kmInicial || 0),
     );
-    let acumulado = ordenados.reduce((s, i) => s + (paragens[i].kgDescarregados || 0), 0);
+    let acumulado = 0; // começa vazio — só o que for apanhado na própria linha
     for (const i of ordenados) {
       resultado[i] = acumulado;
       acumulado += (paragens[i].kgCarregados || 0) - (paragens[i].kgDescarregados || 0);
+    }
+  }
+
+  // 2) Resto das paragens: agrupadas por direção+dia, VAZIO corta em segmentos.
+  const porChave = new Map<string, number[]>();
+  paragens.forEach((_, i) => {
+    if (numaLinha.has(i)) return;
+    const chave = chaveGrupoPeso(paragens[i]);
+    const indices = porChave.get(chave) ?? [];
+    indices.push(i);
+    porChave.set(chave, indices);
+  });
+
+  for (const indices of porChave.values()) {
+    const ordenados = [...indices].sort(
+      (a, b) => (paragens[a].kmInicial || 0) - (paragens[b].kmInicial || 0),
+    );
+
+    const segmentos: number[][] = [];
+    let atual: number[] = [];
+    for (const i of ordenados) {
+      if (paragens[i].tipoVeiculo === "VAZIO") {
+        if (atual.length) segmentos.push(atual);
+        atual = [];
+      } else {
+        atual.push(i);
+      }
+    }
+    if (atual.length) segmentos.push(atual);
+
+    for (const seg of segmentos) {
+      if (seg.length < 2) continue; // segmento de 1 -> sem correção
+      let acumulado = seg.reduce((s, i) => s + (paragens[i].kgDescarregados || 0), 0);
+      for (const i of seg) {
+        resultado[i] = acumulado;
+        acumulado += (paragens[i].kgCarregados || 0) - (paragens[i].kgDescarregados || 0);
+      }
     }
   }
 
