@@ -449,6 +449,37 @@ o que cala o aviso até ao próximo prazo.
   checkbox volta a ficar desmarcada (e o aviso reaparece se dentro dos 45
   dias)
 
+## ☑️📄 Seleção manual em Cobranças + PDF (2026-08-20)
+
+Pedido do Ricardo, a seguir ao agrupamento por empresa: poder procurar
+por ex. "Plasgal", ver todas as linhas dessa empresa, marcar à mão quais
+(pagas ou não) entram, e descarregar um PDF só dessa seleção.
+
+- [x] Caixa de pesquisa em Cobranças passa a filtrar também por nome de
+  empresa (antes só cliente/rota)
+- [x] `components/CobrancasTabela.tsx`: checkbox por linha + checkbox
+  "selecionar tudo" no cabeçalho de cada grupo (independente do estado
+  Pago — pode misturar pagas e não pagas na seleção); barra de ação
+  "N selecionada(s) — Descarregar PDF da seleção" aparece assim que há
+  1+ marcada
+- [x] `lib/cobrancas-service.ts`: `carregarCobrancasPorIds(ids)` (nova,
+  reaproveitando o mesmo mapeamento de `carregarCobrancas()`, agora
+  extraído para uma função partilhada `mapearLinhas`)
+- [x] `lib/pdf/CobrancasDocument.tsx`: ganha `titulo` opcional (default
+  "CONTAS A RECEBER") — usado para o PDF de seleção, com o nome da
+  empresa quando toda a seleção pertence à mesma
+- [x] `POST /api/cobrancas/pdf` (novo, mesma rota do `GET` já existente):
+  recebe `{ids[], titulo?}`, só ESCRITORIO; nome do ficheiro sanitizado
+  + `filename*` RFC 5987 (mesmo padrão do extrato por cliente)
+- [x] `tsc --noEmit`, `next build` limpos
+- [x] Testado com sessão forjada por HMAC: `POST` como MOTORISTA → 403,
+  como ESCRITORIO → 200 com `%PDF-1.3` real (5 linhas reais de Tec-A2);
+  confirmado visualmente (Playwright) que pesquisar "Tecfil" filtra
+  pelas linhas dessa empresa e a barra de seleção aparece ao marcar
+- [x] De caminho, confirmado que o Ricardo já tinha usado a ferramenta
+  "Atribuir empresa" sozinho entretanto — 89 clientes já classificados
+  pelas 5 empresas (Blowtec, Gesplast, Plasgal, Sacofilme, Tecfil)
+
 ## 🏢 Agrupar Cobranças por empresa-mãe (2026-08-20)
 
 Pedido do Ricardo: trabalha para 4-5 empresas (Tecfil, Blowtec, Plasgal,

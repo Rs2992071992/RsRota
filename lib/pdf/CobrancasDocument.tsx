@@ -71,13 +71,22 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Documento PDF da tabela "Contas a receber" inteira (A4, uso interno). */
-export function CobrancasDocument({ linhas, geradoEm }: { linhas: LinhaCobranca[]; geradoEm: Date }) {
+/** Documento PDF da tabela "Contas a receber" inteira, ou de uma seleção manual (A4). */
+export function CobrancasDocument({
+  linhas,
+  geradoEm,
+  titulo = "CONTAS A RECEBER",
+}: {
+  linhas: LinhaCobranca[];
+  geradoEm: Date;
+  /** Ex.: nome da empresa, quando o PDF é de uma seleção específica. */
+  titulo?: string;
+}) {
   const porReceber = linhas.filter((l) => !l.pago).reduce((a, l) => a + l.valor, 0);
   const vencido = linhas.filter((l) => l.estado === "VENCIDO").reduce((a, l) => a + l.valor, 0);
 
   return (
-    <Document title="Contas a receber">
+    <Document title={titulo}>
       <Page size="A4" style={styles.page}>
         <View style={styles.between}>
           <View>
@@ -85,7 +94,7 @@ export function CobrancasDocument({ linhas, geradoEm }: { linhas: LinhaCobranca[
             <Text style={styles.empresaSub}>{EMPRESA.detalhe}</Text>
           </View>
           <View style={styles.tituloBox}>
-            <Text style={styles.titulo}>CONTAS A RECEBER</Text>
+            <Text style={styles.titulo}>{titulo}</Text>
             <Text style={styles.meta}>Gerado em: {fmtData(geradoEm)}</Text>
           </View>
         </View>

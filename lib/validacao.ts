@@ -189,6 +189,12 @@ export const atribuirEmpresaSchema = z.object({
   empresaId: z.number().int().positive(),
 });
 
+/** PDF de uma seleção manual de linhas de cobrança (checkboxes na tabela). */
+export const selecaoCobrancaSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, "Selecione pelo menos uma linha"),
+  titulo: z.string().trim().max(100).optional(),
+});
+
 /** Estados possíveis de um orçamento. */
 export const ESTADOS_DEVIS = ["RASCUNHO", "ENVIADO", "ACEITE", "RECUSADO"] as const;
 
