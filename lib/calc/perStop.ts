@@ -31,10 +31,17 @@ type ComCapacidades = Pick<
  * Custos efetivos de uma paragem: usa o snapshot congelado quando existe, senão
  * cai no contexto atual (parâmetros globais). Centraliza a regra "por-motorista/
  * por-veículo + histórico estável" para o resto do motor.
+ *
+ * O snapshot pode ser mais antigo do que campos entretanto acrescentados a
+ * `ParagemSnapshot` (ex.: capacidade de paletes, criada só a partir de
+ * 2026-07-14 — um snapshot congelado antes disso não tem esses campos).
+ * Por isso faz-se sempre o merge sobre os defaults do contexto atual: os
+ * valores congelados prevalecem onde existirem, e só os campos em falta
+ * caem no contexto atual — nunca `undefined`/`NaN` por um snapshot antigo
+ * incompleto.
  */
 export function efetivos(p: ParagemInput, ctx: ContextoCalculo): ParagemSnapshot {
-  if (p.snapshot) return p.snapshot;
-  return {
+  const defaults: ParagemSnapshot = {
     custoMotoristaPorKm: ctx.derivados.custoMotoristaPorKm,
     custoVeiculoPorKm: ctx.derivados.custoVeiculoPorKm,
     capacidadeCamiao: ctx.params.capacidadeCamiao,
@@ -50,6 +57,7 @@ export function efetivos(p: ParagemInput, ctx: ContextoCalculo): ParagemSnapshot
     valorHoraExtra: ctx.params.valorHoraExtra,
     margemMinima: ctx.params.margemMinima,
   };
+  return p.snapshot ? { ...defaults, ...p.snapshot } : defaults;
 }
 
 /**

@@ -2,6 +2,33 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-22] | Ao analisar a rota real `RIC-Francisco Lince Blowtec`
+  (pedido do Ricardo) encontrei `coeficienteCarga: NaN` em 3 paragens de
+  paletes — e isso propagava-se ao rateio da rota **inteira**: como
+  `somaCoef` ficava `NaN`, a guarda contra divisão por zero
+  (`somaCoef > 0 ? ... : clientes.length`) caía sempre no ramo de
+  emergência, e os 8 clientes desta rota pagavam todos 12,5% cada,
+  ignorando peso/paletes reais (ex.: Blo-sega, 15 paletes, devia pagar
+  32,25% e só pagava 12,5%; Blowtec, coeficiente 0,03, devia pagar 1,9% e
+  pagava 12,5% às custas dos outros). Causa: `Paragem.snapshot` destas 3
+  paragens foi congelado em 2026-07-06 — **antes** de `capacidadePaleteA/B`
+  sequer existirem no sistema (só chegou a 14/07, ver entrada de
+  2026-07-14 abaixo) — por isso o snapshot não tinha esses campos, e
+  `efetivos()` devolvia o snapshot congelado tal e qual, sem preencher os
+  campos em falta: `nPaletes / undefined` = `NaN`. | Sempre que se
+  acrescenta um campo novo a `ParagemSnapshot` (histórico congelado por
+  paragem), lembrar que snapshots antigos, gravados antes desse campo
+  existir, **nunca o vão ter** — não é hipotético, aconteceu na prática 5
+  semanas depois. `efetivos()` (`lib/calc/perStop.ts`) passou a fazer
+  sempre `{ ...defaultsDoContextoAtual, ...snapshotCongelado }` em vez de
+  devolver o snapshot isolado — os valores congelados continuam a
+  prevalecer onde existirem (histórico estável, inalterado), só os campos
+  em falta é que caem no contexto atual. Verificado: só esta 1 rota tinha
+  impacto real (paragens de paletes com snapshot incompleto); outras 44
+  paragens tinham o mesmo snapshot incompleto mas, por serem de peso (não
+  paletes), nunca tocavam nos campos em falta — ficaram protegidas pela
+  mesma correção, sem precisar de nenhum backfill de dados.
+
 - [2026-08-22] | `pesosEmTransito()` (peso em trânsito) agrupava só por
   `tipoVeiculo+dia`, com dois efeitos indesejados encontrados ao analisar
   a rota real `RIC-Tec-eurored` (2 dias, sem `VAZIO` entre eles): (1)
