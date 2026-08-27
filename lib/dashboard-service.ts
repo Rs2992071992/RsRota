@@ -36,8 +36,18 @@ export interface DashboardData {
   estruturaCustos: { nome: string; valor: number }[];
 }
 
-/** Base partilhada: paragens + contexto + inputs com snapshot efetivo. */
-async function carregarBase() {
+type Base = Awaited<ReturnType<typeof carregarBase>>;
+
+/**
+ * Base partilhada: paragens + contexto + inputs com snapshot efetivo. Cara (7
+ * queries) — quem precisar de mais do que uma "vista" sobre os mesmos dados
+ * (ex.: a página do dashboard, que mostra KPIs e poupança Espanha lado a
+ * lado) deve carregá-la UMA vez e passá-la às funções `carregarX(base)`
+ * abaixo, em vez de deixar cada uma ir buscar a sua própria cópia — com
+ * `connection_limit=1` (ligação pooled da Neon, obrigatória em serverless)
+ * cada query extra é mais tempo em fila pela única ligação disponível.
+ */
+export async function carregarBase() {
   const [paragensRaw, ctx, baseSnap] = await Promise.all([
     prisma.paragem.findMany({ orderBy: { data: "asc" }, include: includeRelacoes }),
     carregarContexto(),
@@ -75,8 +85,8 @@ function despesasPorRota(rotas: RotaCalc[]): DespesaPorRota[] {
 }
 
 /** Página de detalhe da "Estrutura de custos" — todas as rotas, discriminadas por categoria. */
-export async function carregarDespesasDetalhe(): Promise<DespesaPorRota[]> {
-  const { ctx, inputs } = await carregarBase();
+export async function carregarDespesasDetalhe(base?: Base): Promise<DespesaPorRota[]> {
+  const { ctx, inputs } = base ?? (await carregarBase());
   return despesasPorRota(calcularRotas(inputs, ctx));
 }
 
@@ -110,8 +120,8 @@ export interface PoupancaEspanhaData {
  * nenhum custo/rateio). Esta função só agrega o que `calcularParagem` já
  * devolve por paragem; não introduz nenhuma fórmula nova.
  */
-export async function carregarPoupancaEspanha(): Promise<PoupancaEspanhaData> {
-  const { paragensRaw, ctx, inputs } = await carregarBase();
+export async function carregarPoupancaEspanha(base?: Base): Promise<PoupancaEspanhaData> {
+  const { paragensRaw, ctx, inputs } = base ?? (await carregarBase());
 
   const porDia: PoupancaEspanhaDia[] = [];
   for (let i = 0; i < paragensRaw.length; i++) {
@@ -156,8 +166,8 @@ export async function carregarPoupancaEspanha(): Promise<PoupancaEspanhaData> {
   return { porDia, porMes, litrosTotal, totalGeral, totalUltimos12Meses };
 }
 
-export async function carregarDashboard(): Promise<DashboardData> {
-  const { paragensRaw, ctx, inputs } = await carregarBase();
+export async function carregarDashboard(base?: Base): Promise<DashboardData> {
+  const { paragensRaw, ctx, inputs } = base ?? (await carregarBase());
   const rotas = calcularRotas(inputs, ctx);
 
   // KPIs

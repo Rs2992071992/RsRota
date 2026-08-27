@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { carregarDashboard, carregarPoupancaEspanha } from "@/lib/dashboard-service";
+import { carregarBase, carregarDashboard, carregarPoupancaEspanha } from "@/lib/dashboard-service";
 import { fmtEuro, fmtNum } from "@/lib/format";
 import {
   GraficoCustoReceita,
@@ -11,7 +11,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [d, espanha] = await Promise.all([carregarDashboard(), carregarPoupancaEspanha()]);
+  const base = await carregarBase();
+  const [d, espanha] = await Promise.all([carregarDashboard(base), carregarPoupancaEspanha(base)]);
 
   if (d.kpis.nRotas === 0) {
     return (

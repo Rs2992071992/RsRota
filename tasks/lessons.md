@@ -2,6 +2,31 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-27] | "Application error: a server-side exception has occurred" sempre
+  que o Ricardo entrava no escritório (login OK, crash logo a seguir, a
+  carregar `/escritorio/dashboard`). Causa: a página do dashboard chamava
+  `carregarDashboard()` e `carregarPoupancaEspanha()` em paralelo, e CADA UMA
+  chamava internamente `carregarBase()` (7 queries Prisma) — o dashboard
+  disparava a mesma carga pesada (paragens + contexto + snapshot) DUAS VEZES,
+  mais a `contarVencidos()` do layout, ~15 queries concorrentes. Com
+  `DATABASE_URL` em `connection_limit=1` (obrigatório em serverless/Neon
+  pooled, ver entrada de 2026-08-12 abaixo), todas essas queries têm de se
+  enfileirar por UMA única ligação — o total ultrapassava os 10s do timeout
+  do pool e rebentava com `PrismaClientKnownRequestError P2024`, não
+  apanhado por try/catch nenhum → crash da Server Component. Só apanhado a
+  correr `next build && next start` local ligado à BD de produção (`npm run
+  dev` não reproduz bem problemas de connection pool) e a ler os logs do
+  servidor — o browser só mostra o "digest", nunca a causa. | Sempre que uma
+  página faz `Promise.all` de duas funções de serviço que podem partilhar a
+  mesma base de dados cara, verificar se não estão a duplicar o fetch —
+  carregar a base UMA vez (`carregarBase()`, agora exportada) e passá-la
+  explicitamente às funções (`carregarDashboard(base)`,
+  `carregarPoupancaEspanha(base)`) em vez de cada uma ir buscar a sua
+  própria cópia. Para depurar "server-side exception" em produção sem acesso
+  aos logs do Vercel: `next build && next start` local com o `DATABASE_URL`
+  de produção reproduz o mesmo `connection_limit=1` e mostra o stack trace
+  completo no terminal.
+
 - [2026-08-22] | Ao analisar a rota real `RIC-Francisco Lince Blowtec`
   (pedido do Ricardo) encontrei `coeficienteCarga: NaN` em 3 paragens de
   paletes — e isso propagava-se ao rateio da rota **inteira**: como
