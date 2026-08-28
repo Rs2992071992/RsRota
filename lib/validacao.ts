@@ -29,9 +29,15 @@ export const paragemSchema = z
     kmFinal: numNaoNeg,
     kgCarregados: numNaoNeg.default(0),
     kgDescarregados: numNaoNeg.default(0),
+    // ⚠️ Legado (paragens registadas antes de 2026-08-28) — a UI de registo não
+    // envia mais estes 2 campos, só tipoPaleteId/nPaletes abaixo.
     volume: z.boolean().default(false),
     tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
     nPaletes: numNaoNeg.default(0),
+    // Palete desta paragem (2026-08-28 em diante) — catálogo TipoPalete, único
+    // modo para paragens novas exceto VAZIO (ver superRefine abaixo).
+    tipoPaleteId: z.number().int().positive().nullable().optional(),
+    pesoAproximado: numOpcional,
     litrosAbastecidos: numNaoNeg.default(0),
     custoAbastecido: numNaoNeg.default(0),
     zonaPortagem: z.string().trim().default(""),
@@ -66,6 +72,23 @@ export const paragemSchema = z
         message: "Escolha o tipo de palete",
         path: ["tipoPalete"],
       });
+    }
+    // Paletes por dimensão são o único modo de rateio para paragens novas
+    // (exceto VAZIO, que não transporta nada) — ver tasks/lessons.md 2026-08-28.
+    if (d.tipoVeiculo !== "VAZIO") {
+      if (!d.tipoPaleteId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Escolha o tipo de palete",
+          path: ["tipoPaleteId"],
+        });
+      } else if (!d.nPaletes || d.nPaletes <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Indique o nº de paletes",
+          path: ["nPaletes"],
+        });
+      }
     }
   });
 
@@ -102,9 +125,15 @@ export const veiculoSchema = z.object({
   capacidadePaleteB: n.positive("Deve ser > 0"),
   capacidadePaleteACamiao: n.positive("Deve ser > 0"),
   capacidadePaleteBCamiao: n.positive("Deve ser > 0"),
-  // Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas).
+  // Caixa de carga (mm) — opcional, "só camião"; usada no empacotamento de
+  // paletes (Cargas) e no rateio por dimensão (2026-08-28 em diante).
   caixaComprimentoMm: n.positive("Deve ser > 0").nullable().optional(),
   caixaLarguraMm: n.positive("Deve ser > 0").nullable().optional(),
+  // Reboque ao qual este veículo está normalmente acoplado (rateio por
+  // dimensão, CAMIAO+REBOQUE) + fator de segurança sobre a capacidade
+  // geométrica calculada (1 = confiar na geometria).
+  reboqueHabitualId: z.number().int().positive().nullable().optional(),
+  fatorOcupacaoPalete: z.number().positive("Deve ser > 0").optional(),
   // Inspeção periódica — prazo + confirmação de que já foi feita.
   dataLimiteInspecao: z.string().trim().nullable().optional(),
   inspecaoVerificada: z.boolean().optional(),
@@ -257,6 +286,8 @@ export const estimarDevisSchema = z.object({
   volume: z.boolean().default(false),
   tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
   nPaletes: numNaoNeg.default(0),
+  tipoPaleteId: z.number().int().positive().nullable().optional(),
+  pesoAproximado: numOpcional,
   zonaPortagem: z.string().trim().nullable().default(null),
   noitesFora: numNaoNeg.default(0),
   alimentacao: numNaoNeg.default(0),

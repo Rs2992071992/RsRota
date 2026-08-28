@@ -108,12 +108,29 @@ model Veiculo {
   capacidadePaleteB       Float @default(28) // camião+reboque
   capacidadePaleteACamiao Float @default(18) // só camião
   capacidadePaleteBCamiao Float @default(14) // só camião
+  // ⚠️ capacidadePaleteA/B/ACamiao/BCamiao ficam legado a partir de 2026-08-28: só
+  // servem para paragens antigas (Paragem.tipoPalete string) recalcularem exatamente
+  // como sempre. Paragens novas usam capacidade por dimensão (ver caixaComprimentoMm/
+  // LarguraMm + reboqueHabitual abaixo, lib/calc/perStop.ts::capacidadePaleteDimensoes).
 
   // --- Caixa de carga (mm) — opcional; só preenchido para veículos usados
-  // no empacotamento de paletes (ver Carregamento/PedidoPalete). null =
-  // veículo não configurado para esta funcionalidade.
+  // no empacotamento de paletes (ver Carregamento/PedidoPalete) e no rateio por
+  // dimensão (ver acima). null = veículo não configurado para esta funcionalidade.
+  // Representa sempre "só camião" — a caixa do reboque vem de `reboqueHabitual`.
   caixaComprimentoMm Float?
   caixaLarguraMm     Float?
+
+  // Reboque ao qual este camião está normalmente acoplado (na prática é sempre o
+  // mesmo par camião/reboque) — usado para somar a caixa do reboque à do camião
+  // quando Paragem.tipoVeiculo = CAMIAO+REBOQUE, no rateio por dimensão. null =
+  // este veículo nunca anda com reboque (ou ainda não configurado).
+  reboqueHabitualId Int?
+  reboqueHabitual   Reboque? @relation(fields: [reboqueHabitualId], references: [id], onDelete: SetNull)
+
+  // Multiplicador de segurança sobre a capacidade geométrica calculada (paletesQueCabem)
+  // — 1 = confiar 100% na fórmula de área; < 1 corrige para baixo um veículo/reboque
+  // concreto com perdas reais (estrutura, acesso) que a área pura não capta.
+  fatorOcupacaoPalete Float @default(1)
 
   // --- Inspeção periódica — aviso ao motorista ao selecionar o veículo no
   // registo, a partir de 45 dias antes do prazo. `inspecaoVerificada` cala o
@@ -197,12 +214,29 @@ model Paragem {
   tipoVeiculo String // CAMIAO | CAMIAO+REBOQUE | VAZIO
   cliente     String
 
-  // Carga por volume (paletes) em vez de peso. Quando true, tipoPalete
-  // identifica o tamanho e nPaletes a quantidade; a capacidade usada no
-  // cálculo depende também de tipoVeiculo (camião vs camião+reboque) — ver
-  // Parametros/Veiculo.capacidadePaleteA/B/ACamiao/BCamiao.
+  // ⚠️ Legado (paragens registadas antes de 2026-08-28): carga por volume (paletes)
+  // em vez de peso. Quando true, tipoPalete identifica o tamanho e nPaletes a
+  // quantidade; a capacidade usada no cálculo depende também de tipoVeiculo (camião
+  // vs camião+reboque) — ver Parametros/Veiculo.capacidadePaleteA/B/ACamiao/BCamiao.
+  // A UI de registo não escreve mais estes 2 campos — só ficam para o motor
+  // continuar a recalcular o histórico exatamente como sempre (lib/calc/perStop.ts).
   volume     Boolean @default(false)
   tipoPalete String? // PALETE_120X80 | PALETE_120X100, só relevante se volume=true
+
+  // Palete desta paragem (2026-08-28 em diante — único modo para paragens novas,
+  // exceto VAZIO). tipoPaleteId é só referência/label (catálogo TipoPalete, pode
+  // mudar de dimensões no futuro); paleteComprimentoMm/LarguraMm são a cópia
+  // congelada das dimensões no momento do registo — fonte de verdade do cálculo,
+  // imune a edições posteriores do catálogo (mesmo princípio do resto do snapshot).
+  tipoPaleteId        Int?
+  tipoPaleteRef       TipoPalete? @relation(fields: [tipoPaleteId], references: [id], onDelete: SetNull)
+  paleteComprimentoMm Float?
+  paleteLarguraMm     Float?
+
+  // Peso aproximado transportado nesta paragem (kg) — opcional, só para alimentar a
+  // tabela de consumos (TabelaConsumo); nunca entra no rateio/coeficienteCarga, que
+  // é sempre por dimensão de palete. Sem valor -> consumo trata como vazio (0 kg).
+  pesoAproximado Float?
 
   // Motorista que registou a paragem (null em dados importados/antigos).
   motoristaId Int?
@@ -393,7 +427,8 @@ model TipoPalete {
   ativo         Boolean @default(true)
   ordem         Int     @default(0)
 
-  pedidos PedidoPalete[]
+  pedidos  PedidoPalete[]
+  paragens Paragem[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -403,7 +438,9 @@ model TipoPalete {
 /// NÃO pertence a um Veiculo fixo: é escolhido por carregamento (ver
 /// Carregamento.reboque), já que o mesmo veículo pode usar reboques
 /// diferentes consoante a volta. `ativo=false` retira de serviço preservando
-/// o histórico dos carregamentos que já o usaram.
+/// o histórico dos carregamentos que já o usaram. `veiculosHabituais` é outra
+/// relação (rateio por dimensão, ver Veiculo.reboqueHabitual) — regista qual é o
+/// par habitual na prática, sem impedir escolher outro reboque num Carregamento.
 model Reboque {
   id            Int     @id @default(autoincrement())
   nome          String
@@ -412,7 +449,8 @@ model Reboque {
   larguraMm     Float
   ativo         Boolean @default(true)
 
-  carregamentos Carregamento[]
+  carregamentos     Carregamento[]
+  veiculosHabituais Veiculo[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt

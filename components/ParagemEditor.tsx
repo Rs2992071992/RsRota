@@ -11,6 +11,12 @@ export interface VeiculoOpcao {
   matricula: string | null;
 }
 
+/** Tipo de palete do catálogo (dimensões reais, mm) — ver /escritorio/cargas. */
+export interface TipoPaleteOpcao {
+  id: number;
+  nome: string;
+}
+
 export interface ParagemEditavel {
   id: number;
   idRota: string;
@@ -21,11 +27,15 @@ export interface ParagemEditavel {
   cliente: string;
   kmInicial: number;
   kmFinal: number;
+  // ⚠️ Legado (paragens registadas antes de 2026-08-28) — ver tipoPaleteId abaixo.
   kgCarregados: number;
   kgDescarregados: number;
   volume: boolean;
   tipoPalete: string | null;
   nPaletes: number;
+  // Palete desta paragem (2026-08-28 em diante).
+  tipoPaleteId: number | null;
+  pesoAproximado: number | null;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -42,6 +52,7 @@ interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
   veiculos: VeiculoOpcao[];
+  tiposPalete: TipoPaleteOpcao[];
   /** Nomes de clientes conhecidos, para o dropdown "Faturar esta recolha a". */
   clientes: string[];
   valorNoite: number;
@@ -58,6 +69,7 @@ export default function ParagemEditor({
   paragem,
   zonas,
   veiculos,
+  tiposPalete,
   clientes,
   valorNoite,
   mostrarReceita = false,
@@ -69,6 +81,8 @@ export default function ParagemEditor({
   const [f, setF] = useState({
     ...paragem,
     veiculoId: paragem.veiculoId === null ? "" : String(paragem.veiculoId),
+    tipoPaleteId: paragem.tipoPaleteId === null ? "" : String(paragem.tipoPaleteId),
+    pesoAproximado: paragem.pesoAproximado === null ? "" : String(paragem.pesoAproximado),
     data: paragem.data.slice(0, 10),
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
@@ -78,29 +92,38 @@ export default function ParagemEditor({
     setF((prev) => ({ ...prev, [k]: v }));
   }
 
-  const ehPalete = f.volume;
+  // Modo desta paragem, a partir dos dados que já tem: "paletes" (2026-08-28
+  // em diante, tipoPaleteId), "paletes-legado" (tipoPalete string, antes
+  // disso) ou "kg" (peso — a esmagadora maioria do histórico). O escritório
+  // pode converter kg/legado -> paletes manualmente (botão abaixo) quando
+  // decidir; nunca o inverso (não faz sentido voltar a peso).
+  const [modo, setModo] = useState<"kg" | "paletes-legado" | "paletes">(
+    paragem.tipoPaleteId != null ? "paletes" : paragem.volume ? "paletes-legado" : "kg",
+  );
 
-  // VAZIO: não há carga nenhuma — força volume=false ao escolher.
+  // VAZIO: não há carga nenhuma.
   function setTipoVeiculo(v: string) {
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
       volume: v === "VAZIO" ? false : prev.volume,
       tipoPalete: v === "VAZIO" ? null : prev.tipoPalete,
+      tipoPaleteId: v === "VAZIO" ? "" : prev.tipoPaleteId,
     }));
   }
 
-  // Paletes: o peso não entra (ocupação é por nº de paletes, combustível
-  // tratado sempre como vazio) — ligar/desligar limpa os campos que deixam
-  // de fazer sentido.
-  function setVolume(v: boolean) {
+  // Converte esta paragem (kg ou palete legado) para o modo novo (dimensão) —
+  // limpa os campos que deixam de fazer sentido, mesmo princípio do antigo
+  // "Volume (paletes)". Não afeta o coeficienteCarga/rateio até se escolher
+  // um tipo de palete e "Guardar".
+  function converterParaPaletesNovo() {
+    setModo("paletes");
     setF((prev) => ({
       ...prev,
-      volume: v,
-      tipoPalete: v ? prev.tipoPalete : null,
-      nPaletes: v ? prev.nPaletes : 0,
-      kgCarregados: v ? 0 : prev.kgCarregados,
-      kgDescarregados: v ? 0 : prev.kgDescarregados,
+      volume: false,
+      tipoPalete: null,
+      kgCarregados: 0,
+      kgDescarregados: 0,
     }));
   }
 
@@ -108,6 +131,10 @@ export default function ParagemEditor({
     setErro("");
     if (Number(f.kmFinal) < Number(f.kmInicial)) {
       setErro("KM Final deve ser ≥ KM Inicial.");
+      return;
+    }
+    if (modo === "paletes" && f.tipoVeiculo !== "VAZIO" && (!f.tipoPaleteId || Number(f.nPaletes) <= 0)) {
+      setErro("Escolha o tipo de palete e o nº de paletes.");
       return;
     }
     setEstado("a-gravar");
@@ -121,11 +148,13 @@ export default function ParagemEditor({
         cliente: f.cliente.trim(),
         kmInicial: Number(f.kmInicial),
         kmFinal: Number(f.kmFinal),
-        kgCarregados: Number(f.kgCarregados),
-        kgDescarregados: Number(f.kgDescarregados),
-        volume: f.volume,
-        tipoPalete: f.volume ? f.tipoPalete : null,
-        nPaletes: Number(f.nPaletes),
+        kgCarregados: modo === "kg" ? Number(f.kgCarregados) : 0,
+        kgDescarregados: modo === "kg" ? Number(f.kgDescarregados) : 0,
+        volume: modo === "paletes-legado",
+        tipoPalete: modo === "paletes-legado" ? f.tipoPalete : null,
+        nPaletes: modo === "kg" ? 0 : Number(f.nPaletes),
+        tipoPaleteId: modo === "paletes" && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
+        pesoAproximado: f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
         noitesFora: Number(f.noitesFora),
@@ -267,22 +296,62 @@ export default function ParagemEditor({
           </div>
           {campo("kmInicial", "KM Inicial")}
           {campo("kmFinal", "KM Final")}
-          {f.tipoVeiculo !== "VAZIO" && (
+          {f.tipoVeiculo !== "VAZIO" && modo !== "paletes" && (
             <div className="col-span-2">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={f.volume}
-                  onChange={(e) => setVolume(e.target.checked)}
-                />
-                Volume (paletes)
-              </label>
+              <button
+                type="button"
+                onClick={converterParaPaletesNovo}
+                className="text-sm font-medium text-brand hover:underline"
+              >
+                Converter para paletes (por dimensão) →
+              </button>
             </div>
           )}
-          {ehPalete ? (
+          {f.tipoVeiculo === "VAZIO" ? null : modo === "paletes" ? (
             <>
               <div>
                 <label className="label">Tipo de palete</label>
+                <select
+                  className="input"
+                  value={f.tipoPaleteId}
+                  onChange={(e) => set("tipoPaleteId", e.target.value as never)}
+                >
+                  <option value="">— escolher —</option>
+                  {tiposPalete.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Nº de paletes</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  className="input"
+                  value={f.nPaletes}
+                  onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Peso aproximado (kg) — opcional</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="Só para estimar o consumo de combustível"
+                  className="input"
+                  value={f.pesoAproximado}
+                  onChange={(e) => set("pesoAproximado", e.target.value as never)}
+                />
+              </div>
+            </>
+          ) : modo === "paletes-legado" ? (
+            <>
+              <div>
+                <label className="label">Tipo de palete (legado)</label>
                 <select
                   className="input"
                   value={f.tipoPalete ?? ""}

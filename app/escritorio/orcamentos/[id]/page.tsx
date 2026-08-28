@@ -14,7 +14,7 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 
-  const [devis, clientes, veiculos, motoristas, portagens] = await Promise.all([
+  const [devis, clientes, veiculos, motoristas, portagens, tiposPalete] = await Promise.all([
     prisma.devis.findUnique({ where: { id } }),
     listarClientesParaOrcamento(),
     prisma.veiculo.findMany({
@@ -28,6 +28,11 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
       select: { id: true, nome: true, codigo: true },
     }),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" }, select: { zona: true } }),
+    prisma.tipoPalete.findMany({
+      where: { ativo: true },
+      orderBy: { ordem: "asc" },
+      select: { id: true, nome: true },
+    }),
   ]);
 
   if (!devis) notFound();
@@ -73,6 +78,7 @@ export default async function OrcamentoDetalhePage({ params }: { params: { id: s
         devis={dados}
         clientes={clientes}
         veiculos={veiculos}
+        tiposPalete={tiposPalete}
         motoristas={motoristas}
         zonas={portagens.map((p) => p.zona)}
       />

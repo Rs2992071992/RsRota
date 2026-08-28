@@ -2,12 +2,13 @@ import { prisma } from "@/lib/db";
 import {
   calcularSnapshot,
   type MotoristaParams,
+  type VeiculoCaixa,
   type VeiculoParams,
 } from "@/lib/calc/snapshot";
 import type { ParagemSnapshot, ParametrosCusto, PneuItem } from "@/lib/calc/types";
-import type { Pneu, Utilizador, Veiculo } from "@prisma/client";
+import type { Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
 
-type VeiculoComPneus = Veiculo & { pneus: Pneu[] };
+type VeiculoComPneus = Veiculo & { pneus: Pneu[]; reboqueHabitual: Reboque | null };
 
 const toPneuItem = (p: Pneu): PneuItem => ({ custo: p.custo, km: p.km });
 
@@ -62,6 +63,22 @@ export async function carregarBaseSnapshot(): Promise<BaseSnapshot> {
   return { base: base as ParametrosCusto, pneusGlobais: pneus.map(toPneuItem) };
 }
 
+/**
+ * Caixa de carga (mm) do veículo + do seu reboque habitual, e o fator de
+ * ocupação — ver `lib/calc/snapshot.ts::VeiculoCaixa`. Não fazem parte de
+ * `VeiculoParams` (não há default global em Parametros).
+ */
+function veiculoCaixa(v: VeiculoComPneus | null): VeiculoCaixa | null {
+  if (!v) return null;
+  return {
+    caixaComprimentoMm: v.caixaComprimentoMm,
+    caixaLarguraMm: v.caixaLarguraMm,
+    caixaReboqueComprimentoMm: v.reboqueHabitual?.comprimentoMm ?? null,
+    caixaReboqueLarguraMm: v.reboqueHabitual?.larguraMm ?? null,
+    fatorOcupacaoPalete: v.fatorOcupacaoPalete,
+  };
+}
+
 /** Snapshot a partir das entidades já carregadas (motorista/veículo incluídos). */
 export function snapshotDeEntidades(
   { base, pneusGlobais }: BaseSnapshot,
@@ -69,7 +86,7 @@ export function snapshotDeEntidades(
   veiculo: VeiculoComPneus | null,
 ): ParagemSnapshot {
   const pneus = veiculo && veiculo.pneus.length > 0 ? veiculo.pneus.map(toPneuItem) : pneusGlobais;
-  return calcularSnapshot(base, motoristaParams(motorista), veiculoParams(veiculo), pneus);
+  return calcularSnapshot(base, motoristaParams(motorista), veiculoParams(veiculo), pneus, veiculoCaixa(veiculo));
 }
 
 /**
@@ -86,7 +103,7 @@ export async function snapshotParaRegisto(
     veiculoId
       ? prisma.veiculo.findUnique({
           where: { id: veiculoId },
-          include: { pneus: { orderBy: { ordem: "asc" } } },
+          include: { pneus: { orderBy: { ordem: "asc" } }, reboqueHabitual: true },
         })
       : null,
   ]);

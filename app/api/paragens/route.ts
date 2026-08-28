@@ -5,6 +5,7 @@ import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
 import { iniciais, gerarIdRota } from "@/lib/rota-id";
+import { resolverPaleteDimensoes } from "@/lib/rotas-service";
 
 // POST /api/paragens — cria uma paragem (motorista ou escritório).
 export async function POST(req: Request) {
@@ -36,7 +37,10 @@ export async function POST(req: Request) {
     idRota = await gerarIdRota(iniciais(user?.nome, user?.codigo ?? "ROTA"), d.cliente);
   }
 
-  const snapshot = await snapshotParaRegisto(motoristaId, veiculoId);
+  const [snapshot, paleteDimensoes] = await Promise.all([
+    snapshotParaRegisto(motoristaId, veiculoId),
+    resolverPaleteDimensoes(d.tipoPaleteId),
+  ]);
 
   const criada = await prisma.paragem.create({
     data: {
@@ -56,6 +60,9 @@ export async function POST(req: Request) {
       volume: d.volume,
       tipoPalete: d.volume ? (d.tipoPalete ?? null) : null,
       nPaletes: d.nPaletes,
+      tipoPaleteId: d.tipoPaleteId ?? null,
+      ...paleteDimensoes,
+      pesoAproximado: d.pesoAproximado ?? null,
       litrosAbastecidos: d.litrosAbastecidos,
       custoAbastecido: d.custoAbastecido,
       zonaPortagem: d.zonaPortagem,

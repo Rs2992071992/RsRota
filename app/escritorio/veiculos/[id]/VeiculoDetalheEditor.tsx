@@ -12,11 +12,13 @@ export default function VeiculoDetalheEditor({
   veiculoNome,
   inicial,
   manutencoesIniciais,
+  reboques,
 }: {
   veiculoId: number;
   veiculoNome: string;
   inicial: VeiculoForm;
   manutencoesIniciais: ManutencaoBD[];
+  reboques: { id: number; nome: string }[];
 }) {
   const router = useRouter();
   const [f, setF] = useState<VeiculoForm>(inicial);
@@ -85,7 +87,7 @@ export default function VeiculoDetalheEditor({
 
       {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
 
-      <VeiculoCamposForm f={f} setF={setF} />
+      <VeiculoCamposForm f={f} setF={setF} reboques={reboques} />
 
       <div className="mt-5 flex items-center justify-between">
         <button onClick={apagar} disabled={estado !== "idle"} className="text-sm font-medium text-red-600 hover:text-red-800">

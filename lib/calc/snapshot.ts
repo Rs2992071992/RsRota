@@ -34,6 +34,20 @@ export type VeiculoParams = Pick<
 >;
 
 /**
+ * Caixa de carga (mm) do veículo + do seu reboque habitual, e o fator de
+ * ocupação — não fazem parte de `ParametrosCusto` (não há default global,
+ * só existem por-veículo), por isso não entram no merge de `calcularSnapshot`
+ * como os campos acima; são passados à parte e só copiados para o snapshot.
+ */
+export interface VeiculoCaixa {
+  caixaComprimentoMm: number | null;
+  caixaLarguraMm: number | null;
+  caixaReboqueComprimentoMm: number | null;
+  caixaReboqueLarguraMm: number | null;
+  fatorOcupacaoPalete: number;
+}
+
+/**
  * Constrói o snapshot de custos efetivos de uma paragem a partir dos parâmetros
  * globais + (opcionalmente) os parâmetros próprios do motorista e do veículo
  * usados. Quando `motorista`/`veiculo` são null, usam-se os defaults globais
@@ -48,6 +62,7 @@ export function calcularSnapshot(
   motorista: MotoristaParams | null,
   veiculo: VeiculoParams | null,
   pneus: PneuItem[],
+  caixa: VeiculoCaixa | null = null,
 ): ParagemSnapshot {
   const merged: ParametrosCusto = {
     ...base,
@@ -70,5 +85,10 @@ export function calcularSnapshot(
     valorNoite: base.valorNoite,
     valorHoraExtra: base.valorHoraExtra,
     margemMinima: base.margemMinima,
+    caixaComprimentoMm: caixa?.caixaComprimentoMm ?? null,
+    caixaLarguraMm: caixa?.caixaLarguraMm ?? null,
+    caixaReboqueComprimentoMm: caixa?.caixaReboqueComprimentoMm ?? null,
+    caixaReboqueLarguraMm: caixa?.caixaReboqueLarguraMm ?? null,
+    fatorOcupacaoPalete: caixa?.fatorOcupacaoPalete ?? 1,
   };
 }

@@ -35,6 +35,10 @@ export interface VeiculoBD {
   capacidadePaleteB: number;
   capacidadePaleteACamiao: number;
   capacidadePaleteBCamiao: number;
+  caixaComprimentoMm: number | null;
+  caixaLarguraMm: number | null;
+  reboqueHabitualId: number | null;
+  fatorOcupacaoPalete: number;
   nParagens: number;
   pneus: PneuForm[];
   manutencoes: ManutencaoBD[];
@@ -46,9 +50,10 @@ interface Props {
   veiculos: VeiculoBD[];
   template: Template;
   avariasPendentes: number;
+  reboques: { id: number; nome: string }[];
 }
 
-export default function VeiculosManager({ veiculos, template, avariasPendentes }: Props) {
+export default function VeiculosManager({ veiculos, template, avariasPendentes, reboques }: Props) {
   const router = useRouter();
   const [criarAberto, setCriarAberto] = useState(false);
 
@@ -113,6 +118,7 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes }
       {criarAberto && (
         <NovoVeiculoModal
           inicial={veiculoParaForm(template)}
+          reboques={reboques}
           onClose={() => setCriarAberto(false)}
           onSaved={() => {
             setCriarAberto(false);
@@ -126,10 +132,12 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes }
 
 function NovoVeiculoModal({
   inicial,
+  reboques,
   onClose,
   onSaved,
 }: {
   inicial: VeiculoForm;
+  reboques: { id: number; nome: string }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -174,7 +182,7 @@ function NovoVeiculoModal({
 
         {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
 
-        <VeiculoCamposForm f={f} setF={setF} />
+        <VeiculoCamposForm f={f} setF={setF} reboques={reboques} />
 
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="btn-secondary">Cancelar</button>

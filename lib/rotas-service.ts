@@ -7,19 +7,36 @@ import {
   type BaseSnapshot,
 } from "@/lib/snapshot-service";
 import type { ParagemInput, ParagemSnapshot, RotaCalc } from "@/lib/calc/types";
-import type { Paragem, Pneu, Utilizador, Veiculo } from "@prisma/client";
+import type { Paragem, Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
 
 /** Paragem com as relações necessárias para resolver o snapshot efetivo. */
 type ParagemComRelacoes = Paragem & {
   motorista: Utilizador | null;
-  veiculo: (Veiculo & { pneus: Pneu[] }) | null;
+  veiculo: (Veiculo & { pneus: Pneu[]; reboqueHabitual: Reboque | null }) | null;
 };
 
-/** Include reutilizável para carregar paragens com motorista + veículo (+ pneus). */
+/** Include reutilizável para carregar paragens com motorista + veículo (+ pneus + reboque habitual). */
 export const includeRelacoes = {
   motorista: true,
-  veiculo: { include: { pneus: { orderBy: { ordem: "asc" as const } } } },
+  veiculo: {
+    include: { pneus: { orderBy: { ordem: "asc" as const } }, reboqueHabitual: true },
+  },
 };
+
+/**
+ * Resolve as dimensões (mm) de um TipoPalete do catálogo, para congelar numa
+ * Paragem no momento do registo (`paleteComprimentoMm`/`LarguraMm`) — nunca uma
+ * referência viva: se o catálogo mudar depois, esta paragem já registada não
+ * é afetada (mesmo princípio do resto do snapshot congelado).
+ */
+export async function resolverPaleteDimensoes(
+  tipoPaleteId: number | null | undefined,
+): Promise<{ paleteComprimentoMm: number | null; paleteLarguraMm: number | null }> {
+  if (!tipoPaleteId) return { paleteComprimentoMm: null, paleteLarguraMm: null };
+  const tipo = await prisma.tipoPalete.findUnique({ where: { id: tipoPaleteId } });
+  if (!tipo) return { paleteComprimentoMm: null, paleteLarguraMm: null };
+  return { paleteComprimentoMm: tipo.comprimentoMm, paleteLarguraMm: tipo.larguraMm };
+}
 
 export interface FiltrosRota {
   de?: Date;
@@ -54,6 +71,10 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     volume: p.volume,
     tipoPalete: p.tipoPalete,
     nPaletes: p.nPaletes,
+    tipoPaleteId: p.tipoPaleteId,
+    paleteComprimentoMm: p.paleteComprimentoMm,
+    paleteLarguraMm: p.paleteLarguraMm,
+    pesoAproximado: p.pesoAproximado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
     noitesFora: p.noitesFora,

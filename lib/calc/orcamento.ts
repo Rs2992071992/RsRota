@@ -19,11 +19,16 @@ export interface LinhaDevis {
   km: number;
   pesoKg: number;
   tipoVeiculo: string;
-  /** Carga por volume (paletes) em vez de peso — ver tipoPalete/nPaletes. */
+  /** ⚠️ Legado — ver tipoPaleteId/nPaletes abaixo (único modo para linhas novas). */
   volume?: boolean;
   tipoPalete?: string | null;
-  /** Nº de paletes (só relevante se volume=true). */
+  /** Nº de paletes (linhas novas e legado — ver tipoPaleteId/tipoPalete). */
   nPaletes: number;
+  /** Palete desta linha (2026-08-28 em diante) — ver ParagemInput equivalente. */
+  tipoPaleteId?: number | null;
+  paleteComprimentoMm?: number | null;
+  paleteLarguraMm?: number | null;
+  pesoAproximado?: number | null;
   zonaPortagem: string | null;
   /** Nº de noites fora do motorista (opcional; ausente em linhas antigas). */
   noitesFora?: number;
@@ -43,6 +48,10 @@ export interface EstimarLinhaInput {
   volume?: boolean;
   tipoPalete?: string | null;
   nPaletes?: number;
+  tipoPaleteId?: number | null;
+  paleteComprimentoMm?: number | null;
+  paleteLarguraMm?: number | null;
+  pesoAproximado?: number | null;
   zonaPortagem?: string | null;
   /** Portagens extra fixas (opcional; somam-se ao custo). */
   portagensExtra?: number;
@@ -123,6 +132,10 @@ export function estimarLinha(
       volume: input.volume || false,
       tipoPalete: input.tipoPalete ?? null,
       nPaletes: input.nPaletes || 0,
+      tipoPaleteId: input.tipoPaleteId ?? null,
+      paleteComprimentoMm: input.paleteComprimentoMm ?? null,
+      paleteLarguraMm: input.paleteLarguraMm ?? null,
+      pesoAproximado: input.pesoAproximado ?? null,
       zonaPortagem: input.zonaPortagem || "",
       portagensExtra: input.portagensExtra || 0,
       noitesFora: 0,

@@ -167,6 +167,66 @@ describe("calcularRota — rateio misto peso + paletes normaliza a 100 %", () =>
   });
 });
 
+// Paletes por dimensão (2026-08-28) — único modo de rateio para paragens
+// novas. Snapshot com a caixa real do AO-33-PJ (7500×2480) + Lecitrailer
+// (8150×2480), ver tests/calc/perStop.test.ts para a validação da fórmula.
+const snapshotDimensao = {
+  custoMotoristaPorKm: ctx.derivados.custoMotoristaPorKm,
+  custoVeiculoPorKm: ctx.derivados.custoVeiculoPorKm,
+  capacidadeCamiao: PARAMS.capacidadeCamiao,
+  capacidadeReboque: PARAMS.capacidadeReboque,
+  capacidadePaleteA: PARAMS.capacidadePaleteA,
+  capacidadePaleteB: PARAMS.capacidadePaleteB,
+  capacidadePaleteACamiao: PARAMS.capacidadePaleteACamiao,
+  capacidadePaleteBCamiao: PARAMS.capacidadePaleteBCamiao,
+  precoCombRef: PARAMS.precoCombRef,
+  consumoAdblue: PARAMS.consumoAdblue,
+  precoAdblue: PARAMS.precoAdblue,
+  valorNoite: PARAMS.valorNoite,
+  valorHoraExtra: PARAMS.valorHoraExtra,
+  margemMinima: PARAMS.margemMinima,
+  caixaComprimentoMm: 7500,
+  caixaLarguraMm: 2480,
+  caixaReboqueComprimentoMm: 8150,
+  caixaReboqueLarguraMm: 2480,
+  fatorOcupacaoPalete: 1,
+};
+
+describe("calcularRota — rateio misto peso + paletes por dimensão normaliza a 100 %", () => {
+  const mista: ParagemInput[] = [
+    paragemBase({ cliente: "Cliente Peso", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, receitaPaga: 1000 }),
+    paragemBase({
+      cliente: "Cliente Paletes Novo",
+      kmInicial: 300,
+      kmFinal: 450,
+      nPaletes: 30,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800, // capacidade = 38 (18 camião + 20 Lecitrailer)
+      pesoAproximado: 20000, // escalão 35 L/100km da tabela (ver fixtures)
+      snapshot: snapshotDimensao,
+      receitaPaga: 500,
+    }),
+  ];
+  const r = calcularRota("MIXDIM01", mista, ctx);
+
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("Σ quotas = 100 %", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.quota, 0);
+    expect(soma).toBeCloseTo(1, 6);
+  });
+  it("cliente de paletes por dimensão usa nPaletes/capacidade geométrica (30/38), não peso/kg", () => {
+    const paletes = r.rateio.find((c) => c.cliente === "Cliente Paletes Novo")!;
+    expect(paletes.coefReal).toBeCloseTo(30 / 38, 6);
+  });
+  it("consumo do troço de paletes usa o peso aproximado (20000kg -> escalão 35, não vazio)", () => {
+    const troco = r.paragens.find((p) => p.cliente === "Cliente Paletes Novo")!;
+    expect(troco.consumoL100).toBe(35);
+  });
+});
+
 // Reproduz o cenário real (rota RIC-Tec-eurored): recolha num fornecedor,
 // material entregue mais tarde ao cliente final — o fornecedor não deve
 // pagar rateio, o custo soma-se à quota do cliente indicado em `faturarCliente`.

@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ParagemEditor, { type ParagemEditavel, type VeiculoOpcao } from "@/components/ParagemEditor";
+import ParagemEditor, {
+  type ParagemEditavel,
+  type TipoPaleteOpcao,
+  type VeiculoOpcao,
+} from "@/components/ParagemEditor";
 
 interface Props {
   paragem: ParagemEditavel;
   zonas: string[];
   veiculos: VeiculoOpcao[];
+  tiposPalete: TipoPaleteOpcao[];
   clientes: string[];
   valorNoite: number;
 }
 
 /** Botões "Editar" e "Apagar" (escritório) para uma paragem. */
-export default function ParagemAcoes({ paragem, zonas, veiculos, clientes, valorNoite }: Props) {
+export default function ParagemAcoes({ paragem, zonas, veiculos, tiposPalete, clientes, valorNoite }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [aApagar, setAApagar] = useState(false);
@@ -57,6 +62,7 @@ export default function ParagemAcoes({ paragem, zonas, veiculos, clientes, valor
           paragem={paragem}
           zonas={zonas}
           veiculos={veiculos}
+          tiposPalete={tiposPalete}
           clientes={clientes}
           valorNoite={valorNoite}
           mostrarReceita

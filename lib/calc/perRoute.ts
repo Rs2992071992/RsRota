@@ -185,6 +185,8 @@ export function calcularRota(
       p.nPaletes || 0,
       p.volume || false,
       p.tipoPalete ?? null,
+      p.paleteComprimentoMm ?? null,
+      p.paleteLarguraMm ?? null,
     );
     // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
     // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.

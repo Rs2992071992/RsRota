@@ -9,7 +9,7 @@ export default async function HistoricoPage() {
   const sessao = getSessaoInfo();
   const motoristaId = sessao?.perfil === "MOTORISTA" ? sessao.id : -1;
 
-  const [paragensRaw, portagens, params, veiculos, nomesClientes] = await Promise.all([
+  const [paragensRaw, portagens, params, veiculos, tiposPalete, nomesClientes] = await Promise.all([
     prisma.paragem.findMany({
       where: { motoristaId },
       orderBy: [{ data: "desc" }, { id: "desc" }],
@@ -21,6 +21,9 @@ export default async function HistoricoPage() {
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true },
     }),
+    // Motorista não tem acesso a /api/tipos-palete (só escritório) — vem
+    // server-side, mesmo padrão de app/motorista/registo/page.tsx.
+    prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
     listarNomesClientes(),
   ]);
 
@@ -39,6 +42,8 @@ export default async function HistoricoPage() {
     volume: p.volume,
     tipoPalete: p.tipoPalete,
     nPaletes: p.nPaletes,
+    tipoPaleteId: p.tipoPaleteId,
+    pesoAproximado: p.pesoAproximado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
     noitesFora: p.noitesFora,
@@ -55,6 +60,7 @@ export default async function HistoricoPage() {
       paragens={paragens}
       zonas={portagens.map((p) => p.zona)}
       veiculos={veiculos}
+      tiposPalete={tiposPalete}
       clientes={nomesClientes.map((c) => c.nome)}
       valorNoite={params?.valorNoite ?? 70}
     />

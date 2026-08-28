@@ -29,6 +29,8 @@ export interface VeiculoLike {
   capacidadePaleteBCamiao: number;
   caixaComprimentoMm?: number | null;
   caixaLarguraMm?: number | null;
+  reboqueHabitualId?: number | null;
+  fatorOcupacaoPalete?: number;
   dataLimiteInspecao?: Date | string | null;
   inspecaoVerificada?: boolean;
   pneus: PneuForm[];
@@ -52,9 +54,13 @@ export interface VeiculoForm {
   capacidadePaleteB: number;
   capacidadePaleteACamiao: number;
   capacidadePaleteBCamiao: number;
-  /** Caixa de carga (mm) — opcional, só usado no empacotamento de paletes (Cargas). */
+  /** Caixa de carga (mm) — "só camião"; empacotamento de paletes (Cargas) e
+   * rateio por dimensão (2026-08-28+). */
   caixaComprimentoMm: number | null;
   caixaLarguraMm: number | null;
+  /** Reboque habitual (rateio por dimensão, CAMIAO+REBOQUE) + fator de segurança. */
+  reboqueHabitualId: number | null;
+  fatorOcupacaoPalete: number;
   /** Prazo de inspeção (yyyy-mm-dd) — aviso ao motorista a partir de 45 dias antes. */
   dataLimiteInspecao: string | null;
   inspecaoVerificada: boolean;
@@ -104,6 +110,8 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
     capacidadePaleteBCamiao: v.capacidadePaleteBCamiao,
     caixaComprimentoMm: v.caixaComprimentoMm ?? null,
     caixaLarguraMm: v.caixaLarguraMm ?? null,
+    reboqueHabitualId: v.reboqueHabitualId ?? null,
+    fatorOcupacaoPalete: v.fatorOcupacaoPalete ?? 1,
     dataLimiteInspecao: v.dataLimiteInspecao
       ? new Date(v.dataLimiteInspecao).toISOString().slice(0, 10)
       : null,

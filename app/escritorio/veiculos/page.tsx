@@ -4,7 +4,7 @@ import VeiculosManager, { type VeiculoBD } from "./VeiculosManager";
 export const dynamic = "force-dynamic";
 
 export default async function VeiculosPage() {
-  const [veiculos, params, pneusGlobais, avariasPendentes] = await Promise.all([
+  const [veiculos, params, pneusGlobais, avariasPendentes, reboques] = await Promise.all([
     prisma.veiculo.findMany({
       orderBy: { criadoEm: "asc" },
       include: {
@@ -16,6 +16,7 @@ export default async function VeiculosPage() {
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
     prisma.avaria.count({ where: { resolvida: false } }),
+    prisma.reboque.findMany({ where: { ativo: true }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
   ]);
 
   // Template (valores por defeito) para pré-preencher um veículo novo.
@@ -37,6 +38,10 @@ export default async function VeiculosPage() {
     capacidadePaleteB: params?.capacidadePaleteB ?? 28,
     capacidadePaleteACamiao: params?.capacidadePaleteACamiao ?? 18,
     capacidadePaleteBCamiao: params?.capacidadePaleteBCamiao ?? 14,
+    caixaComprimentoMm: null,
+    caixaLarguraMm: null,
+    reboqueHabitualId: null,
+    fatorOcupacaoPalete: 1,
     pneus: pneusGlobais.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
   };
 
@@ -60,6 +65,10 @@ export default async function VeiculosPage() {
     capacidadePaleteB: v.capacidadePaleteB,
     capacidadePaleteACamiao: v.capacidadePaleteACamiao,
     capacidadePaleteBCamiao: v.capacidadePaleteBCamiao,
+    caixaComprimentoMm: v.caixaComprimentoMm,
+    caixaLarguraMm: v.caixaLarguraMm,
+    reboqueHabitualId: v.reboqueHabitualId,
+    fatorOcupacaoPalete: v.fatorOcupacaoPalete,
     nParagens: v._count.paragens,
     pneus: v.pneus.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
     manutencoes: v.manutencoes.map((m) => ({
@@ -71,5 +80,12 @@ export default async function VeiculosPage() {
     })),
   }));
 
-  return <VeiculosManager veiculos={lista} template={template} avariasPendentes={avariasPendentes} />;
+  return (
+    <VeiculosManager
+      veiculos={lista}
+      template={template}
+      avariasPendentes={avariasPendentes}
+      reboques={reboques}
+    />
+  );
 }

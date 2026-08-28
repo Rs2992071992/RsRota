@@ -2,6 +2,33 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-28] | Paletes passaram a ser o único modo de rateio (capacidade por
+  dimensão em vez de nº fixo por tipo, catálogo `TipoPalete` de 8 tamanhos) e o
+  peso aproximado passou a alimentar a tabela de consumos — isto **reverte
+  parcialmente** a decisão de 2026-07-17 abaixo ("o peso nem devia entrar no
+  registo deste tipo de carga"). Não é uma contradição: em 07-17 o peso era uma
+  *sugestão automática* (nº × peso médio) sem o utilizador saber que alimentava
+  o consumo — agora é um campo explícito, opcional, pedido conscientemente pelo
+  Ricardo para ter uma ideia real do consumo do veículo. Ambas as decisões
+  ficam registadas para não se perder o porquê de nenhuma. | Quando uma decisão
+  anterior é revertida, não apagar a lição antiga nem fingir que nunca existiu
+  — acrescentar uma nova entrada a explicar o que mudou e porquê (aqui: de
+  "sugestão automática implícita" para "campo explícito opcional").
+- [2026-08-28] | Ao substituir a capacidade de paletes por uma fórmula de área
+  (`floor(caixaLargura/paleteLargura) × floor(caixaComprimento/paleteComprimento)`,
+  testando as 2 orientações), testei-a à mão contra os 4 pares reais de
+  produção (AO-33-PJ/08-SC-33 × paletes 1200×800/1200×1000, somando veículo +
+  reboque habitual). 3 em 4 bateram exatamente com os `capacidadePaleteA/B`
+  atuais (38/30/36) — mas 08-SC-33 + palete 1200×1000 deu 28 pela fórmula
+  contra 24 configurado (+17%), sugerindo que o Frenauf (reboque deste
+  veículo) tem alguma perda física real (estrutura, acesso) que a área pura
+  não capta. | Nunca confiar cegamente numa fórmula geométrica nova só porque
+  bate certo na maioria dos casos — testá-la contra TODOS os casos reais
+  disponíveis antes de a considerar validada, e prever uma via de correção
+  manual (aqui: `Veiculo.fatorOcupacaoPalete`, default 1) para quando a
+  geometria e a realidade física discordam. Ação pendente do Ricardo: decidir
+  se ajusta o fator do 08-SC-33 (~0,86 reproduziria os 24 atuais).
+
 - [2026-08-27] | "Application error: a server-side exception has occurred" sempre
   que o Ricardo entrava no escritório (login OK, crash logo a seguir, a
   carregar `/escritorio/dashboard`). Causa: a página do dashboard chamava

@@ -8,7 +8,7 @@ import {
   type LinhaDevis,
   type DetalheEstimativa,
 } from "@/lib/calc/orcamento";
-import { ROTULOS_TIPO_PALETE, TIPOS_PALETE, TIPOS_VEICULO } from "@/lib/validacao";
+import { TIPOS_VEICULO } from "@/lib/validacao";
 import DetalheLinha from "@/components/orcamento/DetalheLinha";
 import MoradaInput from "@/components/orcamento/MoradaInput";
 
@@ -45,6 +45,7 @@ interface Props {
   devis?: DevisFull;
   clientes: ClienteOpt[];
   veiculos: { id: number; nome: string }[];
+  tiposPalete: { id: number; nome: string }[];
   motoristas: { id: number; nome: string | null; codigo: string }[];
   /** Zonas de portagem já configuradas em Parâmetros (sugestões). */
   zonas: string[];
@@ -73,6 +74,8 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
     volume: false,
     tipoPalete: null,
     nPaletes: 0,
+    tipoPaleteId: null,
+    pesoAproximado: null,
     zonaPortagem: null,
     noitesFora: 0,
     alimentacao: 0,
@@ -87,6 +90,7 @@ export default function OrcamentoForm({
   devis,
   clientes,
   veiculos,
+  tiposPalete,
   motoristas,
   zonas,
   clienteInicial,
@@ -170,6 +174,8 @@ export default function OrcamentoForm({
           volume: l.volume,
           tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
+          tipoPaleteId: l.tipoPaleteId,
+          pesoAproximado: l.pesoAproximado,
           zonaPortagem: l.zonaPortagem,
           noitesFora: l.noitesFora,
           alimentacao: l.alimentacao,
@@ -227,6 +233,8 @@ export default function OrcamentoForm({
           volume: l.volume,
           tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
+          tipoPaleteId: l.tipoPaleteId ?? null,
+          pesoAproximado: l.pesoAproximado ?? null,
           zonaPortagem: l.zonaPortagem,
           noitesFora: l.noitesFora,
           alimentacao: l.alimentacao,
@@ -491,41 +499,35 @@ export default function OrcamentoForm({
                     </option>
                   ))}
                 </select>
-                {l.tipoVeiculo !== "VAZIO" && (
-                  <label className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={l.volume}
-                      onChange={(e) => {
-                        const v = e.target.checked;
-                        patchLinha(i, {
-                          volume: v,
-                          tipoPalete: v ? l.tipoPalete : null,
-                          nPaletes: v ? l.nPaletes : 0,
-                          pesoKg: v ? 0 : l.pesoKg,
-                        });
-                      }}
-                    />
-                    Volume (paletes)
-                  </label>
-                )}
               </div>
-              {l.volume ? (
+              {l.tipoVeiculo !== "VAZIO" && (
                 <>
                   <div>
                     <label className="label">Tipo de palete</label>
                     <select
                       className="input"
-                      value={l.tipoPalete ?? ""}
-                      onChange={(e) => patchLinha(i, { tipoPalete: e.target.value || null })}
+                      value={l.tipoPaleteId ?? ""}
+                      onChange={(e) =>
+                        patchLinha(i, {
+                          tipoPaleteId: e.target.value ? Number(e.target.value) : null,
+                          volume: false,
+                          tipoPalete: null,
+                        })
+                      }
+                      disabled={!veiculoId}
                     >
                       <option value="">— escolher —</option>
-                      {TIPOS_PALETE.map((t) => (
-                        <option key={t} value={t}>
-                          {ROTULOS_TIPO_PALETE[t] ?? t}
+                      {tiposPalete.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.nome}
                         </option>
                       ))}
                     </select>
+                    {!veiculoId && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        Escolha o veículo (acima) para calcular a capacidade por dimensão.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="label">Nº de paletes</label>
@@ -538,17 +540,21 @@ export default function OrcamentoForm({
                       onChange={(e) => patchLinha(i, { nPaletes: Number(e.target.value) || 0 })}
                     />
                   </div>
+                  <div>
+                    <label className="label">Peso aproximado (kg) — opcional</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      step="any"
+                      placeholder="Só para estimar o consumo"
+                      value={l.pesoAproximado ?? ""}
+                      onChange={(e) =>
+                        patchLinha(i, { pesoAproximado: e.target.value === "" ? null : Number(e.target.value) })
+                      }
+                    />
+                  </div>
                 </>
-              ) : (
-                <div>
-                  <label className="label">Peso (kg)</label>
-                  <input
-                    className="input"
-                    type="number"
-                    value={l.pesoKg}
-                    onChange={(e) => patchLinha(i, { pesoKg: Number(e.target.value) || 0 })}
-                  />
-                </div>
               )}
               <div>
                 <label className="label">Zona portagem</label>

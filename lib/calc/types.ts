@@ -92,6 +92,7 @@ export interface ParagemSnapshot {
   custoVeiculoPorKm: number;
   capacidadeCamiao: number;
   capacidadeReboque: number;
+  /** ⚠️ Legado (paragens com Paragem.tipoPalete string, anteriores a 2026-08-28). */
   capacidadePaleteA: number;
   capacidadePaleteB: number;
   capacidadePaleteACamiao: number;
@@ -102,6 +103,19 @@ export interface ParagemSnapshot {
   valorNoite: number;
   valorHoraExtra: number;
   margemMinima: number;
+  /**
+   * Caixa de carga do veículo (mm, "só camião") e do seu reboque habitual, se
+   * ligado — congeladas no registo para o rateio por dimensão (2026-08-28 em
+   * diante, ver lib/calc/perStop.ts::capacidadePaleteDimensoes). null quando o
+   * veículo não tem `caixaComprimentoMm/LarguraMm` configurados, ou não tem
+   * reboque habitual ligado (caixaReboque*).
+   */
+  caixaComprimentoMm?: number | null;
+  caixaLarguraMm?: number | null;
+  caixaReboqueComprimentoMm?: number | null;
+  caixaReboqueLarguraMm?: number | null;
+  /** Multiplicador de segurança do veículo sobre a capacidade geométrica. Default 1. */
+  fatorOcupacaoPalete?: number;
 }
 
 /** Dados de uma paragem necessários ao cálculo. */
@@ -129,12 +143,23 @@ export interface ParagemInput {
    * agrupam paragens).
    */
   pesoEmTransito?: number;
-  /** Carga por volume (paletes) em vez de peso — ver tipoPalete/nPaletes. */
+  /** ⚠️ Legado — ver tipoPalete abaixo. Paragens novas usam paleteComprimentoMm/LarguraMm. */
   volume?: boolean;
-  /** Tamanho da palete (PALETE_120X80|PALETE_120X100), só relevante se volume=true. */
+  /** ⚠️ Legado (PALETE_120X80|PALETE_120X100), só relevante se volume=true. */
   tipoPalete?: string | null;
-  /** Nº de paletes (só relevante se volume=true). */
+  /** Nº de paletes (paragens novas E legado — ver paleteComprimentoMm/tipoPalete). */
   nPaletes?: number;
+  /** Referência ao catálogo TipoPalete (label/relatórios) — nunca fonte de verdade. */
+  tipoPaleteId?: number | null;
+  /**
+   * Dimensões da palete escolhida, congeladas no momento do registo (fonte de
+   * verdade do cálculo). Presentes -> `paleteEfetiva()` usa o caminho novo
+   * (ocupação por área); ausentes -> cai no caminho legado (`tipoPalete`/`volume`).
+   */
+  paleteComprimentoMm?: number | null;
+  paleteLarguraMm?: number | null;
+  /** Peso aproximado (kg), só para a tabela de consumos — nunca entra no rateio. */
+  pesoAproximado?: number | null;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -169,8 +194,14 @@ export interface ParagemCalc {
   /** Passthrough — ver ParagemInput.volume / .tipoPalete. */
   volume: boolean;
   tipoPalete: string | null;
-  /** Nº de paletes (passthrough; só relevante quando volume=true). */
+  /** Nº de paletes (passthrough; legado quando volume=true, ou paragens novas). */
   nPaletes: number;
+  /** Passthrough — ver ParagemInput.tipoPaleteId/paleteComprimentoMm/paleteLarguraMm. */
+  tipoPaleteId: number | null;
+  paleteComprimentoMm: number | null;
+  paleteLarguraMm: number | null;
+  /** Passthrough — ver ParagemInput.pesoAproximado. */
+  pesoAproximado: number | null;
   kmFeitos: number;
   /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
   coeficienteCarga: number;

@@ -13,7 +13,7 @@ export default async function VeiculoDetalhePage({ params }: { params: { id: str
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 
-  const [veiculo, stats] = await Promise.all([
+  const [veiculo, stats, reboques] = await Promise.all([
     prisma.veiculo.findUnique({
       where: { id },
       include: {
@@ -22,6 +22,7 @@ export default async function VeiculoDetalhePage({ params }: { params: { id: str
       },
     }),
     carregarEstatisticasVeiculo(id),
+    prisma.reboque.findMany({ where: { ativo: true }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
   ]);
   if (!veiculo) notFound();
 
@@ -68,6 +69,7 @@ export default async function VeiculoDetalhePage({ params }: { params: { id: str
           valor: m.valor,
           dias: m.dias,
         }))}
+        reboques={reboques}
       />
     </div>
   );

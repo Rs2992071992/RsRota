@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
+import { resolverPaleteDimensoes } from "@/lib/rotas-service";
 
 // Atualização parcial — usada para editar a receita (escritório) ou corrigir uma
 // paragem (escritório, ou o próprio motorista nas suas paragens).
@@ -77,6 +78,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (d.veiculoId !== undefined && d.veiculoId !== auth.paragem.veiculoId) {
     const snapshot = await snapshotParaRegisto(auth.paragem.motoristaId, d.veiculoId);
     data.snapshot = snapshot as unknown as Prisma.InputJsonValue;
+  }
+
+  // Trocar o tipo de palete recongela as dimensões (fonte de verdade do
+  // cálculo) — mesmo princípio do snapshot acima: nunca uma referência viva
+  // ao catálogo TipoPalete.
+  if (d.tipoPaleteId !== undefined) {
+    const paleteDimensoes = await resolverPaleteDimensoes(d.tipoPaleteId);
+    data.paleteComprimentoMm = paleteDimensoes.paleteComprimentoMm;
+    data.paleteLarguraMm = paleteDimensoes.paleteLarguraMm;
   }
 
   const atualizada = await prisma.paragem.update({ where: { id }, data });

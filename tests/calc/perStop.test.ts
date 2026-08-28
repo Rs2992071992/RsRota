@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { derivarCustos } from "@/lib/calc/params";
-import { calcularParagem, coeficienteReal, type ContextoCalculo } from "@/lib/calc/perStop";
-import type { ParagemInput } from "@/lib/calc/types";
+import { calcularParagem, coeficienteReal, paletesQueCabem, type ContextoCalculo } from "@/lib/calc/perStop";
+import type { ParagemInput, ParagemSnapshot } from "@/lib/calc/types";
 import { PARAMS, PNEUS, TABELA_CONSUMO, TABELA_PORTAGENS } from "./fixtures";
 
 const ctx: ContextoCalculo = {
@@ -211,5 +211,170 @@ describe("colunas Espanha — informativas, poupança", () => {
     const r = calcularParagem(p, ctx);
     // 100 × 2 (override da rota, não os 1,834 de Parâmetros) − 150 = 50
     expect(r.poupancaEspanha).toBeCloseTo(50, 4);
+  });
+});
+
+// Paletes por dimensão (2026-08-28) — único modo de rateio para paragens novas.
+// Casos reais de produção (validados à mão, ver plano): AO-33-PJ e 08-SC-33
+// (caixa 7500×2480), Lecitrailer (8150×2480) e Frenauf (7300×2480) — os
+// tamanhos legado 1200×800/1200×1000 reproduzem exatamente os antigos
+// capacidadePaleteA/B (38/30 e 36) para 3 dos 4 pares, confirmando a fórmula.
+describe("paletesQueCabem — fórmula de área (testa as 2 orientações)", () => {
+  it("AO-33-PJ (7500×2480) + palete 1200×800 -> 18", () => {
+    expect(paletesQueCabem(7500, 2480, 1200, 800)).toBe(18);
+  });
+  it("AO-33-PJ (7500×2480) + palete 1200×1000 -> 14", () => {
+    expect(paletesQueCabem(7500, 2480, 1200, 1000)).toBe(14);
+  });
+  it("Lecitrailer (8150×2480) + palete 1200×800 -> 20", () => {
+    expect(paletesQueCabem(8150, 2480, 1200, 800)).toBe(20);
+  });
+  it("Lecitrailer (8150×2480) + palete 1200×1000 -> 16", () => {
+    expect(paletesQueCabem(8150, 2480, 1200, 1000)).toBe(16);
+  });
+  it("Frenauf (7300×2480) + palete 1200×800 -> 18", () => {
+    expect(paletesQueCabem(7300, 2480, 1200, 800)).toBe(18);
+  });
+  it("Frenauf (7300×2480) + palete 1200×1000 -> 14", () => {
+    expect(paletesQueCabem(7300, 2480, 1200, 1000)).toBe(14);
+  });
+  it("orientação importa: a palete não roda inutilmente quando a orientação direita já é melhor", () => {
+    // Caixa 10000×2480, palete 2600×1000: direita dá 2×3=6 (2480/1000 × 10000/2600);
+    // rodada dá 0×10=0 (2480/2600 arredonda a 0) — tem de escolher a direita (6).
+    expect(paletesQueCabem(10000, 2480, 2600, 1000)).toBe(6);
+  });
+});
+
+function snapshotComCaixa(over: Partial<ParagemSnapshot> = {}): ParagemSnapshot {
+  return {
+    custoMotoristaPorKm: ctx.derivados.custoMotoristaPorKm,
+    custoVeiculoPorKm: ctx.derivados.custoVeiculoPorKm,
+    capacidadeCamiao: PARAMS.capacidadeCamiao,
+    capacidadeReboque: PARAMS.capacidadeReboque,
+    capacidadePaleteA: PARAMS.capacidadePaleteA,
+    capacidadePaleteB: PARAMS.capacidadePaleteB,
+    capacidadePaleteACamiao: PARAMS.capacidadePaleteACamiao,
+    capacidadePaleteBCamiao: PARAMS.capacidadePaleteBCamiao,
+    precoCombRef: PARAMS.precoCombRef,
+    consumoAdblue: PARAMS.consumoAdblue,
+    precoAdblue: PARAMS.precoAdblue,
+    valorNoite: PARAMS.valorNoite,
+    valorHoraExtra: PARAMS.valorHoraExtra,
+    margemMinima: PARAMS.margemMinima,
+    // AO-33-PJ + Lecitrailer (dados reais de produção).
+    caixaComprimentoMm: 7500,
+    caixaLarguraMm: 2480,
+    caixaReboqueComprimentoMm: 8150,
+    caixaReboqueLarguraMm: 2480,
+    fatorOcupacaoPalete: 1,
+    ...over,
+  };
+}
+
+describe("calcularParagem — paletes por dimensão (2026-08-28, único modo para paragens novas)", () => {
+  const eff = snapshotComCaixa();
+
+  it("CAMIAO+REBOQUE, palete 1200×800: capacidade 18+20=38, coeficiente = nPaletes/38", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 30,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
+    expect(r.volume).toBe(true);
+  });
+
+  it("só CAMIAO (sem reboque): capacidade só do camião (18), não soma o reboque", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO",
+      kmFinal: 100,
+      nPaletes: 15,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(15 / 18, 6);
+  });
+
+  it("fatorOcupacaoPalete reduz a capacidade calculada (0,5 -> metade)", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 19,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: snapshotComCaixa({ fatorOcupacaoPalete: 0.5 }),
+    });
+    const r = calcularParagem(p, ctx);
+    // capacidade geométrica 38 × 0,5 = 19 -> coeficiente = 1.
+    expect(r.coeficienteCarga).toBeCloseTo(1, 6);
+  });
+
+  it("veículo sem caixa configurada: capacidade 0, coeficiente 0 (nunca Infinity/NaN)", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 10,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: snapshotComCaixa({ caixaComprimentoMm: null, caixaLarguraMm: null }),
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBe(0);
+    expect(Number.isFinite(r.coeficienteCarga)).toBe(true);
+  });
+
+  it("prioridade sobre o legado: dimensão própria vence mesmo com volume/tipoPalete preenchidos", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 30,
+      volume: true,
+      tipoPalete: "PALETE_120X100", // legado, daria 30/28 — não deve ser usado
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6);
+  });
+
+  it("consumo usa o peso aproximado (deixa de forçar sempre vazio, 2026-08-28)", () => {
+    const base = { tipoVeiculo: "CAMIAO+REBOQUE" as const, kmFinal: 100, nPaletes: 10, paleteComprimentoMm: 1200, paleteLarguraMm: 800, snapshot: eff };
+    const semPeso = calcularParagem(paragemBase(base), ctx);
+    const comPeso = calcularParagem(paragemBase({ ...base, pesoAproximado: 20000 }), ctx);
+    expect(semPeso.consumoL100).toBe(25); // sem peso aproximado -> vazio, como sempre
+    expect(comPeso.consumoL100).toBe(35); // 20000 kg -> escalão 35 L/100km da tabela
+  });
+
+  it("caminho antigo (string tipoPalete / headcount fixo) fica bit-a-bit igual", () => {
+    const r = calcularParagem(
+      paragemBase({ tipoVeiculo: "CAMIAO+REBOQUE", volume: true, tipoPalete: "PALETE_120X80", kmFinal: 100, nPaletes: 30 }),
+      ctx,
+    );
+    expect(r.coeficienteCarga).toBeCloseTo(30 / 38, 6); // capacidadePaleteA legado, não a fórmula de área
+  });
+});
+
+describe("coeficienteReal — paletes por dimensão (2026-08-28)", () => {
+  const eff = snapshotComCaixa();
+
+  it("CAMIAO+REBOQUE, palete 1200×800: nPaletes/38", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 19, false, null, 1200, 800)).toBeCloseTo(0.5, 6);
+  });
+  it("sem nPaletes -> 1 (mesma guarda do caminho legado)", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 0, false, null, 1200, 800)).toBe(1);
+  });
+  it("sobrecarga reflete-se (> 1)", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 50, false, null, 1200, 800)).toBeCloseTo(50 / 38, 6);
+  });
+  it("dimensão própria tem prioridade sobre volume/tipoPalete legado", () => {
+    const comLegado = coeficienteReal("CAMIAO+REBOQUE", 0, eff, 30, true, "PALETE_120X100", 1200, 800);
+    expect(comLegado).toBeCloseTo(30 / 38, 6); // usa 1200×800 (38), não PALETE_120X100 (28)
   });
 });

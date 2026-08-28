@@ -2,6 +2,46 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📐 Distribuição por dimensões de palete (2026-08-28)
+
+Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Paletes passam a ser
+o único modo de rateio para paragens NOVAS (catálogo `TipoPalete`, 8 tamanhos, ocupação
+por área em vez de nº fixo por tipo); peso aproximado por paragem alimenta a tabela de
+consumos (deixa de ser sempre "vazio"). Rotas antigas por kg ficam como estão — o Ricardo
+altera-as manualmente quando quiser.
+
+- [x] Schema: `Veiculo.reboqueHabitualId`/`fatorOcupacaoPalete`, `Paragem.tipoPaleteId`/
+  `paleteComprimentoMm`/`paleteLarguraMm`/`pesoAproximado` — aditivo, `db push` no Neon
+- [x] `lib/calc/types.ts`: novos campos em `ParagemSnapshot`/`ParagemInput`/`ParagemCalc`
+- [x] `lib/calc/perStop.ts`: `paletesQueCabem`, `capacidadePaleteDimensoes`, 3º caminho
+  (testado primeiro) em `calcularParagem`/`coeficienteReal`, consumo usa `pesoAproximado`
+  (paletes antigas e novas) — caminhos legados (string `tipoPalete`, fallback
+  pré-migração) intocados
+- [x] `lib/calc/snapshot.ts` + `lib/snapshot-service.ts`: congela caixa veículo +
+  reboque habitual + fator no `ParagemSnapshot`
+- [x] Escrita: `app/api/paragens/route.ts` + `[id]/route.ts` congelam dimensões do
+  `TipoPalete` escolhido (`lib/rotas-service.ts::resolverPaleteDimensoes`);
+  `lib/validacao.ts` torna `tipoPaleteId`+`nPaletes` obrigatórios (não-VAZIO, só
+  escritas novas); passthrough em `paragemToInput`; `lib/calc/orcamento.ts` +
+  `/api/devis/estimar` idem para orçamentos
+- [x] UI: `VeiculosManager.tsx`/`VeiculoCamposForm.tsx` (reboque habitual + fator),
+  `RegistoForm.tsx` (sem ramo `volume`, sempre tipoPalete+nPaletes+peso aproximado),
+  `ParagemEditor.tsx` (3 modos: kg/paletes-legado/paletes, com botão "Converter para
+  paletes" para o Ricardo migrar rotas antigas manualmente), `OrcamentoForm.tsx` (idem,
+  exige veículo escolhido)
+- [x] Ligados `AO-33-PJ→Lecitrailer`, `08-SC-33→Frenauf`; criados `1200x1200`/`1100x1000`
+  no catálogo (8 tipos no total)
+- [x] Testes novos (22: `perStop`/`perRoute`, incl. os 6 pares reais veículo×palete
+  validados à mão), 144 testes verdes, `tsc`/`vitest`/`next build` limpos
+- [x] Regressão confirmada contra produção: rota RIC-Francisco Lince Blowtec (Blo-sega
+  32,25%/296,53€, Blowtec 1,88%/17,30€, Σquota=1.000000) — idêntico à lição de 22/08,
+  zero alteração; caminho de escrita completo (snapshot + resolução de palete) validado
+  ponta-a-ponta contra o veículo real AO-33-PJ
+- [x] `tasks/lessons.md` (reversão parcial da regra 17/07 + desvio do Frenauf) + commit/push
+- [ ] **Ação do utilizador**: decidir se ajusta `fatorOcupacaoPalete` do 08-SC-33 (~0,86
+  reproduziria os 24 paletes atuais em vez dos 28 calculados pela geometria pura com o
+  Frenauf) em `/escritorio/veiculos`
+
 ## 📦 Paletes: capacidade "só camião" vs "camião+reboque" (2026-08-22)
 
 Pedido do Ricardo: os números de capacidade de paletes (38/28) foram

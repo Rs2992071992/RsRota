@@ -6,6 +6,7 @@ import { snapshotParaRegisto } from "@/lib/snapshot-service";
 import { calcularDistanciaKm } from "@/lib/distancia";
 import { calcularPortagem } from "@/lib/portagens";
 import { estimarLinha, kmComRegresso } from "@/lib/calc/orcamento";
+import { resolverPaleteDimensoes } from "@/lib/rotas-service";
 
 // POST /api/devis/estimar — calcula a distância (mapas, perfil pesado) e estima o
 // custo + preço sugerido de uma linha de orçamento (só escritório). Nunca bloqueia:
@@ -55,9 +56,10 @@ export async function POST(req: Request) {
   const portagemOverride = tollAuto != null ? tollAuto * (d.idaVolta ? 2 : 1) : null;
 
   // 4) Custo + preço sugerido via motor (snapshot do motorista/veículo + contexto).
-  const [ctx, snapshot] = await Promise.all([
+  const [ctx, snapshot, paleteDimensoes] = await Promise.all([
     carregarContexto(),
     snapshotParaRegisto(d.motoristaId ?? null, d.veiculoId ?? null),
+    resolverPaleteDimensoes(d.tipoPaleteId),
   ]);
   const { custoEstimado, precoSugerido, detalhe } = estimarLinha(
     {
@@ -67,6 +69,9 @@ export async function POST(req: Request) {
       volume: d.volume,
       tipoPalete: d.tipoPalete,
       nPaletes: d.nPaletes,
+      tipoPaleteId: d.tipoPaleteId,
+      ...paleteDimensoes,
+      pesoAproximado: d.pesoAproximado,
       zonaPortagem: d.zonaPortagem,
       noitesFora: d.noitesFora,
       alimentacao: d.alimentacao,

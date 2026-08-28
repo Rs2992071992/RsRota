@@ -11,9 +11,12 @@ import { CAMPOS_CUSTO, updPneu, type VeiculoForm } from "@/lib/veiculo-form";
 export default function VeiculoCamposForm({
   f,
   setF,
+  reboques,
 }: {
   f: VeiculoForm;
   setF: Dispatch<SetStateAction<VeiculoForm>>;
+  /** Catálogo de reboques (ver /escritorio/cargas) — para "Reboque habitual". */
+  reboques: { id: number; nome: string }[];
 }) {
   function setNum(k: keyof VeiculoForm, v: string) {
     setF((p) => ({ ...p, [k]: v === "" ? 0 : Number(v) }));
@@ -67,6 +70,39 @@ export default function VeiculoCamposForm({
             value={f.caixaLarguraMm ?? ""}
             onChange={(e) => setNumNullable("caixaLarguraMm", e.target.value)}
           />
+        </div>
+        <div>
+          <label className="label">Reboque habitual</label>
+          <select
+            className="input"
+            value={f.reboqueHabitualId ?? ""}
+            onChange={(e) =>
+              setF((p) => ({ ...p, reboqueHabitualId: e.target.value === "" ? null : Number(e.target.value) }))
+            }
+          >
+            <option value="">— nenhum (só camião) —</option>
+            {reboques.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Fator de ocupação de paletes</label>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            className="input"
+            placeholder="1"
+            value={f.fatorOcupacaoPalete}
+            onChange={(e) => setNum("fatorOcupacaoPalete", e.target.value)}
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Reduz a capacidade calculada por dimensão (1 = confiar na geometria) — ajustar só se
+            este veículo/reboque levar sistematicamente menos paletes do que a geometria sugere.
+          </p>
         </div>
       </div>
 

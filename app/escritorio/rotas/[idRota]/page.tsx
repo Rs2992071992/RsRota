@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RotaDetalhe({ params }: { params: { idRota: string } }) {
   const idRota = decodeURIComponent(params.idRota);
-  const [{ rota, paragensRaw }, portagens, parametros, veiculos, nomesClientes] = await Promise.all([
+  const [{ rota, paragensRaw }, portagens, parametros, veiculos, tiposPalete, nomesClientes] = await Promise.all([
     carregarRota(idRota),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
@@ -25,6 +25,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true },
     }),
+    prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
     listarNomesClientes(),
   ]);
   if (!rota) notFound();
@@ -68,6 +69,8 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       volume: p.volume,
       tipoPalete: p.tipoPalete,
       nPaletes: p.nPaletes,
+      tipoPaleteId: p.tipoPaleteId,
+      pesoAproximado: p.pesoAproximado,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,
       noitesFora: p.noitesFora,
@@ -227,6 +230,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                       paragem={editavel(p.id)!}
                       zonas={zonas}
                       veiculos={veiculos}
+                      tiposPalete={tiposPalete}
                       clientes={clientes}
                       valorNoite={valorNoite}
                     />

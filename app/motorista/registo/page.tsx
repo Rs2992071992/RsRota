@@ -13,10 +13,11 @@ export default async function RegistoPage({
   const sessao = getSessaoInfo();
   const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
 
-  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =
+  const [portagens, params, tiposPalete, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =
     await Promise.all([
       prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
       prisma.parametros.findUnique({ where: { id: 1 } }),
+      prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
       prisma.paragem.findMany({
         where: filtroRotas,
         select: { idRota: true },
@@ -31,12 +32,10 @@ export default async function RegistoPage({
           id: true,
           nome: true,
           matricula: true,
-          capacidadeCamiao: true,
-          capacidadeReboque: true,
-          capacidadePaleteA: true,
-          capacidadePaleteB: true,
-          capacidadePaleteACamiao: true,
-          capacidadePaleteBCamiao: true,
+          caixaComprimentoMm: true,
+          caixaLarguraMm: true,
+          fatorOcupacaoPalete: true,
+          reboqueHabitual: { select: { comprimentoMm: true, larguraMm: true } },
           dataLimiteInspecao: true,
           inspecaoVerificada: true,
         },
@@ -78,15 +77,18 @@ export default async function RegistoPage({
     <RegistoForm
       zonas={portagens.map((p) => p.zona)}
       veiculos={veiculos.map((v) => ({
-        ...v,
+        id: v.id,
+        nome: v.nome,
+        matricula: v.matricula,
+        caixaComprimentoMm: v.caixaComprimentoMm,
+        caixaLarguraMm: v.caixaLarguraMm,
+        caixaReboqueComprimentoMm: v.reboqueHabitual?.comprimentoMm ?? null,
+        caixaReboqueLarguraMm: v.reboqueHabitual?.larguraMm ?? null,
+        fatorOcupacaoPalete: v.fatorOcupacaoPalete,
         dataLimiteInspecao: v.dataLimiteInspecao ? v.dataLimiteInspecao.toISOString() : null,
+        inspecaoVerificada: v.inspecaoVerificada,
       }))}
-      capacidadeCamiao={params?.capacidadeCamiao ?? 14000}
-      capacidadeReboque={params?.capacidadeReboque ?? 24000}
-      capacidadePaleteA={params?.capacidadePaleteA ?? 38}
-      capacidadePaleteB={params?.capacidadePaleteB ?? 28}
-      capacidadePaleteACamiao={params?.capacidadePaleteACamiao ?? 18}
-      capacidadePaleteBCamiao={params?.capacidadePaleteBCamiao ?? 14}
+      tiposPalete={tiposPalete}
       valorNoite={params?.valorNoite ?? 70}
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}
