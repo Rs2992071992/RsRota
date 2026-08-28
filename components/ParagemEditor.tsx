@@ -33,6 +33,8 @@ export interface ParagemEditavel {
   volume: boolean;
   tipoPalete: string | null;
   nPaletes: number;
+  // Meias-paletes empilhadas — não ocupam base própria, valem metade no rateio.
+  nMeiasPaletes: number;
   // Palete desta paragem (2026-08-28 em diante).
   tipoPaleteId: number | null;
   pesoAproximado: number | null;
@@ -153,6 +155,7 @@ export default function ParagemEditor({
         volume: modo === "paletes-legado",
         tipoPalete: modo === "paletes-legado" ? f.tipoPalete : null,
         nPaletes: modo === "kg" ? 0 : Number(f.nPaletes),
+        nMeiasPaletes: modo === "paletes" ? Number(f.nMeiasPaletes) || 0 : 0,
         tipoPaleteId: modo === "paletes" && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
         pesoAproximado: f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
         zonaPortagem: f.zonaPortagem.trim(),
@@ -333,6 +336,18 @@ export default function ParagemEditor({
                   className="input"
                   value={f.nPaletes}
                   onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
+                />
+              </div>
+              <div>
+                <label className="label">Nº de meias-paletes — opcional</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Em cima de outras, não ocupam base"
+                  className="input"
+                  value={f.nMeiasPaletes}
+                  onChange={(e) => set("nMeiasPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
                 />
               </div>
               <div className="col-span-2">

@@ -192,6 +192,11 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // próprio do cliente (rateio inalterado, ver lib/calc/perRoute.ts).
   const pesoParaConsumo = p.pesoEmTransito ?? peso;
   const nPaletes = p.nPaletes || 0;
+  // Meias-paletes empilhadas (2026-08-28+): não têm base própria, por isso só
+  // entram no NUMERADOR do coeficiente (valem metade), nunca na capacidade
+  // (denominador) — ver capacidadeNova/capacidadePalete abaixo, que não
+  // dependem de nMeiasPaletes.
+  const nPaletesEquivalente = nPaletes + (p.nMeiasPaletes || 0) * 0.5;
 
   // Palete desta paragem: dimensão própria congelada (2026-08-28 em diante, único
   // caminho para paragens novas) tem sempre prioridade sobre o caminho legado
@@ -213,10 +218,10 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     : 0;
   const coeficienteCarga: number = paleteNova
     ? capacidadeNova > 0
-      ? nPaletes / capacidadeNova
+      ? nPaletesEquivalente / capacidadeNova
       : 0
     : legado.ehPalete
-      ? nPaletes / capacidadePalete(legado.tipoVeiculoEfetivo, legado.tipo, eff)
+      ? nPaletesEquivalente / capacidadePalete(legado.tipoVeiculoEfetivo, legado.tipo, eff)
       : peso / capacidade(p.tipoVeiculo, eff);
 
   // Consumo (lookup aproximado) e combustível. Paletes: o que importa para o
@@ -270,6 +275,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     volume: ehPalete,
     tipoPalete: !paleteNova && legado.ehPalete ? legado.tipo : null,
     nPaletes,
+    nMeiasPaletes: p.nMeiasPaletes || 0,
     tipoPaleteId: p.tipoPaleteId ?? null,
     paleteComprimentoMm: p.paleteComprimentoMm ?? null,
     paleteLarguraMm: p.paleteLarguraMm ?? null,
@@ -304,13 +310,15 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
  * O coeficiente NÃO está limitado a 1: cargas acima da capacidade (sobrecarga)
  * dão coeficiente > 1, refletindo que a carga "pesa" mais do que um camião cheio.
  *
- * `nPaletes`/`volume`/`tipoPalete`/`paleteComprimentoMm`/`paleteLarguraMm` são
- * opcionais (default 0/false/null) para não quebrar chamadas existentes que só
- * passam peso — e para continuar a aceitar, em fallback, `tipoVeiculo` ainda
- * literalmente "PALETE_120X80"/"PALETE_120X100" (dados anteriores à migração
- * para `volume`). `paleteComprimentoMm`/`LarguraMm`, quando presentes, têm
- * sempre prioridade sobre `volume`/`tipoPalete` — mesma regra de
- * `calcularParagem` em cima.
+ * `nPaletes`/`volume`/`tipoPalete`/`paleteComprimentoMm`/`paleteLarguraMm`/
+ * `nMeiasPaletes` são opcionais (default 0/false/null) para não quebrar
+ * chamadas existentes que só passam peso — e para continuar a aceitar, em
+ * fallback, `tipoVeiculo` ainda literalmente "PALETE_120X80"/"PALETE_120X100"
+ * (dados anteriores à migração para `volume`). `paleteComprimentoMm`/
+ * `LarguraMm`, quando presentes, têm sempre prioridade sobre `volume`/
+ * `tipoPalete` — mesma regra de `calcularParagem` em cima. `nMeiasPaletes`
+ * (paletes empilhadas sem base própria) só entra no numerador (0,5 cada),
+ * nunca na capacidade — mesmo princípio de `calcularParagem`.
  */
 export function coeficienteReal(
   tipoVeiculo: string,
@@ -321,15 +329,19 @@ export function coeficienteReal(
   tipoPalete: string | null = null,
   paleteComprimentoMm: number | null = null,
   paleteLarguraMm: number | null = null,
+  nMeiasPaletes = 0,
 ): number {
+  const nPaletesEquivalente = nPaletes + nMeiasPaletes * 0.5;
   if (paleteComprimentoMm && paleteLarguraMm) {
-    if (nPaletes <= 0) return 1;
+    if (nPaletes <= 0 && nMeiasPaletes <= 0) return 1;
     const capacidade = capacidadePaleteDimensoes(tipoVeiculo, paleteComprimentoMm, paleteLarguraMm, cap);
-    return capacidade > 0 ? nPaletes / capacidade : 0;
+    return capacidade > 0 ? nPaletesEquivalente / capacidade : 0;
   }
   const { ehPalete, tipo, tipoVeiculoEfetivo } = paleteEfetiva(tipoVeiculo, volume, tipoPalete);
   if (ehPalete) {
-    return nPaletes > 0 ? nPaletes / capacidadePalete(tipoVeiculoEfetivo, tipo, cap) : 1;
+    return nPaletes > 0 || nMeiasPaletes > 0
+      ? nPaletesEquivalente / capacidadePalete(tipoVeiculoEfetivo, tipo, cap)
+      : 1;
   }
   if (peso <= 0 || tipoVeiculo === "VAZIO") {
     return 1;

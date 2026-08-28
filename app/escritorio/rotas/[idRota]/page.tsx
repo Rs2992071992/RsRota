@@ -69,6 +69,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       volume: p.volume,
       tipoPalete: p.tipoPalete,
       nPaletes: p.nPaletes,
+      nMeiasPaletes: p.nMeiasPaletes,
       tipoPaleteId: p.tipoPaleteId,
       pesoAproximado: p.pesoAproximado,
       zonaPortagem: p.zonaPortagem,

@@ -149,6 +149,13 @@ export interface ParagemInput {
   tipoPalete?: string | null;
   /** Nº de paletes (paragens novas E legado — ver paleteComprimentoMm/tipoPalete). */
   nPaletes?: number;
+  /**
+   * Nº de meias-paletes empilhadas em cima das paletes de base (`nPaletes`)
+   * — sem dimensões próprias, nunca entram no cálculo de capacidade/espaço
+   * (não ocupam uma base própria), só valem metade de uma palete inteira no
+   * numerador do coeficiente de carga.
+   */
+  nMeiasPaletes?: number;
   /** Referência ao catálogo TipoPalete (label/relatórios) — nunca fonte de verdade. */
   tipoPaleteId?: number | null;
   /**
@@ -196,6 +203,8 @@ export interface ParagemCalc {
   tipoPalete: string | null;
   /** Nº de paletes (passthrough; legado quando volume=true, ou paragens novas). */
   nPaletes: number;
+  /** Passthrough — ver ParagemInput.nMeiasPaletes. */
+  nMeiasPaletes: number;
   /** Passthrough — ver ParagemInput.tipoPaleteId/paleteComprimentoMm/paleteLarguraMm. */
   tipoPaleteId: number | null;
   paleteComprimentoMm: number | null;

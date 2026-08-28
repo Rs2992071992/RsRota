@@ -361,6 +361,74 @@ describe("calcularParagem — paletes por dimensão (2026-08-28, único modo par
   });
 });
 
+// Meias-paletes (2026-08-28+): empilhadas em cima de paletes de base, nunca
+// ocupam uma base própria — só entram no numerador (0,5 cada), a capacidade
+// (denominador) fica exatamente igual.
+describe("calcularParagem — meias-paletes (não ocupam base própria)", () => {
+  const eff = snapshotComCaixa();
+
+  it("meia-palete soma 0,5 ao numerador, capacidade (38) fica igual", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 10,
+      nMeiasPaletes: 4,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+    });
+    const r = calcularParagem(p, ctx);
+    // (10 + 4×0,5) / 38 = 12/38, não 14/38 (nunca conta como base cheia).
+    expect(r.coeficienteCarga).toBeCloseTo(12 / 38, 6);
+    expect(r.nMeiasPaletes).toBe(4);
+  });
+
+  it("só meias-paletes, sem base declarada: ainda assim só metade cada", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 0,
+      nMeiasPaletes: 6,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(3 / 38, 6); // 6 × 0,5 = 3
+  });
+
+  it("caminho legado (headcount fixo) também aceita meias-paletes", () => {
+    const r = calcularParagem(
+      paragemBase({
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        volume: true,
+        tipoPalete: "PALETE_120X80",
+        kmFinal: 100,
+        nPaletes: 30,
+        nMeiasPaletes: 2,
+      }),
+      ctx,
+    );
+    expect(r.coeficienteCarga).toBeCloseTo(31 / 38, 6); // (30 + 2×0,5) / 38
+  });
+
+  it("sem nMeiasPaletes (undefined/0): comportamento inalterado", () => {
+    const r = calcularParagem(
+      paragemBase({
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        kmFinal: 100,
+        nPaletes: 10,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: eff,
+      }),
+      ctx,
+    );
+    expect(r.coeficienteCarga).toBeCloseTo(10 / 38, 6);
+    expect(r.nMeiasPaletes).toBe(0);
+  });
+});
+
 describe("coeficienteReal — paletes por dimensão (2026-08-28)", () => {
   const eff = snapshotComCaixa();
 
@@ -376,5 +444,14 @@ describe("coeficienteReal — paletes por dimensão (2026-08-28)", () => {
   it("dimensão própria tem prioridade sobre volume/tipoPalete legado", () => {
     const comLegado = coeficienteReal("CAMIAO+REBOQUE", 0, eff, 30, true, "PALETE_120X100", 1200, 800);
     expect(comLegado).toBeCloseTo(30 / 38, 6); // usa 1200×800 (38), não PALETE_120X100 (28)
+  });
+  it("nMeiasPaletes soma 0,5 cada ao numerador, sem afetar a capacidade", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 10, false, null, 1200, 800, 4)).toBeCloseTo(12 / 38, 6);
+  });
+  it("só nMeiasPaletes (nPaletes=0): ainda calcula, não cai na guarda de 1", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 0, false, null, 1200, 800, 6)).toBeCloseTo(3 / 38, 6);
+  });
+  it("nem nPaletes nem nMeiasPaletes -> 1 (guarda inalterada)", () => {
+    expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 0, false, null, 1200, 800, 0)).toBe(1);
   });
 });

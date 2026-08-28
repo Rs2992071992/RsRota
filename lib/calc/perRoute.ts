@@ -187,6 +187,7 @@ export function calcularRota(
       p.tipoPalete ?? null,
       p.paleteComprimentoMm ?? null,
       p.paleteLarguraMm ?? null,
+      p.nMeiasPaletes || 0,
     );
     // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
     // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.
@@ -217,11 +218,19 @@ export function calcularRota(
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
   const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
   const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
+  // Cobre os 2 estilos de palete: legado (volume=true ou tipoVeiculo literal
+  // pré-migração) e novo (dimensão própria, 2026-08-28+ — p.volume fica
+  // false/vestigial nesse caso, por isso não basta olhar para p.volume).
+  // Meias-paletes contam a 0,5 (nunca ocuparam base própria, mas contam para
+  // o total transportado).
   const totalPaletes = paragens.reduce(
     (a, p) =>
       a +
-      (p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100"
-        ? p.nPaletes || 0
+      (p.volume ||
+      p.tipoVeiculo === "PALETE_120X80" ||
+      p.tipoVeiculo === "PALETE_120X100" ||
+      (p.paleteComprimentoMm && p.paleteLarguraMm)
+        ? (p.nPaletes || 0) + (p.nMeiasPaletes || 0) * 0.5
         : 0),
     0,
   );

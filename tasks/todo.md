@@ -2,6 +2,32 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Meias-paletes (2026-08-28)
+
+Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Uma meia-palete
+cabe em cima de outra já registada — não ocupa base própria (nunca entra na
+capacidade/espaço), só vale metade no rateio.
+
+- [x] Schema: `Paragem.nMeiasPaletes Float @default(0)` — `db push` no Neon
+- [x] `lib/calc/perStop.ts`: numerador do coeficiente = `nPaletes + nMeiasPaletes×0,5`
+  (2 caminhos, novo e legado); capacidade (denominador) inalterada;
+  `coeficienteReal()` ganhou o mesmo 9º parâmetro
+- [x] Fix lateral: `lib/calc/perRoute.ts::totalPaletes` não cobria o estilo novo
+  (por dimensão) — só via `volume`/tipoVeiculo legado; corrigido
+- [x] Fix lateral: `linhaDevisSchema` (`lib/validacao.ts`) não tinha
+  `tipoPaleteId`/`paleteComprimentoMm`/`paleteLarguraMm`/`pesoAproximado` —
+  o Zod descartava-os ao GUARDAR um orçamento (só estavam no schema de estimar)
+- [x] UI: `RegistoForm.tsx`/`ParagemEditor.tsx`(modo paletes)/`OrcamentoForm.tsx`
+  ganharam "Nº de meias-paletes" opcional; aviso de sobrecarga continua a
+  comparar só `nPaletes` (base); novo aviso se meias > bases
+- [x] 12 testes novos (144 → 156 no total), `tsc`/`vitest`/`build` limpos
+- [x] Validado ponta-a-ponta contra o veículo real AO-33-PJ (nPaletes=20 +
+  nMeiasPaletes=6 → coeficiente 23/38, exato)
+- [x] `tasks/lessons.md` (bug lateral do totalPaletes/linhaDevisSchema) + commit
+- [ ] **Push pendente**: credenciais do GitHub (Git Credential Manager) expiradas
+  — `git push` falha com 401, precisa de reautenticação interativa (browser) que
+  só o Ricardo consegue fazer a partir do terminal dele
+
 ## 📐 Distribuição por dimensões de palete (2026-08-28)
 
 Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Paletes passam a ser

@@ -74,6 +74,7 @@ function linhaVazia(origem: string, destino: string): LinhaUI {
     volume: false,
     tipoPalete: null,
     nPaletes: 0,
+    nMeiasPaletes: 0,
     tipoPaleteId: null,
     pesoAproximado: null,
     zonaPortagem: null,
@@ -174,6 +175,7 @@ export default function OrcamentoForm({
           volume: l.volume,
           tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
+          nMeiasPaletes: l.nMeiasPaletes,
           tipoPaleteId: l.tipoPaleteId,
           pesoAproximado: l.pesoAproximado,
           zonaPortagem: l.zonaPortagem,
@@ -233,6 +235,7 @@ export default function OrcamentoForm({
           volume: l.volume,
           tipoPalete: l.volume ? l.tipoPalete : null,
           nPaletes: l.nPaletes,
+          nMeiasPaletes: l.nMeiasPaletes ?? 0,
           tipoPaleteId: l.tipoPaleteId ?? null,
           pesoAproximado: l.pesoAproximado ?? null,
           zonaPortagem: l.zonaPortagem,
@@ -538,6 +541,18 @@ export default function OrcamentoForm({
                       step={1}
                       value={l.nPaletes}
                       onChange={(e) => patchLinha(i, { nPaletes: Number(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Nº de meias-paletes — opcional</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      step={1}
+                      placeholder="Em cima de outras, não ocupam base"
+                      value={l.nMeiasPaletes ?? 0}
+                      onChange={(e) => patchLinha(i, { nMeiasPaletes: Number(e.target.value) || 0 })}
                     />
                   </div>
                   <div>

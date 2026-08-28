@@ -233,6 +233,12 @@ model Paragem {
   paleteComprimentoMm Float?
   paleteLarguraMm     Float?
 
+  // Nº de meias-paletes empilhadas em cima das paletes de base desta paragem
+  // (nPaletes acima) — não têm dimensões próprias, nunca entram no cálculo
+  // de capacidade/espaço (não ocupam uma base própria), só valem metade de
+  // uma palete inteira no rateio (lib/calc/perStop.ts).
+  nMeiasPaletes Float @default(0)
+
   // Peso aproximado transportado nesta paragem (kg) — opcional, só para alimentar a
   // tabela de consumos (TabelaConsumo); nunca entra no rateio/coeficienteCarga, que
   // é sempre por dimensão de palete. Sem valor -> consumo trata como vazio (0 kg).

@@ -34,6 +34,9 @@ export const paragemSchema = z
     volume: z.boolean().default(false),
     tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
     nPaletes: numNaoNeg.default(0),
+    // Meias-paletes empilhadas em cima das de base (nPaletes) — não ocupam
+    // base própria, só valem metade no rateio (lib/calc/perStop.ts).
+    nMeiasPaletes: numNaoNeg.default(0),
     // Palete desta paragem (2026-08-28 em diante) — catálogo TipoPalete, único
     // modo para paragens novas exceto VAZIO (ver superRefine abaixo).
     tipoPaleteId: z.number().int().positive().nullable().optional(),
@@ -250,9 +253,18 @@ export const linhaDevisSchema = z.object({
   km: numNaoNeg.default(0),
   pesoKg: numNaoNeg.default(0),
   tipoVeiculo: z.enum(TIPOS_VEICULO).default("CAMIAO"),
+  // ⚠️ Legado — ver tipoPaleteId/nPaletes abaixo (único modo para linhas novas).
   volume: z.boolean().default(false),
   tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
   nPaletes: numNaoNeg.default(0),
+  // Meias-paletes empilhadas — não ocupam base própria, só valem metade no rateio.
+  nMeiasPaletes: numNaoNeg.default(0),
+  // Palete desta linha (2026-08-28 em diante) — catálogo TipoPalete + as
+  // dimensões congeladas (fonte de verdade do cálculo, ver estimarLinha).
+  tipoPaleteId: z.number().int().positive().nullable().optional(),
+  paleteComprimentoMm: z.number().positive().nullable().optional(),
+  paleteLarguraMm: z.number().positive().nullable().optional(),
+  pesoAproximado: numOpcional,
   zonaPortagem: z.string().trim().max(120).nullable().default(null),
   noitesFora: numNaoNeg.default(0),
   alimentacao: numNaoNeg.default(0),
@@ -286,6 +298,7 @@ export const estimarDevisSchema = z.object({
   volume: z.boolean().default(false),
   tipoPalete: z.enum(TIPOS_PALETE).nullable().optional(),
   nPaletes: numNaoNeg.default(0),
+  nMeiasPaletes: numNaoNeg.default(0),
   tipoPaleteId: z.number().int().positive().nullable().optional(),
   pesoAproximado: numOpcional,
   zonaPortagem: z.string().trim().nullable().default(null),

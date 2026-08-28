@@ -69,6 +69,7 @@ export async function POST(req: Request) {
       volume: d.volume,
       tipoPalete: d.tipoPalete,
       nPaletes: d.nPaletes,
+      nMeiasPaletes: d.nMeiasPaletes,
       tipoPaleteId: d.tipoPaleteId,
       ...paleteDimensoes,
       pesoAproximado: d.pesoAproximado,

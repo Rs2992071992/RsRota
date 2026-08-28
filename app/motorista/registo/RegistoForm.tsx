@@ -70,6 +70,7 @@ const estadoBase = {
   kmFinal: "",
   tipoPaleteId: "",
   nPaletes: "",
+  nMeiasPaletes: "",
   pesoAproximado: "",
   zonaPortagem: "",
   portagensExtra: "",
@@ -177,6 +178,7 @@ export default function RegistoForm({
       tipoVeiculo: v,
       tipoPaleteId: v === "VAZIO" ? "" : prev.tipoPaleteId,
       nPaletes: v === "VAZIO" ? "" : prev.nPaletes,
+      nMeiasPaletes: v === "VAZIO" ? "" : prev.nMeiasPaletes,
       pesoAproximado: v === "VAZIO" ? "" : prev.pesoAproximado,
       cliente:
         v === "VAZIO" ? "Vazio" : prev.tipoVeiculo === "VAZIO" && prev.cliente === "Vazio" ? "" : prev.cliente,
@@ -187,10 +189,15 @@ export default function RegistoForm({
   const avisos = useMemo(() => {
     const a: string[] = [];
     if (mostrarPaletes && capacidadePaletes != null) {
+      // Meias-paletes não entram aqui de propósito — não ocupam base própria
+      // (cabem em cima de outra já contada), só a sobrecarga de bases importa.
       const nPal = num(f.nPaletes);
       if (nPal > capacidadePaletes) {
         a.push(`${nPal} paletes excede a capacidade do veículo (${capacidadePaletes} paletes).`);
       }
+    }
+    if (mostrarPaletes && num(f.nMeiasPaletes) > num(f.nPaletes)) {
+      a.push("Não pode haver mais meias-paletes do que paletes de base (cada meia precisa de uma base por baixo).");
     }
     if (f.zonaPortagem.trim() && !zonas.some((z) => z.toLowerCase() === f.zonaPortagem.trim().toLowerCase())) {
       a.push(`A zona de portagem "${f.zonaPortagem}" não existe na tabela.`);
@@ -210,7 +217,7 @@ export default function RegistoForm({
       }
     }
     return a;
-  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, capacidadePaletes, mostrarPaletes, zonas, veiculoSel]);
+  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, f.nMeiasPaletes, capacidadePaletes, mostrarPaletes, zonas, veiculoSel]);
 
   function validar(): boolean {
     const e: Record<string, string> = {};
@@ -222,7 +229,7 @@ export default function RegistoForm({
     if (f.kmFinal !== "" && f.kmInicial !== "" && num(f.kmFinal) < num(f.kmInicial)) {
       e.kmFinal = "KM Final deve ser ≥ KM Inicial";
     }
-    for (const campo of ["kmInicial", "kmFinal", "nPaletes", "pesoAproximado"] as const) {
+    for (const campo of ["kmInicial", "kmFinal", "nPaletes", "nMeiasPaletes", "pesoAproximado"] as const) {
       if (f[campo] !== "" && num(f[campo]) < 0) e[campo] = "Não pode ser negativo";
     }
     if (mostrarPaletes) {
@@ -251,6 +258,7 @@ export default function RegistoForm({
         kmFinal: num(f.kmFinal),
         tipoPaleteId: mostrarPaletes && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
         nPaletes: mostrarPaletes ? num(f.nPaletes) : 0,
+        nMeiasPaletes: mostrarPaletes ? num(f.nMeiasPaletes) : 0,
         pesoAproximado: f.pesoAproximado === "" ? null : num(f.pesoAproximado),
         // O combustível usado no cálculo vem dos parâmetros (escritório); o motorista
         // não o introduz. Mantemos só o combustível "por fora" (Espanha), informativo.
@@ -513,6 +521,20 @@ export default function RegistoForm({
                 onChange={(e) => set("nPaletes", e.target.value)}
               />
               {erros.nPaletes && <p className="mt-1 text-xs text-red-600">{erros.nPaletes}</p>}
+            </div>
+            <div>
+              <label className="label">Nº de meias-paletes — opcional</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                step="1"
+                min="0"
+                placeholder="Em cima de outras, não ocupam base"
+                className="input"
+                value={f.nMeiasPaletes}
+                onChange={(e) => set("nMeiasPaletes", e.target.value)}
+              />
+              {erros.nMeiasPaletes && <p className="mt-1 text-xs text-red-600">{erros.nMeiasPaletes}</p>}
             </div>
             <div className="col-span-2">
               <label className="label">Peso aproximado (kg) — opcional</label>

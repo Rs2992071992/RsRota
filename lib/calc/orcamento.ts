@@ -24,6 +24,8 @@ export interface LinhaDevis {
   tipoPalete?: string | null;
   /** Nº de paletes (linhas novas e legado — ver tipoPaleteId/tipoPalete). */
   nPaletes: number;
+  /** Meias-paletes empilhadas — não ocupam base própria, valem metade no rateio. */
+  nMeiasPaletes?: number;
   /** Palete desta linha (2026-08-28 em diante) — ver ParagemInput equivalente. */
   tipoPaleteId?: number | null;
   paleteComprimentoMm?: number | null;
@@ -48,6 +50,7 @@ export interface EstimarLinhaInput {
   volume?: boolean;
   tipoPalete?: string | null;
   nPaletes?: number;
+  nMeiasPaletes?: number;
   tipoPaleteId?: number | null;
   paleteComprimentoMm?: number | null;
   paleteLarguraMm?: number | null;
@@ -66,6 +69,7 @@ export interface DetalheEstimativa {
   km: number;
   pesoKg: number;
   nPaletes: number;
+  nMeiasPaletes: number;
   /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
   coeficienteCarga: number;
   consumoL100: number;
@@ -132,6 +136,7 @@ export function estimarLinha(
       volume: input.volume || false,
       tipoPalete: input.tipoPalete ?? null,
       nPaletes: input.nPaletes || 0,
+      nMeiasPaletes: input.nMeiasPaletes || 0,
       tipoPaleteId: input.tipoPaleteId ?? null,
       paleteComprimentoMm: input.paleteComprimentoMm ?? null,
       paleteLarguraMm: input.paleteLarguraMm ?? null,
@@ -162,6 +167,7 @@ export function estimarLinha(
       km: calc.kmFeitos,
       pesoKg: calc.pesoTransportado,
       nPaletes: calc.nPaletes,
+      nMeiasPaletes: calc.nMeiasPaletes,
       coeficienteCarga: calc.coeficienteCarga,
       consumoL100: calc.consumoL100,
       litrosGastos: round2(calc.litrosGastos),

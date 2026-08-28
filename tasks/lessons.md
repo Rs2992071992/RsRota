@@ -2,6 +2,25 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-28] | Ao implementar `nMeiasPaletes` encontrei um bug lateral em
+  `totalPaletes` (`lib/calc/perRoute.ts`, métrica agregada da rota): a
+  condição só somava `nPaletes` quando `p.volume` ou `tipoVeiculo` literal
+  antigo `PALETE_120X80/100` — não cobria o estilo novo por dimensão
+  (`paleteComprimentoMm`/`LarguraMm`), introduzido no commit `e27ce00` no
+  mesmo dia, onde `p.volume` fica `false`/vestigial de propósito. Rotas 100%
+  "estilo novo" mostravam `totalPaletes: 0`, errado — nenhum teste cobria
+  isto. Também faltavam `tipoPaleteId`/`paleteComprimentoMm`/`paleteLarguraMm`/
+  `pesoAproximado` em `linhaDevisSchema` (`lib/validacao.ts`) — o Zod
+  descartava-os silenciosamente ao GUARDAR um orçamento (só estavam no schema
+  de ESTIMAR, `estimarDevisSchema`), perdendo o registo desses campos na BD
+  sem erro nenhum. | Sempre que um campo/condição passa a ter 2 (ou mais)
+  "estilos" válidos (aqui: legado vs. dimensão), fazer uma busca por TODOS os
+  outros sítios que já verificavam o estilo antigo isoladamente (`grep` pelo
+  campo/condição no repo todo) — não basta atualizar o motor de cálculo
+  principal, métricas agregadas e schemas de escrita secundários (ex.:
+  guardar vs. estimar um orçamento) ficam facilmente esquecidos e falham em
+  silêncio (sem exceção, sem teste a apanhar, só dados a menos).
+
 - [2026-08-28] | Paletes passaram a ser o único modo de rateio (capacidade por
   dimensão em vez de nº fixo por tipo, catálogo `TipoPalete` de 8 tamanhos) e o
   peso aproximado passou a alimentar a tabela de consumos — isto **reverte

@@ -71,6 +71,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     volume: p.volume,
     tipoPalete: p.tipoPalete,
     nPaletes: p.nPaletes,
+    nMeiasPaletes: p.nMeiasPaletes,
     tipoPaleteId: p.tipoPaleteId,
     paleteComprimentoMm: p.paleteComprimentoMm,
     paleteLarguraMm: p.paleteLarguraMm,

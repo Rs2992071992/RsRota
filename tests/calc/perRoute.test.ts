@@ -225,6 +225,43 @@ describe("calcularRota — rateio misto peso + paletes por dimensão normaliza a
     const troco = r.paragens.find((p) => p.cliente === "Cliente Paletes Novo")!;
     expect(troco.consumoL100).toBe(35);
   });
+  it("totalPaletes inclui o estilo novo (regressão: antes só contava volume/legado)", () => {
+    expect(r.totalPaletes).toBe(30);
+  });
+});
+
+describe("calcularRota — meias-paletes no rateio (não ocupam base própria)", () => {
+  const comMeias: ParagemInput[] = [
+    paragemBase({ cliente: "Cliente Peso", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, receitaPaga: 1000 }),
+    paragemBase({
+      cliente: "Cliente Paletes+Meias",
+      kmInicial: 300,
+      kmFinal: 450,
+      nPaletes: 10,
+      nMeiasPaletes: 4,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800, // capacidade = 38
+      snapshot: snapshotDimensao,
+      receitaPaga: 500,
+    }),
+  ];
+  const r = calcularRota("MIXMEIAS01", comMeias, ctx);
+
+  it("Σ quotas = 100 %", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.quota, 0);
+    expect(soma).toBeCloseTo(1, 6);
+  });
+  it("Σ custo atribuído = custo total da rota", () => {
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("cliente com meias-paletes usa (10 + 4×0,5)/38, não (10+4)/38", () => {
+    const cliente = r.rateio.find((c) => c.cliente === "Cliente Paletes+Meias")!;
+    expect(cliente.coefReal).toBeCloseTo(12 / 38, 6);
+  });
+  it("totalPaletes soma as meias a 0,5 (10 + 2 = 12)", () => {
+    expect(r.totalPaletes).toBe(12);
+  });
 });
 
 // Reproduz o cenário real (rota RIC-Tec-eurored): recolha num fornecedor,
