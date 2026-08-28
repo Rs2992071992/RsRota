@@ -37,6 +37,10 @@ interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
   tiposPalete: TipoPaleteOpcao[];
+  /** Campos opcionais deste motorista (desligáveis em /escritorio/motoristas/[id]). */
+  mostraNoitesFora: boolean;
+  mostraAlimentacao: boolean;
+  mostraHorasExtra: boolean;
   valorNoite: number;
   rotasRecentes: string[];
   clientes: string[];
@@ -87,6 +91,9 @@ export default function RegistoForm({
   zonas,
   veiculos,
   tiposPalete,
+  mostraNoitesFora,
+  mostraAlimentacao,
+  mostraHorasExtra,
   valorNoite,
   rotasRecentes,
   clientes,
@@ -587,9 +594,11 @@ export default function RegistoForm({
               </p>
             )}
           </div>
-          {campoNum("horasExtra", "Horas Extra")}
+          {mostraHorasExtra && campoNum("horasExtra", "Horas Extra")}
         </div>
+        {(mostraNoitesFora || mostraAlimentacao) && (
         <div className="grid grid-cols-2 gap-3">
+          {mostraNoitesFora && (
           <div>
             <label className="label">Noites fora (nº)</label>
             <input
@@ -609,6 +618,8 @@ export default function RegistoForm({
               </p>
             )}
           </div>
+          )}
+          {mostraAlimentacao && (
           <div>
             <label className="label">Alimentação (€)</label>
             <input
@@ -626,7 +637,9 @@ export default function RegistoForm({
               </p>
             )}
           </div>
+          )}
         </div>
+        )}
       </div>
 
       <div className="card space-y-3">

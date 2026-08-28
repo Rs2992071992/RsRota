@@ -62,6 +62,9 @@ export default async function MotoristaRotas({ params }: { params: { id: string 
           diasAlimentacao: motorista.diasAlimentacao,
           kmAnuais: motorista.kmAnuais,
           fatorAnualizacao: motorista.fatorAnualizacao,
+          mostraNoitesFora: motorista.mostraNoitesFora,
+          mostraAlimentacao: motorista.mostraAlimentacao,
+          mostraHorasExtra: motorista.mostraHorasExtra,
         }}
       />
 

@@ -187,6 +187,11 @@ export const motoristaParamsSchema = z.object({
   diasAlimentacao: n,
   kmAnuais: n.positive("Deve ser > 0"),
   fatorAnualizacao: n,
+  // Campos opcionais do registo, visíveis ou não consoante o motorista (ex.:
+  // um motorista que nunca faz noites fora não precisa de ver esse campo).
+  mostraNoitesFora: z.boolean().optional(),
+  mostraAlimentacao: z.boolean().optional(),
+  mostraHorasExtra: z.boolean().optional(),
 });
 
 export type MotoristaParamsForm = z.infer<typeof motoristaParamsSchema>;

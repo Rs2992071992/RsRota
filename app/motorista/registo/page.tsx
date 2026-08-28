@@ -13,10 +13,20 @@ export default async function RegistoPage({
   const sessao = getSessaoInfo();
   const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
 
-  const [portagens, params, tiposPalete, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =
+  const [portagens, params, campoVisivel, tiposPalete, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =
     await Promise.all([
       prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
       prisma.parametros.findUnique({ where: { id: 1 } }),
+      // Campos opcionais do registo (noites fora/alimentação/horas extra) —
+      // desligáveis por motorista em /escritorio/motoristas/[id]. O
+      // escritório (motoristaId sempre null nas paragens que regista) vê
+      // sempre tudo, por isso só se consulta para sessões de motorista.
+      sessao?.perfil === "MOTORISTA"
+        ? prisma.utilizador.findUnique({
+            where: { id: sessao.id },
+            select: { mostraNoitesFora: true, mostraAlimentacao: true, mostraHorasExtra: true },
+          })
+        : Promise.resolve(null),
       prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
       prisma.paragem.findMany({
         where: filtroRotas,
@@ -89,6 +99,9 @@ export default async function RegistoPage({
         inspecaoVerificada: v.inspecaoVerificada,
       }))}
       tiposPalete={tiposPalete}
+      mostraNoitesFora={campoVisivel?.mostraNoitesFora ?? true}
+      mostraAlimentacao={campoVisivel?.mostraAlimentacao ?? true}
+      mostraHorasExtra={campoVisivel?.mostraHorasExtra ?? true}
       valorNoite={params?.valorNoite ?? 70}
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}

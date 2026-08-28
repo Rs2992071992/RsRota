@@ -2,6 +2,26 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Campos opcionais por motorista (2026-08-28)
+
+Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Alguns motoristas
+nunca fazem noites fora — os campos "Noites fora"/"Alimentação"/"Horas extra"
+passam a ser desligáveis por motorista, na página de edição já existente.
+
+- [x] Schema: `Utilizador.mostraNoitesFora/mostraAlimentacao/mostraHorasExtra`
+  (Boolean, default `true` — preserva o comportamento atual) — `db push` no Neon
+- [x] `lib/validacao.ts` (`motoristaParamsSchema`), `MotoristaParamsForm.tsx`
+  (3 checkboxes, secção "Campos visíveis no registo"),
+  `/escritorio/motoristas/[id]/page.tsx`
+- [x] `app/motorista/registo/page.tsx` busca os 3 campos do motorista da sessão
+  (escritório vê sempre tudo — não regista em nome de nenhum motorista
+  específico); `RegistoForm.tsx` esconde os 3 blocos condicionalmente
+- [x] `ParagemEditor.tsx` (escritório) fica sem alteração — continua a mostrar
+  sempre os 3 campos, independentemente do motorista
+- [x] `tsc`/`vitest` (156, inalterados)/`next build` limpos; confirmado por
+  leitura direta que os 2 motoristas reais mantiveram os defaults `true`
+- [ ] Commit + push
+
 ## 🔲 Meias-paletes (2026-08-28)
 
 Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Uma meia-palete

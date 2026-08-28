@@ -415,6 +415,16 @@ model Utilizador {
   kmAnuais         Float @default(95000)
   fatorAnualizacao Float @default(14)
 
+  // Campos opcionais do registo de paragem, visíveis ou não consoante o
+  // motorista (alguns nunca fazem noites fora, por exemplo) — controlado
+  // pelo escritório em /escritorio/motoristas/[id]. Default true preserva o
+  // comportamento atual (todos visíveis) até o escritório desligar algum.
+  // Só afeta o formulário do próprio motorista (RegistoForm.tsx); o
+  // escritório continua a ver sempre tudo no ParagemEditor.tsx.
+  mostraNoitesFora  Boolean @default(true)
+  mostraAlimentacao Boolean @default(true)
+  mostraHorasExtra  Boolean @default(true)
+
   paragens Paragem[]
   avarias  Avaria[]
 

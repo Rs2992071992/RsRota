@@ -15,7 +15,16 @@ export interface MotoristaParamsBD {
   diasAlimentacao: number;
   kmAnuais: number;
   fatorAnualizacao: number;
+  mostraNoitesFora: boolean;
+  mostraAlimentacao: boolean;
+  mostraHorasExtra: boolean;
 }
+
+const CAMPOS_VISIVEIS: [keyof MotoristaParamsBD, string][] = [
+  ["mostraNoitesFora", "Noites fora"],
+  ["mostraAlimentacao", "Alimentação"],
+  ["mostraHorasExtra", "Horas extra"],
+];
 
 const CAMPOS: [keyof MotoristaParamsBD, string][] = [
   ["salarioMensal", "Salário mensal (€)"],
@@ -58,6 +67,10 @@ export default function MotoristaParamsForm({
 
   function setNum(k: keyof MotoristaParamsBD, v: string) {
     setF((p) => ({ ...p, [k]: v === "" ? 0 : Number(v) }));
+  }
+
+  function setBool(k: keyof MotoristaParamsBD, v: boolean) {
+    setF((p) => ({ ...p, [k]: v }));
   }
 
   async function guardar() {
@@ -117,6 +130,26 @@ export default function MotoristaParamsForm({
             />
           </div>
         ))}
+      </div>
+
+      <div className="border-t border-gray-100 pt-3">
+        <h3 className="mb-2 text-sm font-semibold text-gray-700">Campos visíveis no registo</h3>
+        <p className="mb-2 text-xs text-gray-500">
+          Desligue os que não se aplicam a este motorista (ex.: nunca faz noites fora) — deixam
+          de aparecer no formulário dele, sem afetar mais ninguém.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          {CAMPOS_VISIVEIS.map(([k, label]) => (
+            <label key={k} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={f[k] as boolean}
+                onChange={(e) => setBool(k, e.target.checked)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );
