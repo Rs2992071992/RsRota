@@ -30,7 +30,7 @@ atribuindo manualmente km desse troço a um ou mais clientes.
   100% a um cliente moveu 138,28€→149,06€ / 31,61€→20,82€, custoTotalRota
   manteve-se em 169,88€ ao cêntimo; revertido de seguida (dados de produção
   sem alteração)
-- [ ] Commit + push
+- [x] Commit + push (`330e14c`)
 
 ## ☑️ Campos opcionais por motorista (2026-08-28)
 
