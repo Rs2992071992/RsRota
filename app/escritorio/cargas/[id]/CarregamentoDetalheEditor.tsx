@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
 import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
+import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
 
 type Detalhe = Omit<CarregamentoDetalhe, "data"> & { data: string };
 
@@ -472,7 +473,14 @@ export default function CarregamentoDetalheEditor({
 
       {/* Planta de carga */}
       <div className="card">
-        <h3 className="mb-3 font-semibold">Planta de carga</h3>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="font-semibold">Planta de carga</h3>
+          <DescarregarPdfBotao
+            url={`/api/carregamentos/${detalhe.id}/planta-pdf`}
+            nomeFicheiro={`planta-carga-${detalhe.veiculo.nome}-${new Date(detalhe.data).toISOString().slice(0, 10)}`}
+            label="Imprimir planta de carga"
+          />
+        </div>
         <CarregamentoFloorPlan caixas={detalhe.packing.caixas} />
       </div>
 

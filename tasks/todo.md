@@ -2,6 +2,30 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Imprimir a planta de carga (2026-08-28)
+
+Pedido do Ricardo: no módulo Cargas, poder imprimir a planta de carga para
+dar ao motorista e a quem carrega o camião. Seguido o padrão já existente no
+projeto (PDF gerado no servidor com `@react-pdf/renderer`, não
+`window.print()` — não havia nenhum uso disso no código).
+
+- [x] `lib/pdf/PlantaCargaDocument.tsx` (novo): mesma leitura visual do ecrã
+  (`components/CarregamentoFloorPlan.tsx`) — 1 caixa (Svg) por veículo/
+  reboque, mesma paleta de cores por cliente, legenda, aviso se houver
+  paletes não colocadas, tabela-resumo cliente/tipo/quantidade. A4 paisagem.
+- [x] `app/api/carregamentos/[id]/planta-pdf/route.ts` (novo): `runtime =
+  "nodejs"`, só escritório, reaproveita `carregarCarregamento()` já
+  existente (zero lógica de cálculo nova)
+- [x] `CarregamentoDetalheEditor.tsx`: botão "Imprimir planta de carga"
+  (`DescarregarPdfBotao`, componente já existente) junto ao cabeçalho da
+  secção
+- [x] `tsc`/`vitest` (161, inalterados)/`next build` limpos
+- [x] Verificado com 3 carregamentos reais (até 30 paletes, 2 caixas —
+  camião+reboque, 3 clientes): PDF gerado e inspecionado visualmente,
+  cores/posições/legenda/tabela corretas, quebra de página automática entre
+  caixas
+- [ ] Commit + push
+
 ## ☑️ Cartões da rota: paletes em vez de kg (2026-08-28)
 
 Pedido do Ricardo: na página da rota (`/escritorio/rotas/[idRota]`), o foco
