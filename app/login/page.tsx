@@ -37,13 +37,20 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) {
         setErro(data.erro || "Erro ao entrar.");
+        setALigar(false);
         return;
       }
       router.push(data.destino);
       router.refresh();
+      // Não repõe `aLigar` aqui de propósito: o botão fica desativado/"A
+      // entrar…" até a página mudar (o componente desmonta). Repor cedo
+      // demais (como fazia o `finally` antigo) deixava o botão clicável
+      // enquanto o destino (ex. dashboard) ainda estava a carregar — um
+      // 2º clique disparava um 2º carregamento em simultâneo, e dois a
+      // competir pela única ligação à BD (connection_limit=1, serverless)
+      // esgotava-a (P2024), obrigando a recarregar a página à mão.
     } catch {
       setErro("Erro de ligação.");
-    } finally {
       setALigar(false);
     }
   }
