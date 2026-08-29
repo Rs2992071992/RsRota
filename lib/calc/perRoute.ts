@@ -165,11 +165,38 @@ export function calcularRota(
   const lucro = receitaTotal - custoTotalRota;
   const alerta: RotaCalc["alerta"] = lucro < 0 ? "🔴 PREJUÍZO" : "🟢 OK";
 
-  // Rateio por cliente (auditável). O custo total da rota é repartido de forma
-  // proporcional ao coeficiente de carga (peso/capacidade) de cada cliente,
-  // NORMALIZADO para somar 100 %. Assim Σ custoAtribuido = custoTotalRota e
-  // Σ margem = lucro. Trajetos a vazio (VAZIO ou camião sem carga) não recebem
-  // linha própria: o seu custo já está no total e dilui-se nos clientes reais.
+  // Atribuição manual de troços VAZIO (opcional, escritório): os km indicados
+  // por cliente convertem-se em fração do troço (km/kmFeitos) aplicada ao
+  // custoParagem desse troço, entregue diretamente a esse cliente — fora do
+  // rateio proporcional abaixo. O que não for coberto pelos km indicados
+  // continua a diluir-se automaticamente, como sempre (ver custoProporcional).
+  // Nunca deixa uma paragem atribuir mais km do que os que efetivamente fez
+  // (escala tudo para baixo se a soma ultrapassar `kmFeitos`).
+  const manualPorCliente = new Map<string, number>();
+  let custoManualTotal = 0;
+  for (let i = 0; i < paragens.length; i++) {
+    const p = paragens[i];
+    if (p.tipoVeiculo !== "VAZIO" || !p.rateioManual?.length) continue;
+    const kmFeitosTroco = calc[i].kmFeitos;
+    if (kmFeitosTroco <= 0) continue;
+    const somaKm = p.rateioManual.reduce((a, r) => a + (r.km || 0), 0);
+    if (somaKm <= 0) continue;
+    const fator = somaKm > kmFeitosTroco ? kmFeitosTroco / somaKm : 1;
+    for (const { cliente, km } of p.rateioManual) {
+      if (!cliente || km <= 0) continue;
+      const valor = calc[i].custoParagem * ((km * fator) / kmFeitosTroco);
+      manualPorCliente.set(cliente, (manualPorCliente.get(cliente) ?? 0) + valor);
+      custoManualTotal += valor;
+    }
+  }
+  const custoProporcional = custoTotalRota - custoManualTotal;
+
+  // Rateio por cliente (auditável). O custo (menos o que já foi atribuído
+  // manualmente acima) é repartido de forma proporcional ao coeficiente de
+  // carga (peso/capacidade) de cada cliente, NORMALIZADO para somar 100 %.
+  // Assim Σ custoAtribuido = custoTotalRota e Σ margem = lucro. Trajetos a
+  // vazio (VAZIO ou camião sem carga) não recebem linha própria no loop
+  // abaixo: o que não foi atribuído manualmente dilui-se nos clientes reais.
   const porCliente = new Map<string, RateioCliente>();
   let somaCoef = 0;
   for (let i = 0; i < paragens.length; i++) {
@@ -208,11 +235,36 @@ export function calcularRota(
   }
   // Normalização: quota = coefReal / Σcoef. Garde-fou contra divisão por zero
   // (nenhum arrêt participante) — reparte igualmente entre os clientes presentes.
-  const clientes = Array.from(porCliente.values());
-  const denom = somaCoef > 0 ? somaCoef : clientes.length || 1;
-  for (const c of clientes) {
+  const clientesProporcional = Array.from(porCliente.values());
+  const denom = somaCoef > 0 ? somaCoef : clientesProporcional.length || 1;
+  for (const c of clientesProporcional) {
     c.quota = somaCoef > 0 ? c.coefReal / denom : 1 / denom;
-    c.custoAtribuido = c.quota * custoTotalRota;
+    c.custoAtribuido = c.quota * custoProporcional;
+  }
+
+  // Soma a atribuição manual (se houver) — cria a linha do cliente se ainda
+  // não existir (ex.: um cliente que só aparece via a atribuição manual do
+  // vazio, sem nenhuma outra paragem faturada nesta rota).
+  for (const [chave, valor] of manualPorCliente) {
+    const atual = porCliente.get(chave) ?? {
+      cliente: chave,
+      coefReal: 0,
+      quota: 0,
+      custoAtribuido: 0,
+      receitaPaga: 0,
+    };
+    atual.custoAtribuido += valor;
+    porCliente.set(chave, atual);
+  }
+
+  // Recalcula a quota final de TODOS os clientes a partir do custoAtribuido
+  // real (proporcional + manual) — sem override dá exatamente o mesmo valor
+  // que o cálculo direto acima (custoManualTotal=0 -> custoProporcional=
+  // custoTotalRota), mas mantém "quota = fração real do custo total que este
+  // cliente paga" sempre verdadeiro, incl. quando há atribuição manual.
+  const clientes = Array.from(porCliente.values());
+  for (const c of clientes) {
+    if (custoTotalRota > 0) c.quota = c.custoAtribuido / custoTotalRota;
   }
 
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);

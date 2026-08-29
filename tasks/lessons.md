@@ -2,6 +2,23 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-28] | Ao adicionar a atribuição manual de km de um troço VAZIO
+  (`rateioManual`), a forma óbvia de encaixar no rateio existente seria só
+  subtrair o valor manual do `custoTotalRota` antes do loop de coeficientes
+  e somá-lo depois — mas isso deixava `quota` (campo usado para o mostrar
+  na UI) a mentir: continuava a refletir só a fatia proporcional
+  (`coefReal/denom`), não a fração REAL do custo total que o cliente
+  passava a pagar depois de somar a parte manual. | Sempre que um valor
+  "quota"/"%" é mostrado ao lado de um total que pode ter componentes
+  manuais + proporcionais, recalcular a quota NO FIM a partir do resultado
+  final (`quota = custoAtribuido / custoTotalRota`), nunca a partir da
+  fórmula proporcional isolada — garante Σquota=1 sempre, e é
+  matematicamente idêntico ao valor antigo quando não há override nenhum
+  (confirmado: os 161 testes, incl. os 46 já existentes sobre rateio, não
+  mudaram de resultado). Verificado também contra a rota real
+  `RIC-Blowtec`: atribuir 100% de um vazio de 69 km a um cliente moveu
+  138,28€→149,06€ / 31,61€→20,82€ sem alterar o custoTotalRota (169,88€).
+
 - [2026-08-28] | Ao implementar `nMeiasPaletes` encontrei um bug lateral em
   `totalPaletes` (`lib/calc/perRoute.ts`, métrica agregada da rota): a
   condição só somava `nPaletes` quando `p.volume` ou `tipoVeiculo` literal

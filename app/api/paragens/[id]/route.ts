@@ -32,7 +32,13 @@ async function paragemAutorizada(id: number) {
  * é só cosmético: sem este filtro, um PATCH direto (fora da UI) conseguia
  * alterá-los à mesma.
  */
-const CAMPOS_ESCRITORIO = ["pago", "dataPagamento", "receitaPaga", "faturarCliente"] as const;
+const CAMPOS_ESCRITORIO = [
+  "pago",
+  "dataPagamento",
+  "receitaPaga",
+  "faturarCliente",
+  "rateioManual",
+] as const;
 
 // PATCH /api/paragens/[id]
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -59,6 +65,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const data: Record<string, unknown> = { ...d };
   if (d.data) data.data = new Date(d.data);
   if (d.faturarCliente !== undefined) data.faturarCliente = d.faturarCliente?.trim() || null;
+  // rateioManual só faz sentido num troço VAZIO — nunca guardar num que não seja
+  // (defensivo: mesmo que o pedido venha fora da UI, que já só o mostra para VAZIO).
+  if (d.rateioManual !== undefined) {
+    const tipoVeiculoEfetivo = d.tipoVeiculo ?? auth.paragem.tipoVeiculo;
+    data.rateioManual = tipoVeiculoEfetivo === "VAZIO" ? d.rateioManual : null;
+  }
 
   // Estado de cobrança: ao marcar pago sem data, regista a data de hoje; ao desmarcar,
   // limpa a data de pagamento.

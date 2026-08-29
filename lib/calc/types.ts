@@ -183,6 +183,16 @@ export interface ParagemInput {
    */
   recolha?: boolean;
   faturarCliente?: string | null;
+  /**
+   * Atribuição manual do custo deste troço a clientes — só relevante quando
+   * `tipoVeiculo = VAZIO`. Cada `km` converte-se em fração do troço
+   * (`km/kmFeitos`) aplicada ao custo desse troço, entregue diretamente ao
+   * `cliente` indicado (fora do rateio proporcional normal). O que não for
+   * coberto pelos km indicados continua a diluir-se automaticamente pelos
+   * clientes da rota, como sempre — ver `lib/calc/perRoute.ts::calcularRota`.
+   * null/ausente = sem override (comportamento inalterado).
+   */
+  rateioManual?: RateioManualItem[] | null;
   // Informativo (Espanha)
   litrosEspanha?: number | null;
   custoEspanha?: number | null;
@@ -194,9 +204,10 @@ export interface ParagemCalc {
   idRota: string;
   cliente: string;
   tipoVeiculo: string;
-  /** Passthrough — ver ParagemInput.recolha / .faturarCliente. */
+  /** Passthrough — ver ParagemInput.recolha / .faturarCliente / .rateioManual. */
   recolha: boolean;
   faturarCliente: string | null;
+  rateioManual: RateioManualItem[] | null;
   pesoTransportado: number;
   /** Passthrough — ver ParagemInput.volume / .tipoPalete. */
   volume: boolean;
@@ -231,6 +242,12 @@ export interface ParagemCalc {
   // Espanha (informativo)
   litrosEspanha: number;
   poupancaEspanha: number;
+}
+
+/** Um item de atribuição manual — ver `ParagemInput.rateioManual`. */
+export interface RateioManualItem {
+  cliente: string;
+  km: number;
 }
 
 /** Repartição do custo da rota por cliente. */

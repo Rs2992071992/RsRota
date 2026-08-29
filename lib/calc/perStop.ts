@@ -271,6 +271,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     tipoVeiculo: p.tipoVeiculo,
     recolha: p.recolha ?? false,
     faturarCliente: p.faturarCliente ?? null,
+    rateioManual: p.rateioManual ?? null,
     pesoTransportado: peso,
     volume: ehPalete,
     tipoPalete: !paleteNova && legado.ehPalete ? legado.tipo : null,

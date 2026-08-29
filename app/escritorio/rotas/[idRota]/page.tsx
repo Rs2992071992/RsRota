@@ -81,8 +81,10 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
       litrosEspanha: p.litrosEspanha,
       custoEspanha: p.custoEspanha,
       receitaPaga: p.receitaPaga,
+      rateioManual: p.rateioManual as { cliente: string; km: number }[] | null,
     };
   };
+  const clientesRota = rota.rateio.map((c) => c.cliente);
 
   return (
     <div className="space-y-5">
@@ -233,6 +235,7 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
                       veiculos={veiculos}
                       tiposPalete={tiposPalete}
                       clientes={clientes}
+                      clientesRota={clientesRota}
                       valorNoite={valorNoite}
                     />
                   ) : (
@@ -258,7 +261,9 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         <p className="mb-3 text-xs text-gray-500">
           Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
           quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
-          somar 100 %. Os trajetos a vazio são repartidos pelos clientes; as paragens marcadas
+          somar 100 %. Os trajetos a vazio são repartidos automaticamente pelos clientes — a menos
+          que o escritório atribua manualmente km desse troço a clientes específicos, ao editar a
+          paragem (o que não for atribuído continua a diluir-se como sempre). As paragens marcadas
           "recolha → Cliente" somam o seu custo à quota desse cliente em vez de gerarem linha própria.
           O coef. real (peso/capacidade) é só indicador: acima de 1 indica sobrecarga.
         </p>

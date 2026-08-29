@@ -48,6 +48,8 @@ export interface ParagemEditavel {
   litrosEspanha: number | null;
   custoEspanha: number | null;
   receitaPaga: number;
+  /** Atribuição manual do custo deste troço a clientes (km) — só relevante se VAZIO. */
+  rateioManual: { cliente: string; km: number }[] | null;
 }
 
 interface Props {
@@ -57,6 +59,8 @@ interface Props {
   tiposPalete: TipoPaleteOpcao[];
   /** Nomes de clientes conhecidos, para o dropdown "Faturar esta recolha a". */
   clientes: string[];
+  /** Clientes desta rota (rota.rateio) — para a atribuição manual de km de um troço VAZIO. */
+  clientesRota?: string[];
   valorNoite: number;
   /** Mostrar o campo "Receita paga" (só no escritório). */
   mostrarReceita?: boolean;
@@ -73,6 +77,7 @@ export default function ParagemEditor({
   veiculos,
   tiposPalete,
   clientes,
+  clientesRota = [],
   valorNoite,
   mostrarReceita = false,
   mostrarDetalheEuroNoites = true,
@@ -89,6 +94,15 @@ export default function ParagemEditor({
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
   const [erro, setErro] = useState("");
+
+  // Atribuição manual de km deste troço (só relevante se VAZIO) — um input por
+  // cliente da rota, pré-preenchido a partir do que já estiver guardado.
+  const [kmPorCliente, setKmPorCliente] = useState<Record<string, string>>(() => {
+    const inicial: Record<string, string> = {};
+    for (const r of paragem.rateioManual ?? []) inicial[r.cliente] = String(r.km);
+    return inicial;
+  });
+  const totalKmAtribuido = Object.values(kmPorCliente).reduce((a, v) => a + (Number(v) || 0), 0);
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) {
     setF((prev) => ({ ...prev, [k]: v }));
@@ -164,6 +178,12 @@ export default function ParagemEditor({
         alimentacao: Number(f.alimentacao),
         horasExtra: Number(f.horasExtra),
         faturarCliente: f.faturarCliente?.trim() || null,
+        rateioManual:
+          f.tipoVeiculo === "VAZIO"
+            ? Object.entries(kmPorCliente)
+                .filter(([, v]) => Number(v) > 0)
+                .map(([cliente, v]) => ({ cliente, km: Number(v) }))
+            : null,
         litrosEspanha: f.litrosEspanha === null || f.litrosEspanha === ("" as never) ? null : Number(f.litrosEspanha),
         custoEspanha: f.custoEspanha === null || f.custoEspanha === ("" as never) ? null : Number(f.custoEspanha),
         ...(mostrarReceita ? { receitaPaga: Number(f.receitaPaga) } : {}),
@@ -310,7 +330,50 @@ export default function ParagemEditor({
               </button>
             </div>
           )}
-          {f.tipoVeiculo === "VAZIO" ? null : modo === "paletes" ? (
+          {f.tipoVeiculo === "VAZIO" ? (
+            <div className="col-span-2 rounded-lg border border-gray-200 p-3">
+              <p className="mb-1 text-sm font-medium text-gray-700">
+                Atribuir km deste troço vazio a clientes (opcional)
+              </p>
+              <p className="mb-2 text-xs text-gray-500">
+                Por defeito, o custo deste troço dilui-se automaticamente pelos clientes da rota.
+                Indique aqui quantos km atribuir a cada um para o substituir — o que não for
+                coberto continua a diluir-se como sempre.
+              </p>
+              {clientesRota.length === 0 ? (
+                <p className="text-xs text-gray-400">Sem outros clientes nesta rota ainda.</p>
+              ) : (
+                <div className="space-y-2">
+                  {clientesRota.map((c) => (
+                    <div key={c} className="flex items-center gap-2">
+                      <span className="flex-1 truncate text-sm">{c}</span>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        placeholder="0"
+                        className="input w-24"
+                        value={kmPorCliente[c] ?? ""}
+                        onChange={(e) =>
+                          setKmPorCliente((prev) => ({ ...prev, [c]: e.target.value }))
+                        }
+                      />
+                      <span className="text-xs text-gray-400">km</span>
+                    </div>
+                  ))}
+                  <p
+                    className={`text-xs ${
+                      totalKmAtribuido > 0 && totalKmAtribuido !== Number(f.kmFinal) - Number(f.kmInicial)
+                        ? "text-amber-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Total: {totalKmAtribuido} km (de {Number(f.kmFinal) - Number(f.kmInicial)} km neste troço)
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : modo === "paletes" ? (
             <>
               <div>
                 <label className="label">Tipo de palete</label>

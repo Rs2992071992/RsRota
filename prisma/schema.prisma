@@ -286,6 +286,14 @@ model Paragem {
   // preserva o rateio de toda a história existente.
   faturarCliente String?
 
+  // Atribuição manual do custo deste troço a clientes — só relevante quando
+  // tipoVeiculo = VAZIO. Forma: [{ cliente, km }]. Os km atribuídos convertem-se
+  // em fração do troço (km/kmFeitos) aplicada ao custoParagem; o que não for
+  // coberto continua a diluir-se automaticamente pelos clientes da rota, como
+  // sempre foi (ver lib/calc/perRoute.ts::calcularRota). null = sem override,
+  // comportamento inalterado. Só o escritório o define (CAMPOS_ESCRITORIO).
+  rateioManual Json?
+
   // Override opcional do preço de referência do combustível para esta paragem.
   precoCombRefOverride Float?
 

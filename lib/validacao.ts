@@ -54,6 +54,15 @@ export const paragemSchema = z
     // normalmente ao próprio `cliente`).
     recolha: z.boolean().default(false),
     faturarCliente: z.string().trim().nullable().optional(),
+    // Atribuição manual do custo de um troço VAZIO a clientes (km, não %) —
+    // ver Paragem.rateioManual no schema. Sem teto ao somatório aqui: o
+    // motor de cálculo escala defensivamente se somar mais do que o troço
+    // fez (lib/calc/perRoute.ts::calcularRota).
+    rateioManual: z
+      .array(z.object({ cliente: z.string().trim().min(1), km: z.number().min(0) }))
+      .max(10)
+      .nullable()
+      .optional(),
     precoCombRefOverride: numOpcional,
     receitaPaga: numNaoNeg.default(0),
     pago: z.boolean().default(false),

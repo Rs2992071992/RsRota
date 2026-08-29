@@ -6,7 +6,7 @@ import {
   snapshotDeEntidades,
   type BaseSnapshot,
 } from "@/lib/snapshot-service";
-import type { ParagemInput, ParagemSnapshot, RotaCalc } from "@/lib/calc/types";
+import type { ParagemInput, ParagemSnapshot, RateioManualItem, RotaCalc } from "@/lib/calc/types";
 import type { Paragem, Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
 
 /** Paragem com as relações necessárias para resolver o snapshot efetivo. */
@@ -83,6 +83,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     horasExtra: p.horasExtra,
     recolha: p.recolha,
     faturarCliente: p.faturarCliente,
+    rateioManual: p.rateioManual as RateioManualItem[] | null,
     precoCombRefOverride: p.precoCombRefOverride,
     receitaPaga: p.receitaPaga,
     litrosEspanha: p.litrosEspanha,

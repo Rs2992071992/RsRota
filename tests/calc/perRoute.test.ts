@@ -264,6 +264,86 @@ describe("calcularRota — meias-paletes no rateio (não ocupam base própria)",
   });
 });
 
+describe("calcularRota — atribuição manual de km num troço VAZIO (rateioManual)", () => {
+  function cenario(rateioManual?: { cliente: string; km: number }[]): ReturnType<typeof calcularRota> {
+    const paragens: ParagemInput[] = [
+      paragemBase({ idRota: "VZ01", cliente: "Cliente A", kmInicial: 0, kmFinal: 100, kgCarregados: 12000, receitaPaga: 1000 }),
+      paragemBase({ idRota: "VZ01", cliente: "Cliente B", kmInicial: 100, kmFinal: 200, kgCarregados: 6000, receitaPaga: 500 }),
+      paragemBase({
+        idRota: "VZ01",
+        cliente: "Vazio",
+        tipoVeiculo: "VAZIO",
+        kmInicial: 200,
+        kmFinal: 300,
+        rateioManual,
+      }),
+    ];
+    return calcularRota("VZ01", paragens, ctx);
+  }
+
+  const base = cenario(); // sem override — baseline
+  const custoVazio = base.paragens[2].custoParagem;
+  const quotaProporcionalA = base.rateio.find((c) => c.cliente === "Cliente A")!.custoAtribuido / base.custoTotalRota;
+
+  it("sem override: Σcusto = custoTotalRota (regressão — comportamento inalterado)", () => {
+    const soma = base.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(base.custoTotalRota, 6);
+    expect(base.rateio.find((c) => c.cliente === "Vazio")).toBeUndefined();
+  });
+
+  it("split cobrindo o troço todo (55+45=100 km) — cada cliente recebe a quota proporcional normal + a sua fração exata do custo do vazio", () => {
+    const r = cenario([
+      { cliente: "Cliente A", km: 55 },
+      { cliente: "Cliente B", km: 45 },
+    ]);
+    const a = r.rateio.find((c) => c.cliente === "Cliente A")!;
+    const b = r.rateio.find((c) => c.cliente === "Cliente B")!;
+    // Fórmula: custoAtribuido = quotaProporcional × (custoTotalRota - custoManual) + valorManual.
+    const esperadoA =
+      quotaProporcionalA * (r.custoTotalRota - custoVazio) + custoVazio * 0.55;
+    expect(a.custoAtribuido).toBeCloseTo(esperadoA, 4);
+    // Invariantes continuam a verificar mesmo com override.
+    const soma = r.rateio.reduce((a2, c) => a2 + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 4);
+    const somaQuota = r.rateio.reduce((a2, c) => a2 + c.quota, 0);
+    expect(somaQuota).toBeCloseTo(1, 6);
+    expect(b.custoAtribuido).toBeCloseTo(r.custoTotalRota - a.custoAtribuido, 4);
+  });
+
+  it("split parcial (só 60 dos 100 km atribuídos) — os 40 km restantes continuam a diluir-se proporcionalmente", () => {
+    const r = cenario([{ cliente: "Cliente A", km: 60 }]);
+    const custoManual = custoVazio * 0.6; // só 60 % do troço foi atribuído manualmente
+    const a = r.rateio.find((c) => c.cliente === "Cliente A")!;
+    const esperadoA = quotaProporcionalA * (r.custoTotalRota - custoManual) + custoManual;
+    expect(a.custoAtribuido).toBeCloseTo(esperadoA, 4);
+    const soma = r.rateio.reduce((a2, c) => a2 + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 4);
+  });
+
+  it("split a somar mais km do que o troço fez (70+70 de 100) — escalado para 100 km, nunca ultrapassa o custo do próprio troço", () => {
+    const r = cenario([
+      { cliente: "Cliente A", km: 70 },
+      { cliente: "Cliente B", km: 70 },
+    ]);
+    // Escalado: 70/140×100=50 km cada -> 50 % do custoVazio cada.
+    const esperadoA = quotaProporcionalA * (r.custoTotalRota - custoVazio) + custoVazio * 0.5;
+    const a = r.rateio.find((c) => c.cliente === "Cliente A")!;
+    expect(a.custoAtribuido).toBeCloseTo(esperadoA, 4);
+    const soma = r.rateio.reduce((a2, c) => a2 + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 4);
+  });
+
+  it("cliente atribuído manualmente sem nenhuma outra paragem na rota ganha linha própria", () => {
+    const r = cenario([{ cliente: "Cliente Só No Vazio", km: 100 }]);
+    const novo = r.rateio.find((c) => c.cliente === "Cliente Só No Vazio");
+    expect(novo).toBeDefined();
+    expect(novo!.custoAtribuido).toBeCloseTo(custoVazio, 4);
+    expect(novo!.receitaPaga).toBe(0);
+    const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 4);
+  });
+});
+
 // Reproduz o cenário real (rota RIC-Tec-eurored): recolha num fornecedor,
 // material entregue mais tarde ao cliente final — o fornecedor não deve
 // pagar rateio, o custo soma-se à quota do cliente indicado em `faturarCliente`.

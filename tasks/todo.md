@@ -2,6 +2,36 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Atribuição manual do custo de troços VAZIO por km (2026-08-28)
+
+Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. O custo de
+um troço VAZIO era sempre diluído automaticamente pelos clientes da rota
+(proporcional a peso/paletes) — pedido do Ricardo: poder substituir isso,
+atribuindo manualmente km desse troço a um ou mais clientes.
+
+- [x] Schema: `Paragem.rateioManual` (Json?, `{cliente,km}[]`) — `db push` no Neon
+- [x] `lib/calc/types.ts`: `RateioManualItem`, passthrough em `ParagemInput`/`ParagemCalc`
+- [x] `lib/calc/perRoute.ts::calcularRota`: km atribuídos -> fração do troço
+  (`km/kmFeitos`, escalada se somar mais do que o troço fez) -> valor fixo
+  por cliente, fora do pool proporcional (`custoTotalRota - custoManualTotal`);
+  quota recalculada no fim a partir do `custoAtribuido` real — Σcusto e
+  Σquota continuam a verificar sempre, com ou sem override
+- [x] `lib/validacao.ts`, `app/api/paragens/route.ts` + `[id]/route.ts`
+  (`rateioManual` só grava em troços VAZIO, só escritório — junta-se a
+  `CAMPOS_ESCRITORIO`), `lib/rotas-service.ts` (passthrough)
+- [x] UI: `ParagemEditor.tsx` ganha secção "Atribuir km deste troço vazio a
+  clientes" (só quando `tipoVeiculo=VAZIO`, uma linha por cliente da rota,
+  total ao vivo); `ParagemAcoes.tsx`/`rotas/[idRota]/page.tsx` passam
+  `clientesRota` (de `rota.rateio`)
+- [x] 5 testes novos (`tests/calc/perRoute.test.ts`) — split total, parcial,
+  a somar mais km do que o troço (escala), cliente novo só via manual,
+  baseline sem override; 161 testes verdes, `tsc`/`build` limpos
+- [x] Verificado contra a rota real `RIC-Blowtec` (vazio de 69 km): atribuir
+  100% a um cliente moveu 138,28€→149,06€ / 31,61€→20,82€, custoTotalRota
+  manteve-se em 169,88€ ao cêntimo; revertido de seguida (dados de produção
+  sem alteração)
+- [ ] Commit + push
+
 ## ☑️ Campos opcionais por motorista (2026-08-28)
 
 Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. Alguns motoristas

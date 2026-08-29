@@ -54,6 +54,7 @@ export default async function HistoricoPage() {
     litrosEspanha: p.litrosEspanha,
     custoEspanha: p.custoEspanha,
     receitaPaga: p.receitaPaga,
+    rateioManual: p.rateioManual as { cliente: string; km: number }[] | null,
   }));
 
   return (
