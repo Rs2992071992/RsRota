@@ -2,6 +2,22 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cartões da rota: paletes em vez de kg (2026-08-28)
+
+Pedido do Ricardo: na página da rota (`/escritorio/rotas/[idRota]`), o foco
+passa a ser a quantidade de paletes transportadas, não os kg.
+
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: os cartões "Total KG
+  Carregados/Descarregados" passam a "Paletes transportadas" + "Peso
+  aproximado" (soma de `pesoAproximado`, o campo que o motorista introduz)
+  sempre que a rota tem paletes (`rota.totalPaletes > 0`); rotas antigas por
+  peso (`totalPaletes = 0`) mantêm os 2 cartões de kg como sempre — mostrar
+  paletes OU kg, nunca 0 à toa numa rota real
+- [x] `tsc`/`vitest` (161, inalterados)/`next build` limpos; confirmado com
+  2 rotas reais (RIC-Blowtec: paletes=9, peso aprox. ainda não preenchido →
+  "—"; RIC-Percam: kg como sempre)
+- [ ] Commit + push
+
 ## ☑️ Atribuição manual do custo de troços VAZIO por km (2026-08-28)
 
 Plano: `C:\Users\Ricardo\.claude\plans\steady-wondering-whisper.md`. O custo de

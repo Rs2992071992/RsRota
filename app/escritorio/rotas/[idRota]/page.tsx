@@ -40,6 +40,12 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
   const rawPorId = new Map(paragensRaw.map((r) => [r.id, r]));
   const totalKgCarregados = paragensRaw.reduce((a, p) => a + p.kgCarregados, 0);
   const totalKgDescarregados = paragensRaw.reduce((a, p) => a + p.kgDescarregados, 0);
+  // Rotas por paletes (2026-08-28+): o foco passa a ser a quantidade de paletes
+  // transportadas, não os kg. O peso deixa de vir de kgCarregados/Descarregados
+  // (ficam a 0 nestas paragens) — passa a somar-se o peso aproximado que o
+  // motorista introduziu por paragem (informativo). Rotas antigas por peso
+  // (totalPaletes=0) continuam a mostrar os cartões de kg como sempre.
+  const totalPesoAproximado = paragensRaw.reduce((a, p) => a + (p.pesoAproximado || 0), 0);
   const datasParagens = paragensRaw.map((p) => p.data);
   const dataRotaLabel =
     datasParagens.length === 0
@@ -123,16 +129,34 @@ export default async function RotaDetalhe({ params }: { params: { idRota: string
         </div>
       </div>
 
-      {/* Carga total da rota (soma de todas as paragens) */}
+      {/* Carga total da rota (soma de todas as paragens) — paletes (2026-08-28+)
+          ou kg (rotas antigas por peso), consoante o que a rota tem. */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="card">
-          <p className="text-xs text-gray-500">Total KG Carregados</p>
-          <p className="text-lg font-bold">{fmtNum(totalKgCarregados)} kg</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500">Total KG Descarregados</p>
-          <p className="text-lg font-bold">{fmtNum(totalKgDescarregados)} kg</p>
-        </div>
+        {rota.totalPaletes > 0 ? (
+          <>
+            <div className="card">
+              <p className="text-xs text-gray-500">Paletes transportadas</p>
+              <p className="text-lg font-bold">{fmtNum(rota.totalPaletes)}</p>
+            </div>
+            <div className="card">
+              <p className="text-xs text-gray-500">Peso aproximado</p>
+              <p className="text-lg font-bold">
+                {totalPesoAproximado > 0 ? `${fmtNum(totalPesoAproximado)} kg` : "—"}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="card">
+              <p className="text-xs text-gray-500">Total KG Carregados</p>
+              <p className="text-lg font-bold">{fmtNum(totalKgCarregados)} kg</p>
+            </div>
+            <div className="card">
+              <p className="text-xs text-gray-500">Total KG Descarregados</p>
+              <p className="text-lg font-bold">{fmtNum(totalKgDescarregados)} kg</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Decomposição do custo da rota */}
