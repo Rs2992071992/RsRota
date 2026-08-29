@@ -16,7 +16,7 @@ passa a ser a quantidade de paletes transportadas, não os kg.
 - [x] `tsc`/`vitest` (161, inalterados)/`next build` limpos; confirmado com
   2 rotas reais (RIC-Blowtec: paletes=9, peso aprox. ainda não preenchido →
   "—"; RIC-Percam: kg como sempre)
-- [ ] Commit + push
+- [x] Commit + push (`41c931c`)
 
 ## ☑️ Atribuição manual do custo de troços VAZIO por km (2026-08-28)
 
