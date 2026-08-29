@@ -5,11 +5,12 @@ import OrcamentoForm from "@/components/orcamento/OrcamentoForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NovoOrcamentoPage({
-  searchParams,
-}: {
-  searchParams: { cliente?: string };
-}) {
+export default async function NovoOrcamentoPage(
+  props: {
+    searchParams: Promise<{ cliente?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const [clientes, veiculos, motoristas, portagens, tiposPalete] = await Promise.all([
     listarClientesParaOrcamento(),
     prisma.veiculo.findMany({

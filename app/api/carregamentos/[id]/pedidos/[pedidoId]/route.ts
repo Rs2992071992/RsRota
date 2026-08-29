@@ -5,11 +5,9 @@ import { pedidoPaleteUpdateSchema } from "@/lib/validacao";
 
 // PATCH /api/carregamentos/[id]/pedidos/[pedidoId] — corrige a quantidade de
 // uma linha de pedido já registada (só escritório).
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string; pedidoId: string } },
-) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string; pedidoId: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const carregamentoId = Number(params.id);
@@ -43,9 +41,10 @@ export async function PATCH(
 // pedido (só escritório).
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string; pedidoId: string } },
+  props: { params: Promise<{ id: string; pedidoId: string }> }
 ) {
-  if (getSessao() !== "ESCRITORIO") {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const carregamentoId = Number(params.id);

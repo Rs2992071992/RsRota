@@ -5,8 +5,9 @@ import { rotaOverrideSchema } from "@/lib/validacao";
 
 // DELETE /api/rotas/[idRota] — apaga uma rota inteira (todas as paragens com este
 // idRota). Só escritório. Ação destrutiva e irreversível.
-export async function DELETE(_req: Request, { params }: { params: { idRota: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ idRota: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 
@@ -23,8 +24,9 @@ export async function DELETE(_req: Request, { params }: { params: { idRota: stri
 // PATCH /api/rotas/[idRota] — aplica o override de preço de ref. combustível a
 // TODAS as paragens da rota de uma vez. Só escritório. Valor null/omitido volta
 // a usar o preço global de Parâmetros (ver Paragem.precoCombRefOverride).
-export async function PATCH(req: Request, { params }: { params: { idRota: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ idRota: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

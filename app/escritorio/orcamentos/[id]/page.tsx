@@ -10,7 +10,8 @@ import type { LinhaDevis } from "@/lib/calc/orcamento";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrcamentoDetalhePage({ params }: { params: { id: string } }) {
+export default async function OrcamentoDetalhePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 

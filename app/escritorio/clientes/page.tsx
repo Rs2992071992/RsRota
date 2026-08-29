@@ -16,7 +16,8 @@ interface SearchParams {
   q?: string;
 }
 
-export default async function ClientesPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function ClientesPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const selecionado = searchParams.cliente || "";
   const q = (searchParams.q || "").trim().toLowerCase();
 

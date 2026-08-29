@@ -14,7 +14,7 @@ async function contarVencidos(): Promise<number> {
 }
 
 export default async function EscritorioLayout({ children }: { children: React.ReactNode }) {
-  exigirPerfil("ESCRITORIO");
+  await exigirPerfil("ESCRITORIO");
   const vencidos = await contarVencidos();
   return (
     <div className="min-h-screen">

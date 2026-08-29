@@ -5,7 +5,7 @@ import { reboqueSchema } from "@/lib/validacao";
 
 // GET /api/reboques — catálogo de reboques (só escritório). Inclui inativos.
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const reboques = await prisma.reboque.findMany({ orderBy: { criadoEm: "asc" } });
@@ -14,7 +14,7 @@ export async function GET() {
 
 // POST /api/reboques — cria um novo reboque (só escritório).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

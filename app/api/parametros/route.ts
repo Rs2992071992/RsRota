@@ -46,7 +46,7 @@ const payloadSchema = z.object({
 
 // PUT /api/parametros — guarda parâmetros + tabelas (só escritório), transacional.
 export async function PUT(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

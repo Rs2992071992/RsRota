@@ -15,7 +15,8 @@ import type { ParagemEditavel } from "@/components/ParagemEditor";
 
 export const dynamic = "force-dynamic";
 
-export default async function RotaDetalhe({ params }: { params: { idRota: string } }) {
+export default async function RotaDetalhe(props: { params: Promise<{ idRota: string }> }) {
+  const params = await props.params;
   const idRota = decodeURIComponent(params.idRota);
   const [{ rota, paragensRaw }, portagens, parametros, veiculos, tiposPalete, nomesClientes] = await Promise.all([
     carregarRota(idRota),

@@ -23,7 +23,8 @@ const sortValue: Record<SortKey, (r: DespesaPorRota) => number | string> = {
   total: (r) => r.total,
 };
 
-export default async function DespesasDetalhe({ searchParams }: { searchParams: SearchParams }) {
+export default async function DespesasDetalhe(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const linhas = await carregarDespesasDetalhe();
 
   // Por defeito (sem `sort`), maior custo total primeiro. A pedido: também

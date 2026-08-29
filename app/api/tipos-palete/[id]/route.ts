@@ -5,8 +5,9 @@ import { tipoPaleteUpdateSchema } from "@/lib/validacao";
 import { ehErroFkRestricao } from "@/lib/prisma-errors";
 
 // PATCH /api/tipos-palete/[id] — atualiza um tipo de palete (só escritório).
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);
@@ -30,8 +31,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 // DELETE /api/tipos-palete/[id] — apaga um tipo de palete (só escritório).
 // Se tiver pedidos associados, sugere desativar em vez de apagar.
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

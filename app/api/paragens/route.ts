@@ -9,7 +9,7 @@ import { resolverPaleteDimensoes } from "@/lib/rotas-service";
 
 // POST /api/paragens — cria uma paragem (motorista ou escritório).
 export async function POST(req: Request) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   const body = await req.json().catch(() => null);
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
 // que app/motorista/historico/page.tsx já faz server-side — usado por
 // clientes que não podem renderizar no servidor, ex. app nativa).
 export async function GET(req: Request) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   if (sessao.perfil === "ESCRITORIO") {

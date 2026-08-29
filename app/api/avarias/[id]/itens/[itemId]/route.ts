@@ -14,8 +14,9 @@ interface ItemAvaria {
 // resolvido/pendente. Qualquer sessão autenticada (motorista OU escritório
 // — os dois confirmam à medida que vão resolvendo). `resolvida`/`resolvidaEm`
 // da avaria são sempre derivados de todos os itens, nunca editados à parte.
-export async function PATCH(req: Request, { params }: { params: { id: string; itemId: string } }) {
-  const sessao = getSessaoInfo();
+export async function PATCH(req: Request, props: { params: Promise<{ id: string; itemId: string }> }) {
+  const params = await props.params;
+  const sessao = await getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   const id = Number(params.id);

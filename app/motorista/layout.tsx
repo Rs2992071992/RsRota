@@ -8,8 +8,8 @@ import LinkPrecoReferencia from "@/components/LinkPrecoReferencia";
 export const dynamic = "force-dynamic";
 
 export default async function MotoristaLayout({ children }: { children: React.ReactNode }) {
-  exigirPerfil("MOTORISTA");
-  const sessao = getSessaoInfo();
+  await exigirPerfil("MOTORISTA");
+  const sessao = await getSessaoInfo();
   const user =
     sessao?.perfil === "MOTORISTA"
       ? await prisma.utilizador.findUnique({ where: { id: sessao.id } })

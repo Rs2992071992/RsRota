@@ -9,7 +9,7 @@ import { agruparClientesSchema } from "@/lib/validacao";
 // automaticamente. Só toca no campo `cliente`/`nome` (string) — nunca em
 // custo, receita, snapshot ou totais.
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

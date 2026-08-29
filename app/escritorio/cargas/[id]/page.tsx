@@ -7,7 +7,8 @@ import CarregamentoDetalheEditor from "./CarregamentoDetalheEditor";
 
 export const dynamic = "force-dynamic";
 
-export default async function CarregamentoDetalhePage({ params }: { params: { id: string } }) {
+export default async function CarregamentoDetalhePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 

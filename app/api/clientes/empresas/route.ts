@@ -7,7 +7,7 @@ import { atribuirEmpresaSchema } from "@/lib/validacao";
 // (só escritório). Cria a ficha de cliente se ainda não existir (mesmo padrão
 // de upsert usado em /api/clientes/agrupar).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

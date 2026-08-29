@@ -12,7 +12,7 @@ import { resolverPaleteDimensoes } from "@/lib/rotas-service";
 // custo + preço sugerido de uma linha de orçamento (só escritório). Nunca bloqueia:
 // se a distância automática falhar devolve `kmAuto: null` + aviso e usa kmManual/0.
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

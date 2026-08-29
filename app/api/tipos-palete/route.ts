@@ -6,7 +6,7 @@ import { tipoPaleteSchema } from "@/lib/validacao";
 // GET /api/tipos-palete — catálogo de tipos de palete (só escritório). Inclui
 // inativos para que o editor de Parâmetros os possa reativar.
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const tiposPalete = await prisma.tipoPalete.findMany({
@@ -17,7 +17,7 @@ export async function GET() {
 
 // POST /api/tipos-palete — cria um novo tipo de palete (só escritório).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

@@ -9,8 +9,9 @@ export const runtime = "nodejs";
 
 // GET /api/carregamentos/[id]/planta-pdf — planta de carga em PDF, para dar ao
 // motorista e a quem carrega o camião (só escritório — módulo Cargas inteiro é).
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return new Response("Sem permissão.", { status: 403 });
   }
   const id = Number(params.id);

@@ -8,7 +8,8 @@ import AlterarPinMotorista from "./AlterarPinMotorista";
 
 export const dynamic = "force-dynamic";
 
-export default async function MotoristaRotas({ params }: { params: { id: string } }) {
+export default async function MotoristaRotas(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
 

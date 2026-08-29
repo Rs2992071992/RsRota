@@ -46,7 +46,7 @@ function serieParaData(v: unknown): Date | null {
 
 // POST /api/importar — recebe o .xlsx e cria paragens a partir da folha Viagens_APP.
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

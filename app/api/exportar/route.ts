@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/exportar?formato=xlsx|csv — exporta rotas e paragens calculadas.
 export async function GET(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const formato = new URL(req.url).searchParams.get("formato") ?? "xlsx";

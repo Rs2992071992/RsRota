@@ -9,7 +9,7 @@ import { getSessaoInfo } from "@/lib/session";
 // o que app/motorista/registo/page.tsx já carrega server-side hoje — usado
 // por clientes que não podem renderizar no servidor (ex. app nativa).
 export async function GET() {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao || sessao.perfil !== "MOTORISTA") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }

@@ -15,7 +15,7 @@ const patchSchema = paragemSchema.innerType().partial();
  * pode mexer nas paragens que ele próprio registou. Devolve a paragem ou null.
  */
 async function paragemAutorizada(id: number) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) return { erro: 401 as const, paragem: null, sessao: null };
   const paragem = await prisma.paragem.findUnique({ where: { id } });
   if (!paragem) return { erro: 404 as const, paragem: null, sessao: null };
@@ -41,7 +41,8 @@ const CAMPOS_ESCRITORIO = [
 ] as const;
 
 // PATCH /api/paragens/[id]
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 
@@ -106,7 +107,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // DELETE /api/paragens/[id]
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ erro: "ID inválido." }, { status: 400 });
 

@@ -5,8 +5,9 @@ import { veiculoSchema } from "@/lib/validacao";
 import { ehErroFkRestricao } from "@/lib/prisma-errors";
 
 // PATCH /api/veiculos/[id] — atualiza um veículo + substitui os seus pneus.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);
@@ -50,8 +51,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 // DELETE /api/veiculos/[id] — apaga um veículo. As paragens ficam com veiculoId
 // null (o snapshot congelado preserva os custos históricos).
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

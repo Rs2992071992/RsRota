@@ -7,7 +7,7 @@ import { alterarPinProprioSchema } from "@/lib/validacao";
 // PATCH /api/auth/pin — qualquer utilizador autenticado (escritório ou
 // motorista) muda o seu próprio PIN (exige o PIN atual).
 export async function PATCH(req: Request) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }

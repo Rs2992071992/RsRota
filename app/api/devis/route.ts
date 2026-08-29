@@ -8,7 +8,7 @@ import { proximoNumeroDevis, totaisDevis } from "@/lib/calc/orcamento";
 // POST /api/devis — cria um orçamento (só escritório). Gera o número, congela os
 // dados de contacto do cliente e calcula os totais a partir das linhas.
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
 // GET /api/devis — lista (só escritório).
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const devis = await prisma.devis.findMany({ orderBy: { criadoEm: "desc" } });

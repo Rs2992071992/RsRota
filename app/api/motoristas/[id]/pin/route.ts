@@ -5,8 +5,9 @@ import { getSessao } from "@/lib/session";
 import { alterarPinMotoristaSchema } from "@/lib/validacao";
 
 // PATCH /api/motoristas/[id]/pin — escritório muda o PIN de um motorista.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

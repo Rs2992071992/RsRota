@@ -8,8 +8,9 @@ import { ExtratoClienteDocument, type ExtratoClienteData } from "@/lib/pdf/Extra
 export const runtime = "nodejs";
 
 // GET /api/clientes/[nome]/pdf — extrato de conta de um cliente (só escritório).
-export async function GET(_req: Request, { params }: { params: { nome: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function GET(_req: Request, props: { params: Promise<{ nome: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return new Response("Sem permissão.", { status: 403 });
   }
   const nome = decodeURIComponent(params.nome);

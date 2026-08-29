@@ -29,7 +29,8 @@ const sortValue: Record<SortKey, (r: RotaCalc) => number> = {
   lucro: (r) => r.lucro,
 };
 
-export default async function RotasPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function RotasPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const filtros: FiltrosRota = {
     de: searchParams.de ? new Date(searchParams.de) : undefined,
     ate: searchParams.ate ? new Date(searchParams.ate + "T23:59:59") : undefined,

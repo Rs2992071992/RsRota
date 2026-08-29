@@ -7,7 +7,7 @@ import { avariaSchema } from "@/lib/validacao";
 // opcional ?resolvida=false — usado pela app Android para mostrar as
 // pendentes e evitar reportes duplicados.
 export async function GET(req: Request) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   const resolvidaParam = new URL(req.url).searchParams.get("resolvida");
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
 // POST /api/avarias — reporta uma avaria (motorista ou escritório).
 export async function POST(req: Request) {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   const body = await req.json().catch(() => null);

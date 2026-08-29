@@ -9,8 +9,9 @@ import { carregarCarregamento } from "@/lib/carregamento-service";
 // Grava SEMPRE a linha, mesmo que não caiba fisicamente no espaço disponível
 // (o compromisso ao telefone já foi feito) — a resposta indica o overflow e
 // sugestões de reboque para a UI assinalar, sem bloquear o registo.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const carregamentoId = Number(params.id);

@@ -5,7 +5,7 @@ import { carregamentoSchema } from "@/lib/validacao";
 
 // GET /api/carregamentos — lista de carregamentos (só escritório), abertos primeiro.
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const carregamentos = await prisma.carregamento.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
 
 // POST /api/carregamentos — cria um novo carregamento para um veículo (só escritório).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

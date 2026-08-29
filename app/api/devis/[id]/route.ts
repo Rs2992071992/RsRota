@@ -10,8 +10,9 @@ const patchSchema = devisSchema.partial();
 
 // PATCH /api/devis/[id] — edita um orçamento (só escritório). Recalcula os totais
 // quando as linhas ou o IVA mudam.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);
@@ -59,8 +60,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // DELETE /api/devis/[id] — apaga um orçamento (só escritório).
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

@@ -5,8 +5,9 @@ import { motoristaParamsSchema } from "@/lib/validacao";
 
 // PATCH /api/motoristas/[id] — edita os parâmetros salariais de um motorista
 // (só escritório). Não afeta paragens já registadas (snapshot congelado).
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);
@@ -32,8 +33,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 // DELETE /api/motoristas/[id] — apaga um motorista (só escritório).
 // As paragens dele ficam com motoristaId = null (não se apagam dados).
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

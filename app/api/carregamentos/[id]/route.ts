@@ -5,8 +5,9 @@ import { carregamentoUpdateSchema } from "@/lib/validacao";
 
 // PATCH /api/carregamentos/[id] — anexar/trocar/remover reboque (reboqueId),
 // fechar/reabrir (estado) e/ou atualizar notas (só escritório).
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);
@@ -42,8 +43,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // DELETE /api/carregamentos/[id] — apaga o carregamento e os seus pedidos (cascata).
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const id = Number(params.id);

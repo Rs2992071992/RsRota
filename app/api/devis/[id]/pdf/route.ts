@@ -9,8 +9,9 @@ import type { LinhaDevis } from "@/lib/calc/orcamento";
 export const runtime = "nodejs";
 
 // GET /api/devis/[id]/pdf — gera o PDF do orçamento (só escritório).
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return new Response("Sem permissão.", { status: 403 });
   }
   const id = Number(params.id);

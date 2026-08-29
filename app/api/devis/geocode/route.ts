@@ -4,7 +4,7 @@ import { sugerirMoradas } from "@/lib/distancia";
 
 // GET /api/devis/geocode?q=... — sugestões de morada (autocomplete ORS, só escritório).
 export async function GET(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const q = new URL(req.url).searchParams.get("q") ?? "";

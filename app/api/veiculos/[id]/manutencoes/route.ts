@@ -4,8 +4,9 @@ import { getSessao } from "@/lib/session";
 import { manutencaoSchema } from "@/lib/validacao";
 
 // POST /api/veiculos/[id]/manutencoes — cria uma manutenção para o veículo (só escritório).
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  if (getSessao() !== "ESCRITORIO") {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const veiculoId = Number(params.id);

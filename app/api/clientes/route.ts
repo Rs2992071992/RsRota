@@ -6,7 +6,7 @@ import { clienteContactoSchema } from "@/lib/validacao";
 // PATCH /api/clientes — cria/atualiza a ficha de contacto de um cliente (só escritório).
 // Upsert por `nome` (= Paragem.cliente). Campos vazios são normalizados para null.
 export async function PATCH(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

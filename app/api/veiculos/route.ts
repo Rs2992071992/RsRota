@@ -5,7 +5,7 @@ import { veiculoSchema } from "@/lib/validacao";
 
 // GET /api/veiculos — lista de veículos da frota (só escritório).
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const veiculos = await prisma.veiculo.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
 
 // POST /api/veiculos — cria um veículo + os seus pneus (só escritório).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const body = await req.json().catch(() => null);

@@ -6,7 +6,7 @@ import HistoricoMotorista, { type ParagemHist } from "./HistoricoMotorista";
 export const dynamic = "force-dynamic";
 
 export default async function HistoricoPage() {
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   const motoristaId = sessao?.perfil === "MOTORISTA" ? sessao.id : -1;
 
   const [paragensRaw, portagens, params, veiculos, tiposPalete, nomesClientes] = await Promise.all([

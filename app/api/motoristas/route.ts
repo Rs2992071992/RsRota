@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
 // GET /api/motoristas — lista motoristas (só escritório).
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
   const motoristas = await prisma.utilizador.findMany({

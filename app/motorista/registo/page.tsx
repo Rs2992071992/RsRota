@@ -4,13 +4,14 @@ import RegistoForm from "./RegistoForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function RegistoPage({
-  searchParams,
-}: {
-  searchParams: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
-}) {
+export default async function RegistoPage(
+  props: {
+    searchParams: Promise<{ idRota?: string; tipoVeiculo?: string; kmInicial?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // O motorista só vê para continuar as SUAS próprias rotas; o escritório vê todas.
-  const sessao = getSessaoInfo();
+  const sessao = await getSessaoInfo();
   const filtroRotas = sessao?.perfil === "MOTORISTA" ? { motoristaId: sessao.id } : {};
 
   const [portagens, params, campoVisivel, tiposPalete, rotasRecentes, veiculos, clientesParagens, clientesFicha, paragensRotaAtiva] =

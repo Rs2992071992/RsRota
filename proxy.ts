@@ -40,7 +40,7 @@ function comCors(res: NextResponse, origin: string | null): NextResponse {
   return res;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // CORS para a API — só relevante para apps nativas fora da origem do site

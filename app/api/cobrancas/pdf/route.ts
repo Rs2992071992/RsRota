@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 // GET /api/cobrancas/pdf — PDF da tabela "Contas a receber" inteira (só escritório).
 export async function GET() {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return new Response("Sem permissão.", { status: 403 });
   }
 
@@ -35,7 +35,7 @@ export async function GET() {
 // POST /api/cobrancas/pdf — PDF de uma seleção manual de linhas (checkboxes
 // na tabela de Cobranças), ex.: só os clientes de uma empresa (só escritório).
 export async function POST(req: Request) {
-  if (getSessao() !== "ESCRITORIO") {
+  if (await getSessao() !== "ESCRITORIO") {
     return new Response("Sem permissão.", { status: 403 });
   }
 
