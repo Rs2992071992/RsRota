@@ -76,6 +76,10 @@ export async function POST(req: Request) {
   });
   res.cookies.set(SESSION_COOKIE, createSessionValue(perfil, user.id), {
     httpOnly: true,
+    // Nunca enviar a cookie de sessão por HTTP simples (só https) em produção.
+    // Em dev (localhost) fica false — Secure exige https, que não há em localhost
+    // em todos os browsers, e não há nada sensível em jogo em desenvolvimento.
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 12, // 12 horas
