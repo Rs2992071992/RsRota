@@ -24,7 +24,7 @@ projeto (PDF gerado no servidor com `@react-pdf/renderer`, não
   camião+reboque, 3 clientes): PDF gerado e inspecionado visualmente,
   cores/posições/legenda/tabela corretas, quebra de página automática entre
   caixas
-- [ ] Commit + push
+- [x] Commit + push (`50ccd28`)
 
 ## ☑️ Cartões da rota: paletes em vez de kg (2026-08-28)
 
