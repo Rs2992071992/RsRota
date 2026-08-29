@@ -2,6 +2,56 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-30] | No upgrade Next.js 14→16, `npx @next/codemod@canary` (a
+  ferramenta oficial da Vercel) resolveu-se a si própria para
+  `16.4.0-canary.11` — uma versão mais recente/canary do que o `16.3.3`
+  (estável) que instalou no projeto. Aplicou 2 transforms de uma feature
+  que só existe nessa versão canary, não na 16.3.3 real: `lib/session.ts`
+  ganhou um cast para `UnsafeUnwrappedCookies`/`UnsafeUnwrappedHeaders`
+  (tipo que não existe no `next/headers` da 16.3.3 — erro de compilação
+  imediato), e 30 páginas ganharam `export const instant = false` (opção
+  "Cache Components", também inexistente na 16.3.3 — erro de tipos nos
+  `.next/types` gerados). Só se detetou porque `tsc --noEmit` correu logo
+  a seguir a cada lote de alterações, antes de continuar. | Depois de
+  correr um codemod de upgrade (desta ou de outra ferramenta), correr
+  sempre `tsc --noEmit` **imediatamente**, antes de aplicar o codemod
+  seguinte ou de considerar o lote "aplicado" — a ferramenta pode estar
+  numa versão diferente (mais nova) do pacote-alvo real instalado, e
+  aplicar transforms para funcionalidades que esse pacote ainda não tem.
+  Nunca confiar cegamente no "0 errors" que o próprio codemod reporta —
+  isso só significa que o *parsing/transform* não falhou, não que o
+  código resultante compila contra a versão instalada.
+- [2026-08-30] | O mesmo upgrade só ficou a compilar depois de descobrir que
+  o atalho "unsafe" acima nem sequer era válido — a solução correta
+  (`cookies()`/`headers()` verdadeiramente assíncronos) tocou ~60
+  call-sites de `getSessao()`/`getSessaoInfo()`/`getMotoristaId()`/
+  `exigirPerfil()` espalhados por rotas API e páginas. Como todos já
+  estavam dentro de funções `async` (convenção já seguida no projeto),
+  bastou um script (`grep -rl` + `String.replace` com lookbehind
+  `(?<!await )` para ser idempotente) a prefixar cada chamada com
+  `await` — 1 função não-async (`app/page.tsx`) foi o único caso a
+  corrigir à mão. | Uma alteração de assinatura numa função central
+  chamada de dezenas de sítios (aqui: tornar `getSessao()` assíncrona)
+  não obriga a editar ficheiro a ficheiro se o padrão de chamada for
+  uniforme — um script de substituição com lookbehind negativo (evita
+  duplicar `await` em chamadas já corrigidas) trata o grosso em segundos,
+  com `tsc` a apanhar os poucos casos que precisam de atenção manual.
+- [2026-08-30] | Bug real encontrado ao testar o upgrade (não causado por
+  ele): em `app/login/page.tsx`, o `finally` da função `entrar()` repunha
+  `aLigar=false` logo a seguir a `router.push(destino)`, sem esperar a
+  navegação terminar — o botão ficava clicável de novo enquanto o
+  dashboard ainda estava a carregar. Um 2º clique disparava um 2º
+  carregamento completo do dashboard em simultâneo (~8 queries cada), e
+  dois a competir pela única ligação à BD (`connection_limit=1`,
+  serverless) esgotavam-na (P2024), obrigando a recarregar a página à
+  mão para conseguir entrar — só reproduzido a testar localmente com BD
+  real, nunca em `vitest`. | Um botão que dispara `router.push()` para uma
+  página cara (várias queries) só deve voltar a ficar clicável nos
+  caminhos de erro — no caminho de sucesso, deixar o estado "a carregar"
+  até o componente desmontar com a troca de página. Resolver isto em
+  paralelo a otimizar o destino (menos queries) é mais frágil do que
+  simplesmente impedir o duplo-clique na origem.
+
 - [2026-08-28] | Ao adicionar a atribuição manual de km de um troço VAZIO
   (`rateioManual`), a forma óbvia de encaixar no rateio existente seria só
   subtrair o valor manual do `custoTotalRota` antes do loop de coeficientes

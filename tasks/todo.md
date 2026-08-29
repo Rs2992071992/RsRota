@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Revisão de segurança + upgrade Next.js 14→16 (2026-08-29/30)
+
+Pedido do Ricardo: rever o código quanto a falhas de segurança. Encontrado por
+`npm audit`: cookie de sessão sem `Secure`, `xlsx` com 2 CVEs altas (sem fix no
+npm), Next.js 14.2.35 com 21 CVEs (só corrigidas na 16.3.3, breaking change).
+
+- [x] Cookie de sessão ganha `secure: NODE_ENV==="production"` (`52ecf6a`)
+- [x] `xlsx` trocado para o build oficial do CDN da SheetJS, 0.20.3 (`eb73407`)
+  — testado exportar+reimportar, sem alterações de código necessárias
+- [x] Tag `pre-next16-upgrade` no GitHub, ponto de retorno antes do upgrade
+- [x] Next.js 14.2.35 → 16.3.3, React 18→19 (`60c5a18`) — feito com
+  `@next/codemod` oficial: `cookies()`/`headers()` assíncronos
+  (`lib/session.ts` + ~60 call-sites), `params` assíncrono em todas as
+  páginas/rotas `[id]`, `middleware.ts` → `proxy.ts` (lógica
+  bit-a-bit igual, só o nome mudou), `next.config.mjs`
+  (`serverExternalPackages`)
+- [x] `npm audit --omit=dev`: 0 vulnerabilidades (antes: 2 altas + as 21 do
+  Next.js). 161 testes inalterados, `tsc`/build limpos
+- [x] Testado localmente (BD real): login, dashboard, rota, CORS, PDF — tudo OK
+- [x] Bug real encontrado ao testar (não do upgrade em si): botão "Entrar"
+  ficava clicável antes da navegação terminar → 2º clique disparava 2º
+  carregamento do dashboard em simultâneo → esgotava o connection pool
+  (P2024). Corrigido em `app/login/page.tsx` (`bc7567d`)
+- [x] Commit + push de tudo
+
 ## ☑️ Imprimir a planta de carga (2026-08-28)
 
 Pedido do Ricardo: no módulo Cargas, poder imprimir a planta de carga para
