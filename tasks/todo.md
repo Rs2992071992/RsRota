@@ -2,6 +2,41 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 DECISÃO PENDENTE — modelo de rateio: "por peso" vs "por troço" (2026-08-30)
+
+O Ricardo vai perguntar ao cliente e depois decidimos. **Não implementar ainda.**
+
+**Problema encontrado** (rota real RIC-Plas-Sonae): o rateio atual reparte
+**todo** o custo não-manual por peso/capacidade (`coeficienteReal / Σcoef`),
+ignorando de quem era cada troço. Numa rota onde uma carga pequena obriga a uma
+viagem longa, isto subcobra quem deu a volta grande.
+
+Números da RIC-Plas-Sonae (custo total 632,90 €; vazio de 259 km já atribuído à
+mão 80 km→Plas-Sonae / 179 km→Tecfil):
+
+| | modelo atual (por peso) | modelo "por troço" |
+|---|---|---|
+| Plas-Sonae (34 pal, entregas 116 km) | 318,05 € (50 %) | ~233 € |
+| Tecfil (20 pal, recolha a 161 km) | 314,84 € (50 %) | ~400 € |
+
+- **Atual**: `custoProporcional = custoTotal − custoManual`; cada cliente paga
+  `(coefReal/Σcoef) × custoProporcional` + a sua parte manual do vazio. A
+  Plas-Sonae paga 240 € de troços quando os seus só custaram 125 € — está a
+  pagar parte da ida buscar o Tecfil.
+- **"Por troço"**: cada cliente paga o `custoParagem` dos **seus** troços +
+  a sua fatia do(s) vazio(s) + fatia dos custos comuns da rota (horas extra,
+  portagens tabela — ~60,65 € nesta rota).
+
+**Se avançar**: mexe em `lib/calc/perRoute.ts` (loop do rateio) e afeta TODOS
+os rateios. Revalidar contra rotas reais + os testes (HILP01 = 1487,73 € tem
+de se manter; há ~46 testes sobre rateio). Manter a atribuição manual do vazio
+a funcionar por cima. Ver também: acrescentar atribuição manual de km a troços
+NÃO-vazios (hoje só VAZIO tem `rateioManual`).
+
+**Extra pedido de caminho** (independente da decisão acima): coluna "Preço
+mínimo" (custo atribuído × 1,25) e decomposição "dos quais, vazio" na tabela do
+rateio em `/escritorio/rotas/[idRota]`.
+
 ## ☑️ Registo do motorista — aviso de sobreocupação de espaço da rota (2026-08-30)
 
 Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Pedido do
