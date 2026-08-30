@@ -55,6 +55,7 @@ interface ParagemRotaResumo {
   portagensExtra: number;
   noitesFora: number;
   alimentacao: number;
+  tipoVeiculo: string;
   nPaletes: number;
   paleteComprimentoMm: number | null;
   paleteLarguraMm: number | null;
@@ -176,17 +177,33 @@ export default function RegistoForm({
         larguraMm: veiculoSel.caixaReboqueLarguraMm,
       });
     }
-    const linhas = paragensRota
-      .filter((p) => p.nPaletes > 0 && p.paleteComprimentoMm && p.paleteLarguraMm)
-      .map((p) => ({
-        tipoPaleteId: 0,
-        comprimentoMm: p.paleteComprimentoMm as number,
-        larguraMm: p.paleteLarguraMm as number,
-        nPaletes: p.nPaletes,
-        clienteNome: p.cliente,
-      }));
+    // Segmenta a carga pelos trajetos VAZIO (o camião esvazia — Plas-Sonae
+    // entregue e Tecfil recolhida depois não coexistem no camião).
+    type LinhaCarga = {
+      tipoPaleteId: number;
+      comprimentoMm: number;
+      larguraMm: number;
+      nPaletes: number;
+      clienteNome: string;
+    };
+    const segmentos: LinhaCarga[][] = [[]];
+    for (const p of paragensRota) {
+      if (p.tipoVeiculo === "VAZIO") {
+        if (segmentos[segmentos.length - 1].length > 0) segmentos.push([]);
+        continue;
+      }
+      if (p.nPaletes > 0 && p.paleteComprimentoMm && p.paleteLarguraMm) {
+        segmentos[segmentos.length - 1].push({
+          tipoPaleteId: 0,
+          comprimentoMm: p.paleteComprimentoMm,
+          larguraMm: p.paleteLarguraMm,
+          nPaletes: p.nPaletes,
+          clienteNome: p.cliente,
+        });
+      }
+    }
     if (mostrarPaletes && tipoPaleteSel && num(f.nPaletes) > 0) {
-      linhas.push({
+      segmentos[segmentos.length - 1].push({
         tipoPaleteId: tipoPaleteSel.id,
         comprimentoMm: tipoPaleteSel.comprimentoMm,
         larguraMm: tipoPaleteSel.larguraMm,
@@ -194,7 +211,7 @@ export default function RegistoForm({
         clienteNome: f.cliente.trim() || "esta paragem",
       });
     }
-    return verificarEspacoCarga(caixas, linhas);
+    return verificarEspacoCarga(caixas, segmentos);
   }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, tipoPaleteSel, f.nPaletes, f.cliente]);
   const custoNoites = num(f.noitesFora) * valorNoite;
 
@@ -324,6 +341,7 @@ export default function RegistoForm({
           portagensExtra: payload.portagensExtra,
           noitesFora: payload.noitesFora,
           alimentacao: payload.alimentacao,
+          tipoVeiculo: payload.tipoVeiculo,
           nPaletes: payload.nPaletes,
           paleteComprimentoMm: tipoPaleteSel?.comprimentoMm ?? null,
           paleteLarguraMm: tipoPaleteSel?.larguraMm ?? null,

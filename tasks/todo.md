@@ -25,6 +25,14 @@ paletes da rota, arruma-as com o motor 2D real e avisa quando não cabem.
   limite). Banner do escritório confirmado no browser (aparece só quando não
   cabe). Aviso não bloqueia (pior caso — pode avisar a mais)
 - [x] Commit + push (`1c81e59`)
+- [x] **Fix (mesmo dia, reportado pelo Ricardo)**: o VAZIO estava a ser
+  ignorado — a Plas-Sonae entregue + a Tecfil recolhida depois de um trajeto
+  VAZIO eram somadas (54 pal) quando nunca coexistem no camião.
+  `verificarEspacoCarga` passa a receber **segmentos** (a carga cortada nos
+  VAZIO, mesma lógica de `pesosEmTransito`) e devolve o pior segmento.
+  RIC-Plas-Sonae deixa de avisar (pior segmento = 34, cabe); RIC-Francisco
+  Lince Blowtec continua (1 segmento, 34 pal 1200×1000, carga mesmo no
+  limite). 186 testes verdes. Commit + push
 - [ ] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
   Motorista + `.apk` novo (bundle próprio)
 

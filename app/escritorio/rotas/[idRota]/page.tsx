@@ -115,15 +115,25 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       larguraMm: veicRota.reboqueHabitual.larguraMm,
     });
   }
-  const espacoCarga = verificarEspacoCarga(
-    caixasRota,
-    paragensRaw.flatMap((p) => {
-      const dims = dimensoesPaleteParagem(p);
-      return dims
-        ? [{ tipoPaleteId: p.tipoPaleteId ?? 0, ...dims, nPaletes: p.nPaletes, clienteNome: p.cliente }]
-        : [];
-    }),
-  );
+  // Segmenta a carga pelos trajetos VAZIO — a Plas-Sonae entregue e a Tecfil
+  // recolhida depois de um VAZIO nunca estão no camião ao mesmo tempo.
+  const segmentosCarga: { tipoPaleteId: number; comprimentoMm: number; larguraMm: number; nPaletes: number; clienteNome: string }[][] = [[]];
+  for (const p of paragensRaw) {
+    if (p.tipoVeiculo === "VAZIO") {
+      if (segmentosCarga[segmentosCarga.length - 1].length > 0) segmentosCarga.push([]);
+      continue;
+    }
+    const dims = dimensoesPaleteParagem(p);
+    if (dims && p.nPaletes > 0) {
+      segmentosCarga[segmentosCarga.length - 1].push({
+        tipoPaleteId: p.tipoPaleteId ?? 0,
+        ...dims,
+        nPaletes: p.nPaletes,
+        clienteNome: p.cliente,
+      });
+    }
+  }
+  const espacoCarga = verificarEspacoCarga(caixasRota, segmentosCarga);
 
   return (
     <div className="space-y-5">
