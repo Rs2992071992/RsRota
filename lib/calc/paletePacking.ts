@@ -2,22 +2,23 @@
 // TypeScript, sem dependências de framework/DB (ver convenção em
 // lib/calc/perStop.ts).
 //
-// Empacotamento "online", por ordem de chegada (`ordem`), NUNCA reordenado
-// por tamanho: quem liga primeiro ocupa espaço primeiro, e a resposta de
-// "quanto espaço resta" não pode mudar retroativamente quando chega um
-// pedido novo maior. Cada palete é colocada por "prateleiras" (linhas): as
-// paletes ficam lado a lado ao longo da largura da caixa até não caber mais
-// nenhuma na prateleira aberta, altura em que se fecha e abre-se a
-// seguinte ao longo do comprimento. Quando uma caixa fica cheia, passa-se
-// para a caixa seguinte da lista (ex.: veículo -> reboque, se anexado).
+// Empacotamento 2D com rotação. `empacotar` corre DOIS algoritmos e fica com o
+// que coloca mais paletes:
+//   - por faixas (prateleiras): grelha regular, ótimo para carga uniforme;
+//   - MaxRects (maximal rectangles, Best-Short-Side-Fit): apanha faixas lado a
+//     lado a ritmos diferentes e cargas mistas.
+// As unidades são processadas por ordem de chegada (`ordem`) e NUNCA
+// reordenadas. Cada algoritmo é, isoladamente, estável a anexar unidades no
+// fim (não reflui as já colocadas) — é o que sustenta `estimarQuantosCabem`.
+// Sem espaço numa caixa, tenta-se a caixa seguinte (veículo -> reboque).
 
 export interface CaixaInput {
   /** Identifica a caixa (ex.: "veiculo" ou o id do reboque anexado). */
   id: string;
   label: string;
-  /** Eixo ao longo do qual as prateleiras se empilham. */
+  /** Eixo "para dentro" da caixa (fundo do camião) — onde a carga avança. */
   comprimentoMm: number;
-  /** Eixo ao longo do qual as paletes ficam lado a lado numa prateleira. */
+  /** Eixo "ao través" da caixa — onde as paletes ficam lado a lado. */
   larguraMm: number;
 }
 
@@ -41,8 +42,8 @@ export interface PaleteUnidade {
 
 export interface PaleteColocada extends PaleteUnidade {
   caixaId: string;
-  prateleiraIndex: number;
   rotacionado: boolean;
+  /** Canto da palete: `x` ao longo da largura da caixa, `y` ao longo do comprimento. */
   x: number;
   y: number;
   /** Dimensões ocupadas nos eixos da caixa, já com a orientação aplicada. */
@@ -57,19 +58,13 @@ export interface PaleteNaoColocada {
   motivo: MotivoNaoColocado;
 }
 
-export interface PrateleiraResultado {
-  index: number;
-  cursorInicioMm: number;
-  profundidadeMm: number;
-  larguraUsadaMm: number;
-  itens: PaleteColocada[];
-}
-
 export interface CaixaResultado {
   caixa: CaixaInput;
-  prateleiras: PrateleiraResultado[];
+  /** Todas as paletes colocadas nesta caixa, por ordem de colocação. */
+  itens: PaleteColocada[];
   areaUsadaMm2: number;
   areaTotalMm2: number;
+  /** Ponto mais fundo usado na caixa (max y + comprimentoOcupado). */
   comprimentoUsadoMm: number;
 }
 
@@ -79,229 +74,327 @@ export interface ResultadoPacking {
   naoColocados: PaleteNaoColocada[];
 }
 
+// --- MaxRects --------------------------------------------------------------
+
+interface RectLivre {
+  x: number;
+  y: number;
+  larg: number;
+  comp: number;
+}
+
 interface Orientacao {
-  larguraOcupada: number;
-  profundidadeOcupada: number;
+  larg: number;
+  comp: number;
   rotacionado: boolean;
 }
 
-function orientacoesQueCabem(caixa: CaixaInput, unidade: PaleteUnidade): Orientacao[] {
-  const candidatas: Orientacao[] = [
-    { larguraOcupada: unidade.larguraMm, profundidadeOcupada: unidade.comprimentoMm, rotacionado: false },
-    { larguraOcupada: unidade.comprimentoMm, profundidadeOcupada: unidade.larguraMm, rotacionado: true },
+/** As orientações da palete que cabem nas dimensões da caixa vazia. */
+function orientacoesQueCabem(caixa: CaixaInput, u: PaleteUnidade): Orientacao[] {
+  const cand: Orientacao[] = [
+    { larg: u.larguraMm, comp: u.comprimentoMm, rotacionado: false },
+    { larg: u.comprimentoMm, comp: u.larguraMm, rotacionado: true },
   ];
-  return candidatas.filter((o) => o.larguraOcupada <= caixa.larguraMm);
+  return cand.filter((o) => o.larg <= caixa.larguraMm && o.comp <= caixa.comprimentoMm);
 }
 
-/** `true` se `o` corresponde à orientação preferida da linha (COMPRIDO =
- * não rotacionada; TRAVES = rotacionada). `AUTO`/ausente → nunca "preferida". */
-function ehOrientacaoPreferida(o: Orientacao, unidade: PaleteUnidade): boolean {
+/** `true` se `o` é a orientação preferida da linha (COMPRIDO = não rotacionada;
+ * TRAVES = rotacionada). AUTO/ausente → nunca "preferida". */
+function ehPreferida(o: Orientacao, u: PaleteUnidade): boolean {
   return (
-    (unidade.orientacao === "COMPRIDO" && !o.rotacionado) ||
-    (unidade.orientacao === "TRAVES" && o.rotacionado)
+    (u.orientacao === "COMPRIDO" && !o.rotacionado) ||
+    (u.orientacao === "TRAVES" && o.rotacionado)
   );
 }
 
-/**
- * Ordena orientações por preferência ao abrir uma prateleira nova: primeiro a
- * que encaixa mais paletes lado a lado (`largura da caixa / largura ocupada`,
- * arredondado por baixo) — testado contra o exemplo do próprio utilizador:
- * escolher sempre a orientação de menor profundidade dava só 6 das 10 paletes
- * 1300x1100 no camião (1 por prateleira), quando na realidade cabem 10 (2 por
- * prateleira, na orientação que ocupa menos largura). Em empate, a de menor
- * profundidade (deixa mais comprimento livre para prateleiras futuras).
- */
-function compararPreferenciaNovaPrateleira(caixa: CaixaInput) {
-  return (a: Orientacao, b: Orientacao): number => {
-    const contA = Math.floor(caixa.larguraMm / a.larguraOcupada);
-    const contB = Math.floor(caixa.larguraMm / b.larguraOcupada);
-    if (contB !== contA) return contB - contA;
-    return a.profundidadeOcupada - b.profundidadeOcupada;
+interface Posicao {
+  x: number;
+  y: number;
+  /** Best-Short-Side-Fit: menor sobra num dos lados do retângulo livre usado. */
+  shortFit: number;
+}
+
+/** Melhor posição para um retângulo `larg×comp` entre os livres (Best-Short-
+ * Side-Fit; desempate: menor y = mais ao fundo, depois menor x). `null` se não
+ * cabe em nenhum livre. */
+function melhorPosicao(livres: RectLivre[], larg: number, comp: number): Posicao | null {
+  let melhor: Posicao | null = null;
+  for (const r of livres) {
+    if (larg > r.larg || comp > r.comp) continue;
+    const cand: Posicao = { x: r.x, y: r.y, shortFit: Math.min(r.larg - larg, r.comp - comp) };
+    if (
+      melhor === null ||
+      cand.shortFit < melhor.shortFit ||
+      (cand.shortFit === melhor.shortFit && cand.y < melhor.y) ||
+      (cand.shortFit === melhor.shortFit && cand.y === melhor.y && cand.x < melhor.x)
+    ) {
+      melhor = cand;
+    }
+  }
+  return melhor;
+}
+
+function intersecta(r: RectLivre, px: number, py: number, pl: number, pc: number): boolean {
+  return px < r.x + r.larg && px + pl > r.x && py < r.y + r.comp && py + pc > r.y;
+}
+
+function contido(a: RectLivre, b: RectLivre): boolean {
+  return a.x >= b.x && a.y >= b.y && a.x + a.larg <= b.x + b.larg && a.y + a.comp <= b.y + b.comp;
+}
+
+/** Substitui cada livre que interseta a palete pelos sub-retângulos maximais
+ * que sobram à esquerda/direita/frente/trás da palete. */
+function dividirLivres(livres: RectLivre[], px: number, py: number, pl: number, pc: number): RectLivre[] {
+  const out: RectLivre[] = [];
+  for (const r of livres) {
+    if (!intersecta(r, px, py, pl, pc)) {
+      out.push(r);
+      continue;
+    }
+    if (px > r.x) out.push({ x: r.x, y: r.y, larg: px - r.x, comp: r.comp });
+    if (px + pl < r.x + r.larg)
+      out.push({ x: px + pl, y: r.y, larg: r.x + r.larg - (px + pl), comp: r.comp });
+    if (py > r.y) out.push({ x: r.x, y: r.y, larg: r.larg, comp: py - r.y });
+    if (py + pc < r.y + r.comp)
+      out.push({ x: r.x, y: py + pc, larg: r.larg, comp: r.y + r.comp - (py + pc) });
+  }
+  return out;
+}
+
+/** Remove livres degenerados e os que estão contidos noutro (mantendo, entre
+ * duplicados exatos, só o de índice menor). */
+function podar(rects: RectLivre[]): RectLivre[] {
+  const out: RectLivre[] = [];
+  for (let i = 0; i < rects.length; i++) {
+    const r = rects[i];
+    if (r.larg <= 0 || r.comp <= 0) continue;
+    let redundante = false;
+    for (let j = 0; j < rects.length && !redundante; j++) {
+      if (i === j) continue;
+      const o = rects[j];
+      if (!contido(r, o)) continue;
+      const iguais = r.x === o.x && r.y === o.y && r.larg === o.larg && r.comp === o.comp;
+      if (!iguais || j < i) redundante = true;
+    }
+    if (!redundante) out.push(r);
+  }
+  return out;
+}
+
+function montarCaixaResultado(e: { caixa: CaixaInput; itens: PaleteColocada[] }): CaixaResultado {
+  return {
+    caixa: e.caixa,
+    itens: e.itens,
+    areaUsadaMm2: e.itens.reduce((s, it) => s + it.larguraOcupada * it.comprimentoOcupado, 0),
+    areaTotalMm2: e.caixa.comprimentoMm * e.caixa.larguraMm,
+    comprimentoUsadoMm: e.itens.reduce((m, it) => Math.max(m, it.y + it.comprimentoOcupado), 0),
   };
 }
 
-interface PrateleiraAberta {
-  profundidadeMm: number;
-  larguraUsadaMm: number;
+interface EstadoMaxRects {
+  caixa: CaixaInput;
+  livres: RectLivre[];
   itens: PaleteColocada[];
 }
 
-interface EstadoCaixa {
-  caixa: CaixaInput;
-  cursorMm: number;
-  prateleiraAberta: PrateleiraAberta | null;
-  prateleirasFechadas: PrateleiraResultado[];
-}
+function tentarColocar(estado: EstadoMaxRects, u: PaleteUnidade): PaleteColocada | null {
+  const orients = orientacoesQueCabem(estado.caixa, u);
+  if (orients.length === 0) return null; // nenhuma orientação cabe na caixa
 
-function fecharPrateleira(estado: EstadoCaixa): void {
-  const pa = estado.prateleiraAberta;
-  if (!pa) return;
-  estado.prateleirasFechadas.push({
-    index: estado.prateleirasFechadas.length,
-    cursorInicioMm: estado.cursorMm,
-    profundidadeMm: pa.profundidadeMm,
-    larguraUsadaMm: pa.larguraUsadaMm,
-    itens: pa.itens,
-  });
-  estado.cursorMm += pa.profundidadeMm;
-  estado.prateleiraAberta = null;
-}
+  const avaliadas = orients
+    .map((o) => ({ o, pos: melhorPosicao(estado.livres, o.larg, o.comp) }))
+    .filter((a): a is { o: Orientacao; pos: Posicao } => a.pos !== null);
+  if (avaliadas.length === 0) return null; // cabe na caixa vazia, mas não agora
 
-/**
- * Tenta colocar uma unidade numa caixa: primeiro na prateleira aberta (só
- * aceita orientações com profundidade <= à já comprometida — uma prateleira
- * nunca "cresce" depois de aberta, para manter a grelha visual retangular),
- * senão fecha-a e abre uma nova. Devolve null se a caixa não tem espaço.
- *
- * `unidade.orientacao` (COMPRIDO/TRAVES) é uma **preferência**, não uma
- * obrigação: a prateleira abre nessa orientação e, quando duas paletes assim
- * não cabem lado a lado mas cabem com a seguinte rodada, reserva-se
- * profundidade para a encostar (ver `profundidadeAberta`).
- */
-function tentarColocarNaCaixa(estado: EstadoCaixa, unidade: PaleteUnidade): PaleteColocada | null {
-  const { caixa } = estado;
-  const candidatas = orientacoesQueCabem(caixa, unidade);
-  if (candidatas.length === 0) return null;
-
-  // Ordena preferindo a orientação da linha; em igualdade, a de menor largura
-  // ocupada (deixa mais espaço livre para os itens seguintes da prateleira).
-  const porPreferencia = (a: Orientacao, b: Orientacao) => {
-    const pa = ehOrientacaoPreferida(a, unidade) ? 0 : 1;
-    const pb = ehOrientacaoPreferida(b, unidade) ? 0 : 1;
-    if (pa !== pb) return pa - pb;
-    return a.larguraOcupada - b.larguraOcupada;
-  };
-
-  if (estado.prateleiraAberta) {
-    const pa = estado.prateleiraAberta;
-    const cabem = candidatas
-      .filter((o) => o.profundidadeOcupada <= pa.profundidadeMm)
-      .filter((o) => o.larguraOcupada <= caixa.larguraMm - pa.larguraUsadaMm)
-      .sort(porPreferencia);
-
-    if (cabem.length > 0) {
-      const o = cabem[0];
-      const colocada: PaleteColocada = {
-        ...unidade,
-        caixaId: caixa.id,
-        prateleiraIndex: estado.prateleirasFechadas.length,
-        rotacionado: o.rotacionado,
-        x: pa.larguraUsadaMm,
-        y: estado.cursorMm,
-        larguraOcupada: o.larguraOcupada,
-        comprimentoOcupado: o.profundidadeOcupada,
-      };
-      pa.larguraUsadaMm += o.larguraOcupada;
-      pa.itens.push(colocada);
-      return colocada;
-    }
-
-    fecharPrateleira(estado);
+  let escolhida: { o: Orientacao; pos: Posicao };
+  const preferida = avaliadas.find((a) => ehPreferida(a.o, u));
+  if (u.orientacao && preferida) {
+    // Preferência forte: usa a orientação escolhida salvo se a outra couber
+    // materialmente mais ao fundo (menos comprimento gasto).
+    const outra = avaliadas.find((a) => a !== preferida);
+    escolhida = !outra || preferida.pos.y <= outra.pos.y ? preferida : outra;
+  } else {
+    escolhida = avaliadas.reduce((m, a) => {
+      if (a.pos.shortFit !== m.pos.shortFit) return a.pos.shortFit < m.pos.shortFit ? a : m;
+      if (a.pos.y !== m.pos.y) return a.pos.y < m.pos.y ? a : m;
+      if (a.pos.x !== m.pos.x) return a.pos.x < m.pos.x ? a : m;
+      return m;
+    });
   }
 
-  // Orientação para abrir a prateleira: a preferida da linha se couber no
-  // comprimento restante; senão a que mete mais paletes lado a lado. Fallback
-  // para a alternativa se a 1ª escolha não couber no comprimento.
-  const ordemAbertura = unidade.orientacao
-    ? [...candidatas].sort(porPreferencia)
-    : [...candidatas].sort(compararPreferenciaNovaPrateleira(caixa));
-  const escolhida = ordemAbertura.find(
-    (o) => estado.cursorMm + o.profundidadeOcupada <= caixa.comprimentoMm,
-  );
-  if (!escolhida) return null;
-
-  // Se a orientação escolhida sozinha não mete 2 na fila (2×largura > caixa),
-  // mas escolhida + a rodada cabem, reserva profundidade para a rodada que vem
-  // a seguir encostar-se — sem isto a fila ficaria com uma só palete e muito
-  // espaço livre ao lado.
-  const alt = candidatas.find((o) => o.rotacionado !== escolhida.rotacionado);
-  const podeEncostarRodada =
-    alt !== undefined &&
-    2 * escolhida.larguraOcupada > caixa.larguraMm &&
-    escolhida.larguraOcupada + alt.larguraOcupada <= caixa.larguraMm &&
-    estado.cursorMm + Math.max(escolhida.profundidadeOcupada, alt.profundidadeOcupada) <=
-      caixa.comprimentoMm;
-  const profundidadeAberta = podeEncostarRodada
-    ? Math.max(escolhida.profundidadeOcupada, alt!.profundidadeOcupada)
-    : escolhida.profundidadeOcupada;
-
+  const { o, pos } = escolhida;
   const colocada: PaleteColocada = {
-    ...unidade,
-    caixaId: caixa.id,
-    prateleiraIndex: estado.prateleirasFechadas.length,
-    rotacionado: escolhida.rotacionado,
-    x: 0,
-    y: estado.cursorMm,
-    larguraOcupada: escolhida.larguraOcupada,
-    comprimentoOcupado: escolhida.profundidadeOcupada,
+    ...u,
+    caixaId: estado.caixa.id,
+    rotacionado: o.rotacionado,
+    x: pos.x,
+    y: pos.y,
+    larguraOcupada: o.larg,
+    comprimentoOcupado: o.comp,
   };
-  estado.prateleiraAberta = {
-    profundidadeMm: profundidadeAberta,
-    larguraUsadaMm: escolhida.larguraOcupada,
-    itens: [colocada],
-  };
+  estado.livres = podar(dividirLivres(estado.livres, pos.x, pos.y, o.larg, o.comp));
+  estado.itens.push(colocada);
   return colocada;
 }
 
-function colocarUnidade(
-  estados: EstadoCaixa[],
-  unidade: PaleteUnidade,
-): { sucesso: true; colocada: PaleteColocada } | { sucesso: false; motivo: MotivoNaoColocado } {
-  let aceitaAlgumaOrientacao = false;
-  for (const estado of estados) {
-    if (orientacoesQueCabem(estado.caixa, unidade).length > 0) {
-      aceitaAlgumaOrientacao = true;
-    }
-    const colocada = tentarColocarNaCaixa(estado, unidade);
-    if (colocada) return { sucesso: true, colocada };
-  }
-  return { sucesso: false, motivo: aceitaAlgumaOrientacao ? "SEM_ESPACO" : "NAO_CABE_ORIENTACAO" };
-}
-
-/**
- * Empacota as unidades nas caixas dadas, por ordem de chegada (`ordem`).
- * Caixas devem vir na ordem em que o overflow deve ser tentado (ex.: caixa
- * do veículo primeiro, depois a do reboque se anexado).
- */
-export function empacotar(caixas: CaixaInput[], unidades: PaleteUnidade[]): ResultadoPacking {
-  const estados: EstadoCaixa[] = caixas.map((caixa) => ({
+/** Empacotamento MaxRects (bom para faixas a ritmos diferentes / cargas mistas). */
+function empacotarMaxRects(caixas: CaixaInput[], unidades: PaleteUnidade[]): ResultadoPacking {
+  const estados: EstadoMaxRects[] = caixas.map((caixa) => ({
     caixa,
-    cursorMm: 0,
-    prateleiraAberta: null,
-    prateleirasFechadas: [],
+    livres: [{ x: 0, y: 0, larg: caixa.larguraMm, comp: caixa.comprimentoMm }],
+    itens: [],
   }));
 
   const colocados: PaleteColocada[] = [];
   const naoColocados: PaleteNaoColocada[] = [];
-  const ordenadas = [...unidades].sort((a, b) => a.ordem - b.ordem);
 
-  for (const unidade of ordenadas) {
+  for (const unidade of [...unidades].sort((a, b) => a.ordem - b.ordem)) {
     if (estados.length === 0) {
       naoColocados.push({ unidade, motivo: "SEM_ESPACO" });
       continue;
     }
-    const resultado = colocarUnidade(estados, unidade);
-    if (resultado.sucesso) {
-      colocados.push(resultado.colocada);
-    } else {
-      naoColocados.push({ unidade, motivo: resultado.motivo });
+    let colocada: PaleteColocada | null = null;
+    let aceita = false;
+    for (const estado of estados) {
+      if (orientacoesQueCabem(estado.caixa, unidade).length > 0) aceita = true;
+      colocada = tentarColocar(estado, unidade);
+      if (colocada) break;
     }
+    if (colocada) colocados.push(colocada);
+    else naoColocados.push({ unidade, motivo: aceita ? "SEM_ESPACO" : "NAO_CABE_ORIENTACAO" });
   }
 
-  for (const estado of estados) fecharPrateleira(estado);
+  return { caixas: estados.map(montarCaixaResultado), colocados, naoColocados };
+}
 
-  const caixasResultado: CaixaResultado[] = estados.map((estado) => ({
-    caixa: estado.caixa,
-    prateleiras: estado.prateleirasFechadas,
-    areaUsadaMm2: estado.prateleirasFechadas.reduce(
-      (soma, p) => soma + p.itens.reduce((s, it) => s + it.larguraOcupada * it.comprimentoOcupado, 0),
-      0,
-    ),
-    areaTotalMm2: estado.caixa.comprimentoMm * estado.caixa.larguraMm,
-    comprimentoUsadoMm: estado.cursorMm,
-  }));
+// --- Empacotamento por faixas (prateleiras) --------------------------------
+//
+// Preenche linha a linha ao longo da largura da caixa; um cursor único avança
+// no comprimento. Excelente para cargas de tamanho uniforme (grelha regular) e
+// para o "truque" de abrir uma faixa rasa no fim quando a funda já não cabe;
+// fraco quando a solução ótima precisa de faixas lado a lado a ritmos
+// diferentes (aí é o MaxRects que ganha).
 
-  return { caixas: caixasResultado, colocados, naoColocados };
+function preferenciaFaixa(caixa: CaixaInput, u: PaleteUnidade) {
+  return (a: Orientacao, b: Orientacao): number => {
+    const pa = ehPreferida(a, u) ? 0 : 1;
+    const pb = ehPreferida(b, u) ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    if (u.orientacao) return a.larg - b.larg;
+    const contA = Math.floor(caixa.larguraMm / a.larg);
+    const contB = Math.floor(caixa.larguraMm / b.larg);
+    if (contB !== contA) return contB - contA;
+    return a.comp - b.comp;
+  };
+}
+
+interface EstadoFaixa {
+  caixa: CaixaInput;
+  cursorMm: number;
+  aberta: { profundidadeMm: number; larguraUsadaMm: number } | null;
+  itens: PaleteColocada[];
+}
+
+function fecharFaixa(e: EstadoFaixa): void {
+  if (!e.aberta) return;
+  e.cursorMm += e.aberta.profundidadeMm;
+  e.aberta = null;
+}
+
+function tentarColocarFaixa(e: EstadoFaixa, u: PaleteUnidade): PaleteColocada | null {
+  const cand = orientacoesQueCabem(e.caixa, u);
+  if (cand.length === 0) return null;
+  const pref = preferenciaFaixa(e.caixa, u);
+
+  if (e.aberta) {
+    const fa = e.aberta;
+    const cabem = cand
+      .filter((o) => o.comp <= fa.profundidadeMm && o.larg <= e.caixa.larguraMm - fa.larguraUsadaMm)
+      .sort(pref);
+    if (cabem.length > 0) {
+      const o = cabem[0];
+      const colocada: PaleteColocada = {
+        ...u,
+        caixaId: e.caixa.id,
+        rotacionado: o.rotacionado,
+        x: fa.larguraUsadaMm,
+        y: e.cursorMm,
+        larguraOcupada: o.larg,
+        comprimentoOcupado: o.comp,
+      };
+      fa.larguraUsadaMm += o.larg;
+      e.itens.push(colocada);
+      return colocada;
+    }
+    fecharFaixa(e);
+  }
+
+  const escolhida = [...cand]
+    .sort(pref)
+    .find((o) => e.cursorMm + o.comp <= e.caixa.comprimentoMm);
+  if (!escolhida) return null;
+
+  // Reserva profundidade para encostar uma palete rodada quando a escolhida
+  // sozinha não mete 2 na fila (evita 1 por fila com muito espaço ao lado).
+  const alt = cand.find((o) => o.rotacionado !== escolhida.rotacionado);
+  const encosta =
+    alt !== undefined &&
+    2 * escolhida.larg > e.caixa.larguraMm &&
+    escolhida.larg + alt.larg <= e.caixa.larguraMm &&
+    e.cursorMm + Math.max(escolhida.comp, alt.comp) <= e.caixa.comprimentoMm;
+  const profundidadeMm = encosta ? Math.max(escolhida.comp, alt!.comp) : escolhida.comp;
+
+  const colocada: PaleteColocada = {
+    ...u,
+    caixaId: e.caixa.id,
+    rotacionado: escolhida.rotacionado,
+    x: 0,
+    y: e.cursorMm,
+    larguraOcupada: escolhida.larg,
+    comprimentoOcupado: escolhida.comp,
+  };
+  e.aberta = { profundidadeMm, larguraUsadaMm: escolhida.larg };
+  e.itens.push(colocada);
+  return colocada;
+}
+
+function empacotarPorFaixas(caixas: CaixaInput[], unidades: PaleteUnidade[]): ResultadoPacking {
+  const estados: EstadoFaixa[] = caixas.map((caixa) => ({ caixa, cursorMm: 0, aberta: null, itens: [] }));
+  const colocados: PaleteColocada[] = [];
+  const naoColocados: PaleteNaoColocada[] = [];
+
+  for (const unidade of [...unidades].sort((a, b) => a.ordem - b.ordem)) {
+    if (estados.length === 0) {
+      naoColocados.push({ unidade, motivo: "SEM_ESPACO" });
+      continue;
+    }
+    let colocada: PaleteColocada | null = null;
+    let aceita = false;
+    for (const e of estados) {
+      if (orientacoesQueCabem(e.caixa, unidade).length > 0) aceita = true;
+      colocada = tentarColocarFaixa(e, unidade);
+      if (colocada) break;
+    }
+    if (colocada) colocados.push(colocada);
+    else naoColocados.push({ unidade, motivo: aceita ? "SEM_ESPACO" : "NAO_CABE_ORIENTACAO" });
+  }
+
+  for (const e of estados) fecharFaixa(e);
+  return { caixas: estados.map(montarCaixaResultado), colocados, naoColocados };
+}
+
+/**
+ * Empacota as unidades nas caixas dadas, por ordem de chegada (`ordem`).
+ * Caixas na ordem em que o overflow deve ser tentado (veículo, depois reboque).
+ *
+ * Corre os dois algoritmos (faixas + MaxRects) e devolve o que coloca mais
+ * paletes — em empate, o de faixas (grelha mais regular). Cada algoritmo,
+ * isoladamente, é estável a anexar unidades no fim (não reflui as já colocadas).
+ */
+export function empacotar(caixas: CaixaInput[], unidades: PaleteUnidade[]): ResultadoPacking {
+  const porFaixas = empacotarPorFaixas(caixas, unidades);
+  const maxRects = empacotarMaxRects(caixas, unidades);
+  return maxRects.colocados.length > porFaixas.colocados.length ? maxRects : porFaixas;
 }
 
 export interface PedidoParaExpandir {
@@ -358,7 +451,7 @@ export function estimarQuantosCabem(
   caixas: CaixaInput[],
   unidadesExistentes: PaleteUnidade[],
   tipoPalete: { tipoPaleteId: number; tipoPaleteNome: string; comprimentoMm: number; larguraMm: number },
-  max = 500,
+  max = 150,
 ): number {
   const ordemBase = unidadesExistentes.reduce((m, u) => Math.max(m, u.ordem), 0);
   const sinteticas: PaleteUnidade[] = Array.from({ length: max }, (_, i) => ({
@@ -380,9 +473,10 @@ export function estimarQuantosCabem(
 // Otimização da ordem de carga
 // ---------------------------------------------------------------------------
 //
-// `empacotar` é sensível à ordem (empacotamento por prateleiras, "online"): a
-// mesma lista de paletes numa ordem diferente pode caber toda ou deixar paletes
-// de fora. `otimizarOrdem` procura a melhor ordem SEM tocar no motor — mantém
+// `empacotar` é sensível à ordem (as unidades são colocadas por `ordem` e nunca
+// refluídas): a mesma lista de paletes numa ordem diferente pode caber toda ou
+// deixar paletes de fora. `otimizarOrdem` procura a melhor ordem SEM tocar no
+// motor — mantém
 // cada cliente num bloco contíguo (as suas paletes ficam juntas no camião, para
 // carga/descarga) e experimenta as ordens possíveis dos blocos.
 

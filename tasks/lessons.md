@@ -2,6 +2,25 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-30] | O motor de empacotamento da planta de carga arrumava só por
+  "prateleiras" (filas ao longo da largura, cursor único no comprimento). O
+  Ricardo mostrou o carreg. real #9: 11 paletes 1300×1100 num camião 7500×2480
+  cabem (faixa de 6 "ao través" 1300mm + faixa de 5 "ao comprido" 1100mm =
+  2400≤2480), mas o motor só metia 10 — o modelo de cursor único não exprime
+  duas faixas a avançarem a ritmos diferentes. Ao trocar para MaxRects
+  (empacotamento 2D verdadeiro) o #9 passou a 11, MAS o #7 (38× 1200×800)
+  REGREDIU de 38 para 36: a heurística gulosa do MaxRects quebra a grelha
+  uniforme, enquanto as prateleiras (com o fallback de abrir uma fila rasa no
+  fim) já a resolviam na perfeição. | Ao substituir um algoritmo heurístico
+  central, NUNCA assumir que o novo domina o antigo em todos os casos —
+  heurísticas de bin-packing 2D trocam de "melhor" conforme a instância. A
+  solução robusta foi `empacotar` correr OS DOIS (prateleiras + MaxRects) e
+  devolver o que coloca mais paletes (empate → prateleiras, mais regular e
+  estável): "nunca pior do que antes" por construção. Validado com diff
+  antes/depois de TODOS os carregamentos reais (#5–#9), não só o caso novo —
+  foi o único sítio onde a regressão do #7 apareceu (nem `tsc` nem os testes a
+  apanhariam sem o diff contra dados reais).
+
 - [2026-08-30] | A 1ª versão da rotação de paletes na planta de carga
   (`PedidoPalete.orientacao`, commit `13e40ea`) implementou "Ao través"/"Ao
   comprido" como restrição **rígida** em `orientacoesQueCabem` (filtrava a

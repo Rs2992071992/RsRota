@@ -35,12 +35,10 @@ export default function CarregamentoFloorPlan({
   const clientes: { id: number; nome: string }[] = [];
   const vistos = new Set<number>();
   for (const cx of caixas) {
-    for (const p of cx.prateleiras) {
-      for (const item of p.itens) {
-        if (!vistos.has(item.clienteId)) {
-          vistos.add(item.clienteId);
-          clientes.push({ id: item.clienteId, nome: item.clienteNome });
-        }
+    for (const item of cx.itens) {
+      if (!vistos.has(item.clienteId)) {
+        vistos.add(item.clienteId);
+        clientes.push({ id: item.clienteId, nome: item.clienteNome });
       }
     }
   }
@@ -100,8 +98,7 @@ export default function CarregamentoFloorPlan({
                 stroke="#d8d6cc"
                 strokeWidth={8}
               />
-              {cx.prateleiras.flatMap((p) =>
-                p.itens.map((item) => {
+              {cx.itens.map((item) => {
                   const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
                   return (
                     <g
@@ -170,8 +167,7 @@ export default function CarregamentoFloorPlan({
                       </foreignObject>
                     </g>
                   );
-                }),
-              )}
+                })}
             </svg>
           </div>
         );

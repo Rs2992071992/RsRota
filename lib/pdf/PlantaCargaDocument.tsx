@@ -94,12 +94,10 @@ export function PlantaCargaDocument({ detalhe }: { detalhe: CarregamentoDetalhe 
   const clientes: { id: number; nome: string }[] = [];
   const vistos = new Set<number>();
   for (const cx of detalhe.packing.caixas) {
-    for (const p of cx.prateleiras) {
-      for (const item of p.itens) {
-        if (!vistos.has(item.clienteId)) {
-          vistos.add(item.clienteId);
-          clientes.push({ id: item.clienteId, nome: item.clienteNome });
-        }
+    for (const item of cx.itens) {
+      if (!vistos.has(item.clienteId)) {
+        vistos.add(item.clienteId);
+        clientes.push({ id: item.clienteId, nome: item.clienteNome });
       }
     }
   }
@@ -173,8 +171,7 @@ export function PlantaCargaDocument({ detalhe }: { detalhe: CarregamentoDetalhe 
                   stroke="#d8d6cc"
                   strokeWidth={8}
                 />
-                {cx.prateleiras.flatMap((p) =>
-                  p.itens.map((item) => {
+                {cx.itens.map((item) => {
                     const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
                     const fontSize = Math.max(Math.min(item.larguraOcupada, item.comprimentoOcupado) / 7, 20);
                     // Sem suporte a truncar com elipse/overflow no SVG do react-pdf —
@@ -205,8 +202,7 @@ export function PlantaCargaDocument({ detalhe }: { detalhe: CarregamentoDetalhe 
                         </Text>
                       </React.Fragment>
                     );
-                  }),
-                )}
+                  })}
               </Svg>
               <View style={styles.legenda}>
                 {clientes.map((c, i) => (

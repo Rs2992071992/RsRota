@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cargas — empacotamento 2D real (MaxRects + faixas, o melhor dos dois) (2026-08-30)
+
+Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Bug real
+do Ricardo (carreg. #9): 11 paletes 1300×1100 cabem no AO-33-PJ (faixa de 6 "ao
+través" + faixa de 5 "ao comprido") mas o motor por prateleiras só metia 10 (não
+exprime faixas a ritmos diferentes).
+
+- [x] `lib/calc/paletePacking.ts`: `empacotar` passa a correr 2 algoritmos e a
+  ficar com o que coloca mais paletes (empate → faixas):
+  `empacotarPorFaixas` (o de prateleiras, renomeado/adaptado a `itens[]`) +
+  `empacotarMaxRects` (novo, maximal-rectangles Best-Short-Side-Fit)
+- [x] `CaixaResultado.prateleiras` → `CaixaResultado.itens` (lista plana);
+  `PrateleiraResultado` e `PaleteColocada.prateleiraIndex` removidos
+- [x] `components/CarregamentoFloorPlan.tsx` + `lib/pdf/PlantaCargaDocument.tsx`:
+  `cx.prateleiras.flatMap(p=>p.itens)` → `cx.itens`
+- [x] `estimarQuantosCabem` max default 500 → 150 (perf: corre 2 algoritmos)
+- [x] `tests/calc/paletePacking.test.ts` reescritos (asserções sobre `itens` +
+  invariante "sem sobreposições"; novo teste do caso #9: 11 cabem, 12ª não).
+  176 verdes; estabilidade append-only mantida; `tsc`/`build` limpos
+- [x] E2E: diff antes/depois de TODOS os carregamentos reais (#5–#9) — **nenhum
+  regride**; #7 (38× 1200×800) mantém 38 (via faixas, MaxRects sozinho dava 36);
+  #9 sobe a 11/11 (via MaxRects). Página e PDF do #9 OK, sem "Sem espaço"
+- [x] `tasks/lessons.md` (não assumir que o algoritmo novo domina o antigo)
+- [ ] Commit + push
+
 ## ☑️ Cargas — "Ao através" deixa de desperdiçar filas (2026-08-30)
 
 Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Bug real
