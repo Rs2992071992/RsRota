@@ -90,13 +90,16 @@ function orientacoesQueCabem(caixa: CaixaInput, unidade: PaleteUnidade): Orienta
     { larguraOcupada: unidade.larguraMm, profundidadeOcupada: unidade.comprimentoMm, rotacionado: false },
     { larguraOcupada: unidade.comprimentoMm, profundidadeOcupada: unidade.larguraMm, rotacionado: true },
   ];
-  const forcada =
-    unidade.orientacao === "COMPRIDO"
-      ? candidatas.filter((o) => !o.rotacionado)
-      : unidade.orientacao === "TRAVES"
-        ? candidatas.filter((o) => o.rotacionado)
-        : candidatas;
-  return forcada.filter((o) => o.larguraOcupada <= caixa.larguraMm);
+  return candidatas.filter((o) => o.larguraOcupada <= caixa.larguraMm);
+}
+
+/** `true` se `o` corresponde à orientação preferida da linha (COMPRIDO =
+ * não rotacionada; TRAVES = rotacionada). `AUTO`/ausente → nunca "preferida". */
+function ehOrientacaoPreferida(o: Orientacao, unidade: PaleteUnidade): boolean {
+  return (
+    (unidade.orientacao === "COMPRIDO" && !o.rotacionado) ||
+    (unidade.orientacao === "TRAVES" && o.rotacionado)
+  );
 }
 
 /**
@@ -147,25 +150,34 @@ function fecharPrateleira(estado: EstadoCaixa): void {
 /**
  * Tenta colocar uma unidade numa caixa: primeiro na prateleira aberta (só
  * aceita orientações com profundidade <= à já comprometida — uma prateleira
- * nunca "cresce" depois do 1º item, para manter a grelha visual retangular),
- * senão fecha-a e abre uma nova (orientação de menor profundidade, para
- * maximizar prateleiras futuras). Devolve null se a caixa não tem espaço.
+ * nunca "cresce" depois de aberta, para manter a grelha visual retangular),
+ * senão fecha-a e abre uma nova. Devolve null se a caixa não tem espaço.
+ *
+ * `unidade.orientacao` (COMPRIDO/TRAVES) é uma **preferência**, não uma
+ * obrigação: a prateleira abre nessa orientação e, quando duas paletes assim
+ * não cabem lado a lado mas cabem com a seguinte rodada, reserva-se
+ * profundidade para a encostar (ver `profundidadeAberta`).
  */
 function tentarColocarNaCaixa(estado: EstadoCaixa, unidade: PaleteUnidade): PaleteColocada | null {
   const { caixa } = estado;
   const candidatas = orientacoesQueCabem(caixa, unidade);
   if (candidatas.length === 0) return null;
 
+  // Ordena preferindo a orientação da linha; em igualdade, a de menor largura
+  // ocupada (deixa mais espaço livre para os itens seguintes da prateleira).
+  const porPreferencia = (a: Orientacao, b: Orientacao) => {
+    const pa = ehOrientacaoPreferida(a, unidade) ? 0 : 1;
+    const pb = ehOrientacaoPreferida(b, unidade) ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return a.larguraOcupada - b.larguraOcupada;
+  };
+
   if (estado.prateleiraAberta) {
     const pa = estado.prateleiraAberta;
-    // Entre as orientações que cabem na prateleira aberta, prefere a de menor
-    // largura ocupada — deixa mais espaço livre na prateleira para os
-    // próximos itens (maximiza quantos entram nesta linha), em vez de
-    // "gastar" logo o espaço com a orientação mais larga.
     const cabem = candidatas
       .filter((o) => o.profundidadeOcupada <= pa.profundidadeMm)
       .filter((o) => o.larguraOcupada <= caixa.larguraMm - pa.larguraUsadaMm)
-      .sort((a, b) => a.larguraOcupada - b.larguraOcupada);
+      .sort(porPreferencia);
 
     if (cabem.length > 0) {
       const o = cabem[0];
@@ -187,14 +199,31 @@ function tentarColocarNaCaixa(estado: EstadoCaixa, unidade: PaleteUnidade): Pale
     fecharPrateleira(estado);
   }
 
-  // Tenta a orientação preferida (mais paletes lado a lado); se não couber no
-  // comprimento restante desta caixa, cai para a alternativa (ex.: perto do
-  // fim da caixa só resta espaço para a orientação "de lado").
-  const preferencia = [...candidatas].sort(compararPreferenciaNovaPrateleira(caixa));
-  const escolhida = preferencia.find(
+  // Orientação para abrir a prateleira: a preferida da linha se couber no
+  // comprimento restante; senão a que mete mais paletes lado a lado. Fallback
+  // para a alternativa se a 1ª escolha não couber no comprimento.
+  const ordemAbertura = unidade.orientacao
+    ? [...candidatas].sort(porPreferencia)
+    : [...candidatas].sort(compararPreferenciaNovaPrateleira(caixa));
+  const escolhida = ordemAbertura.find(
     (o) => estado.cursorMm + o.profundidadeOcupada <= caixa.comprimentoMm,
   );
   if (!escolhida) return null;
+
+  // Se a orientação escolhida sozinha não mete 2 na fila (2×largura > caixa),
+  // mas escolhida + a rodada cabem, reserva profundidade para a rodada que vem
+  // a seguir encostar-se — sem isto a fila ficaria com uma só palete e muito
+  // espaço livre ao lado.
+  const alt = candidatas.find((o) => o.rotacionado !== escolhida.rotacionado);
+  const podeEncostarRodada =
+    alt !== undefined &&
+    2 * escolhida.larguraOcupada > caixa.larguraMm &&
+    escolhida.larguraOcupada + alt.larguraOcupada <= caixa.larguraMm &&
+    estado.cursorMm + Math.max(escolhida.profundidadeOcupada, alt.profundidadeOcupada) <=
+      caixa.comprimentoMm;
+  const profundidadeAberta = podeEncostarRodada
+    ? Math.max(escolhida.profundidadeOcupada, alt!.profundidadeOcupada)
+    : escolhida.profundidadeOcupada;
 
   const colocada: PaleteColocada = {
     ...unidade,
@@ -207,7 +236,7 @@ function tentarColocarNaCaixa(estado: EstadoCaixa, unidade: PaleteUnidade): Pale
     comprimentoOcupado: escolhida.profundidadeOcupada,
   };
   estado.prateleiraAberta = {
-    profundidadeMm: escolhida.profundidadeOcupada,
+    profundidadeMm: profundidadeAberta,
     larguraUsadaMm: escolhida.larguraOcupada,
     itens: [colocada],
   };

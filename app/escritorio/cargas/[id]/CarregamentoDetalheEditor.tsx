@@ -721,7 +721,9 @@ export default function CarregamentoDetalheEditor({
         />
         <p className="mt-2 text-xs text-gray-400">
           Clica numa palete no desenho para a rodar, ou usa a coluna
-          &quot;Orientação&quot; na tabela de pedidos.
+          &quot;Orientação&quot; na tabela de pedidos. &quot;Ao comprido&quot; /
+          &quot;Ao través&quot; definem a orientação principal da linha — o motor
+          pode rodar algumas paletes para as encostar e aproveitar a largura.
         </p>
       </div>
 

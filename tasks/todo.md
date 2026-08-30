@@ -2,6 +2,29 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cargas — "Ao através" deixa de desperdiçar filas (2026-08-30)
+
+Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Bug real
+encontrado pelo Ricardo no carreg. #9: forçar "Ao través" a 10 paletes 1300×1100
+(caixa 7500×2480) metia 1 por fila e deixava 4 de fora, quando 1300+1100 cabe.
+
+- [x] `lib/calc/paletePacking.ts`: `orientacoesQueCabem` deixa de excluir a
+  orientação não-preferida (COMPRIDO/TRAVES passam a preferência, não obrigação).
+  `tentarColocarNaCaixa`: nova ordenação `porPreferencia` (tenta a orientação da
+  linha primeiro); ao abrir prateleira, se a orientação escolhida sozinha não
+  mete 2 na fila (`2×largura > caixa`) mas escolhida+rodada cabem, reserva
+  `profundidade = max(escolhida, alt)` para a rodada seguinte encostar
+- [x] Texto de ajuda na planta: "Ao comprido/Ao través definem a orientação
+  principal — o motor pode rodar algumas paletes para as encostar"
+- [x] `tests/calc/paletePacking.test.ts`: 3 testes de orientação reescritos
+  (TRAVES 10×1300×1100 → 5 filas de través+comprido; COMPRIDO 1100 → pares sem
+  rodar; preferida que não cabe na largura → cai para a alternativa). 175 verdes,
+  `clienteA`/estabilidade inalterados. `tsc`/`build` limpos
+- [x] E2E contra a BD real: carreg. #9 com 24/25 forçados a TRAVES → 10/10 em 5
+  filas (2400mm cada), 0 sem espaço; estado do #9 restaurado
+- [x] `tasks/lessons.md` (preferência ≠ restrição rígida)
+- [ ] Commit + push
+
 ## ☑️ Cargas — rodar as paletes na planta de carga (2026-08-30)
 
 Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Última

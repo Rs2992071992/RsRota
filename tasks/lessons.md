@@ -2,6 +2,22 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-30] | A 1ª versão da rotação de paletes na planta de carga
+  (`PedidoPalete.orientacao`, commit `13e40ea`) implementou "Ao través"/"Ao
+  comprido" como restrição **rígida** em `orientacoesQueCabem` (filtrava a
+  orientação não-escolhida). O Ricardo forçou "Ao través" a 10 paletes 1300×1100
+  reais (carreg. #9, caixa 7500×2480): como `2×1300 > 2480`, o motor metia 1 por
+  fila e deixava 4 sem espaço — quando `1300 + 1100 (rodada) = 2400` cabe na
+  largura. Só apanhado quando ele testou com dados reais, não pelos testes (que
+  só verificavam "todas rotacionadas"). | Uma preferência de orientação/layout
+  imposta pelo utilizador deve ser **preferência com fallback**, nunca uma
+  exclusão rígida no passo que decide o que cabe: manter as 2 orientações
+  candidatas e só usar a preferência na ordenação (qual tentar primeiro) + numa
+  regra de "reservar profundidade da fila para encostar a palete seguinte
+  rodada" quando a orientação preferida sozinha não mete 2 lado a lado. Testar
+  sempre um caso onde a orientação forçada é geometricamente pior do que a
+  automática, não só o caso feliz.
+
 - [2026-08-30] | No upgrade Next.js 14→16, `npx @next/codemod@canary` (a
   ferramenta oficial da Vercel) resolveu-se a si própria para
   `16.4.0-canary.11` — uma versão mais recente/canary do que o `16.3.3`

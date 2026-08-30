@@ -243,11 +243,12 @@ describe("otimizarOrdem", () => {
   });
 });
 
-describe("empacotar — orientação forçada por linha", () => {
-  // Palete 1300x1100: 'COMPRIDO' -> largura ocupada 1100 (rotacionado:false);
-  // 'TRAVES' -> largura ocupada 1300 (rotacionado:true).
-  it("'TRAVES' força todas as paletes da linha rotacionadas", () => {
-    const us = unidades(4, {
+describe("empacotar — orientação preferida por linha (COMPRIDO/TRAVES)", () => {
+  // Palete 1300x1100 na caixa 7500x2480. 'TRAVES' = 1300 de largura -> 2 de
+  // través não cabem lado a lado (2600 > 2480), mas 1300 + 1100 (rodada) = 2400
+  // cabem. O motor deve encostá-las 2 por fila, não 1.
+  it("'TRAVES': encosta pares través + comprido em vez de 1 por fila", () => {
+    const us = unidades(10, {
       ordemInicial: 1,
       clienteId: 1,
       comprimentoMm: 1300,
@@ -255,11 +256,19 @@ describe("empacotar — orientação forçada por linha", () => {
       orientacao: "TRAVES",
     });
     const r = empacotar([CAMIAO], us);
-    expect(r.colocados).toHaveLength(4);
-    expect(r.colocados.every((c) => c.rotacionado === true)).toBe(true);
+    expect(r.colocados).toHaveLength(10);
+    expect(r.naoColocados).toHaveLength(0);
+    expect(r.caixas[0].prateleiras).toHaveLength(5);
+    for (const p of r.caixas[0].prateleiras) {
+      expect(p.itens).toHaveLength(2);
+      // 1ª da fila na orientação preferida (través = rotacionada), 2ª rodada.
+      expect(p.itens[0].rotacionado).toBe(true);
+      expect(p.itens[1].rotacionado).toBe(false);
+      expect(p.profundidadeMm).toBe(1300);
+    }
   });
 
-  it("'COMPRIDO' força todas as paletes da linha não rotacionadas", () => {
+  it("'COMPRIDO' (1100 de largura): 2 cabem lado a lado sem precisar de rodar", () => {
     const us = unidades(4, {
       ordemInicial: 1,
       clienteId: 1,
@@ -272,9 +281,9 @@ describe("empacotar — orientação forçada por linha", () => {
     expect(r.colocados.every((c) => c.rotacionado === false)).toBe(true);
   });
 
-  it("orientação forçada que não cabe em nenhum eixo -> NAO_CABE_ORIENTACAO", () => {
-    // Caixa estreita (1200mm); palete 2000x1000 'COMPRIDO' ocupa 1000 de largura
-    // e cabe, mas 'TRAVES' ocuparia 2000 > 1200 -> não cabe.
+  it("orientação preferida que não cabe na largura cai para a alternativa", () => {
+    // Caixa 1200 de largura; palete 2000x1000: 'TRAVES' ocuparia 2000 > 1200,
+    // 'COMPRIDO' ocupa 1000 <= 1200 -> coloca ao comprido, não fica de fora.
     const caixaEstreita: CaixaInput = {
       id: "veiculo",
       label: "Estreita",
@@ -289,8 +298,8 @@ describe("empacotar — orientação forçada por linha", () => {
       orientacao: "TRAVES",
     });
     const r = empacotar([caixaEstreita], us);
-    expect(r.colocados).toHaveLength(0);
-    expect(r.naoColocados[0].motivo).toBe("NAO_CABE_ORIENTACAO");
+    expect(r.colocados).toHaveLength(1);
+    expect(r.colocados[0].rotacionado).toBe(false);
   });
 });
 
