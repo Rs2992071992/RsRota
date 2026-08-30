@@ -18,7 +18,7 @@ Pedido do Ricardo: ter 4 paletes 1300×1100 de um cliente e carregar 2 ao compri
 - [x] E2E contra a BD real: dividir ped24 (x5) do #9 → x3 + ped27 x2 (mesma
   orientação), ordem renumerada; MOTORISTA → 403; separar 99 → 400. Estado do
   #9 reposto ao original
-- [ ] Commit + push
+- [x] Commit + push (`ee54d0f`)
 
 ## ☑️ Cargas — empacotamento 2D real (MaxRects + faixas, o melhor dos dois) (2026-08-30)
 
@@ -244,7 +244,7 @@ passam a ser desligáveis por motorista, na página de edição já existente.
   sempre os 3 campos, independentemente do motorista
 - [x] `tsc`/`vitest` (156, inalterados)/`next build` limpos; confirmado por
   leitura direta que os 2 motoristas reais mantiveram os defaults `true`
-- [ ] Commit + push
+- [x] Commit + push (`ee54d0f`)
 
 ## 🔲 Meias-paletes (2026-08-28)
 
