@@ -5,6 +5,8 @@ import { carregarRota } from "@/lib/rotas-service";
 import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
+import { verificarEspacoCarga, dimensoesPaleteParagem } from "@/lib/calc/cargaRota";
+import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { AlertaBadge } from "@/components/Badge";
 import ParagemAcoes from "@/components/ParagemAcoes";
 import PagoToggle from "@/components/PagoToggle";
@@ -93,6 +95,36 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   };
   const clientesRota = rota.rateio.map((c) => c.cliente);
 
+  // Sobreocupação: as paletes registadas na rota cabem no veículo (+ reboque)?
+  const veicRota = paragensRaw.find((p) => p.tipoVeiculo !== "VAZIO" && p.veiculo)?.veiculo ?? null;
+  const rotaTemReboque = paragensRaw.some((p) => p.tipoVeiculo === "CAMIAO+REBOQUE");
+  const caixasRota: CaixaInput[] = [];
+  if (veicRota?.caixaComprimentoMm && veicRota.caixaLarguraMm) {
+    caixasRota.push({
+      id: "veiculo",
+      label: veicRota.nome,
+      comprimentoMm: veicRota.caixaComprimentoMm,
+      larguraMm: veicRota.caixaLarguraMm,
+    });
+  }
+  if (rotaTemReboque && veicRota?.reboqueHabitual) {
+    caixasRota.push({
+      id: "reboque",
+      label: veicRota.reboqueHabitual.nome,
+      comprimentoMm: veicRota.reboqueHabitual.comprimentoMm,
+      larguraMm: veicRota.reboqueHabitual.larguraMm,
+    });
+  }
+  const espacoCarga = verificarEspacoCarga(
+    caixasRota,
+    paragensRaw.flatMap((p) => {
+      const dims = dimensoesPaleteParagem(p);
+      return dims
+        ? [{ tipoPaleteId: p.tipoPaleteId ?? 0, ...dims, nPaletes: p.nPaletes, clienteNome: p.cliente }]
+        : [];
+    }),
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -107,6 +139,16 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         </div>
         <AlertaBadge alerta={rota.alerta} />
       </div>
+
+      {espacoCarga.verificavel && !espacoCarga.cabemTodas && (
+        <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+          ⚠ As paletes registadas não cabem todas
+          {veicRota ? ` no ${veicRota.nome}` : " no veículo"}
+          {rotaTemReboque ? " + reboque" : ""}: cabem {espacoCarga.colocadas} de{" "}
+          {espacoCarga.totalPaletes} ({espacoCarga.semEspaco} sem espaço). Contagem do pior
+          caso (soma de toda a rota).
+        </div>
+      )}
 
       {/* Resumo rentabilidade */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

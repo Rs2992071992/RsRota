@@ -2,6 +2,32 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Registo do motorista — aviso de sobreocupação de espaço da rota (2026-08-30)
+
+Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Pedido do
+Ricardo: à medida que o motorista regista paragens, o sistema soma TODAS as
+paletes da rota, arruma-as com o motor 2D real e avisa quando não cabem.
+
+- [x] `lib/calc/cargaRota.ts` (novo): `verificarEspacoCarga(caixas, linhas)` —
+  reusa `empacotar`/`expandirPedidosEmUnidades`. `dimensoesPaleteParagem` +
+  `DIMENSOES_PALETE_LEGADO` (resolve `Paragem.tipoPalete` string legado
+  "PALETE_120X80"→1200×800 / "…100"→1200×1000)
+- [x] Motorista `RegistoForm.tsx`: aviso por-paragem (fórmula crua
+  `paletesQueCabem`) → aviso **cumulativo da rota** (soma paragens já
+  registadas + a que está a escrever, motor 2D). `page.tsx`: query
+  `paragensRotaAtiva` + `nPaletes`/dims/`tipoPalete`, resolvidas server-side
+- [x] `/escritorio/rotas/[idRota]`: banner vermelho no topo quando as paletes
+  registadas não cabem no veículo (+reboque) — "cabem X de Y (Z sem espaço)"
+- [x] `tests/calc/cargaRota.test.ts` (6). 182 testes verdes, `tsc`/`build` limpos
+- [x] E2E contra a BD real: `verificarEspacoCarga` corrido em todas as 12 rotas
+  reais com paletes — 10 cabem, 2 assinaladas: RIC-Plas-Sonae (54 pal → 35, é
+  multi-viagem sob 1 idRota) e RIC-Francisco Lince Blowtec (34 → 32, carga no
+  limite). Banner do escritório confirmado no browser (aparece só quando não
+  cabe). Aviso não bloqueia (pior caso — pode avisar a mais)
+- [ ] Commit + push
+- [ ] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
+  Motorista + `.apk` novo (bundle próprio)
+
 ## ☑️ Cargas — dividir linha de pedido (orientações diferentes) (2026-08-30)
 
 Pedido do Ricardo: ter 4 paletes 1300×1100 de um cliente e carregar 2 ao comprido

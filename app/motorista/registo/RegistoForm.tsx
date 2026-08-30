@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
-import { paletesQueCabem } from "@/lib/calc/perStop";
+import { verificarEspacoCarga } from "@/lib/calc/cargaRota";
+import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { fmtEuro } from "@/lib/format";
 import Autocomplete from "@/components/Autocomplete";
 
@@ -54,6 +55,9 @@ interface ParagemRotaResumo {
   portagensExtra: number;
   noitesFora: number;
   alimentacao: number;
+  nPaletes: number;
+  paleteComprimentoMm: number | null;
+  paleteLarguraMm: number | null;
 }
 
 // "12 €, 8 € e 5 €" — junta com vírgula e liga o último item com "e".
@@ -150,30 +154,48 @@ export default function RegistoForm({
   const ehReboque = f.tipoVeiculo === "CAMIAO+REBOQUE";
   const mostrarPaletes = f.tipoVeiculo !== "VAZIO";
   const tipoPaleteSel = tiposPalete.find((t) => String(t.id) === f.tipoPaleteId);
-  // Capacidade por dimensão: caixa do veículo (+ a do reboque habitual, se
-  // CAMIAO+REBOQUE e estiver configurada) — mesma fórmula do motor de cálculo
-  // (lib/calc/perStop.ts::capacidadePaleteDimensoes). null = veículo/reboque
-  // sem caixa configurada, não dá para prever (o servidor ainda valida).
-  const capacidadePaletes = useMemo(() => {
-    if (!veiculoSel || !tipoPaleteSel || !veiculoSel.caixaComprimentoMm || !veiculoSel.caixaLarguraMm) {
-      return null;
+  // Sobreocupação de espaço: soma TODAS as paletes já registadas na rota + a
+  // paragem que está a ser escrita e arruma-as com o motor de empacotamento 2D
+  // real (o mesmo das Cargas do escritório). null = sem veículo escolhido.
+  const espacoCargaRota = useMemo(() => {
+    if (!veiculoSel) return null;
+    const caixas: CaixaInput[] = [];
+    if (veiculoSel.caixaComprimentoMm && veiculoSel.caixaLarguraMm) {
+      caixas.push({
+        id: "veiculo",
+        label: veiculoSel.nome,
+        comprimentoMm: veiculoSel.caixaComprimentoMm,
+        larguraMm: veiculoSel.caixaLarguraMm,
+      });
     }
-    let total = paletesQueCabem(
-      veiculoSel.caixaComprimentoMm,
-      veiculoSel.caixaLarguraMm,
-      tipoPaleteSel.comprimentoMm,
-      tipoPaleteSel.larguraMm,
-    );
     if (ehReboque && veiculoSel.caixaReboqueComprimentoMm && veiculoSel.caixaReboqueLarguraMm) {
-      total += paletesQueCabem(
-        veiculoSel.caixaReboqueComprimentoMm,
-        veiculoSel.caixaReboqueLarguraMm,
-        tipoPaleteSel.comprimentoMm,
-        tipoPaleteSel.larguraMm,
-      );
+      caixas.push({
+        id: "reboque",
+        label: "Reboque",
+        comprimentoMm: veiculoSel.caixaReboqueComprimentoMm,
+        larguraMm: veiculoSel.caixaReboqueLarguraMm,
+      });
     }
-    return Math.floor(total * veiculoSel.fatorOcupacaoPalete);
-  }, [veiculoSel, tipoPaleteSel, ehReboque]);
+    const linhas = paragensRota
+      .filter((p) => p.nPaletes > 0 && p.paleteComprimentoMm && p.paleteLarguraMm)
+      .map((p) => ({
+        tipoPaleteId: 0,
+        comprimentoMm: p.paleteComprimentoMm as number,
+        larguraMm: p.paleteLarguraMm as number,
+        nPaletes: p.nPaletes,
+        clienteNome: p.cliente,
+      }));
+    if (mostrarPaletes && tipoPaleteSel && num(f.nPaletes) > 0) {
+      linhas.push({
+        tipoPaleteId: tipoPaleteSel.id,
+        comprimentoMm: tipoPaleteSel.comprimentoMm,
+        larguraMm: tipoPaleteSel.larguraMm,
+        nPaletes: num(f.nPaletes),
+        clienteNome: f.cliente.trim() || "esta paragem",
+      });
+    }
+    return verificarEspacoCarga(caixas, linhas);
+  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, tipoPaleteSel, f.nPaletes, f.cliente]);
   const custoNoites = num(f.noitesFora) * valorNoite;
 
   // VAZIO: não há cliente a faturar (repositionamento) nem carga a bordo,
@@ -195,13 +217,12 @@ export default function RegistoForm({
   // Avisos (não bloqueiam).
   const avisos = useMemo(() => {
     const a: string[] = [];
-    if (mostrarPaletes && capacidadePaletes != null) {
-      // Meias-paletes não entram aqui de propósito — não ocupam base própria
-      // (cabem em cima de outra já contada), só a sobrecarga de bases importa.
-      const nPal = num(f.nPaletes);
-      if (nPal > capacidadePaletes) {
-        a.push(`${nPal} paletes excede a capacidade do veículo (${capacidadePaletes} paletes).`);
-      }
+    // Meias-paletes não entram na verificação de propósito — não ocupam base
+    // própria (cabem em cima de outra já contada).
+    if (mostrarPaletes && espacoCargaRota?.verificavel && !espacoCargaRota.cabemTodas) {
+      a.push(
+        `As paletes desta rota já não cabem no veículo: cabem ~${espacoCargaRota.colocadas} de ${espacoCargaRota.totalPaletes} (${espacoCargaRota.semEspaco} sem espaço).`,
+      );
     }
     if (mostrarPaletes && num(f.nMeiasPaletes) > num(f.nPaletes)) {
       a.push("Não pode haver mais meias-paletes do que paletes de base (cada meia precisa de uma base por baixo).");
@@ -224,7 +245,7 @@ export default function RegistoForm({
       }
     }
     return a;
-  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, f.nMeiasPaletes, capacidadePaletes, mostrarPaletes, zonas, veiculoSel]);
+  }, [f.tipoVeiculo, f.zonaPortagem, f.nPaletes, f.nMeiasPaletes, espacoCargaRota, mostrarPaletes, zonas, veiculoSel]);
 
   function validar(): boolean {
     const e: Record<string, string> = {};
@@ -303,6 +324,9 @@ export default function RegistoForm({
           portagensExtra: payload.portagensExtra,
           noitesFora: payload.noitesFora,
           alimentacao: payload.alimentacao,
+          nPaletes: payload.nPaletes,
+          paleteComprimentoMm: tipoPaleteSel?.comprimentoMm ?? null,
+          paleteLarguraMm: tipoPaleteSel?.larguraMm ?? null,
         },
       ]);
       setMsg({

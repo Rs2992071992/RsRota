@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
+import { dimensoesPaleteParagem } from "@/lib/calc/cargaRota";
 import RegistoForm from "./RegistoForm";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,10 @@ export default async function RegistoPage(
               portagensExtra: true,
               noitesFora: true,
               alimentacao: true,
+              nPaletes: true,
+              paleteComprimentoMm: true,
+              paleteLarguraMm: true,
+              tipoPalete: true,
             },
             orderBy: { id: "asc" },
           })
@@ -107,7 +112,19 @@ export default async function RegistoPage(
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}
       inicial={inicial}
-      paragensRotaIniciais={paragensRotaAtiva}
+      paragensRotaIniciais={paragensRotaAtiva.map((p) => {
+        const dims = dimensoesPaleteParagem(p);
+        return {
+          cliente: p.cliente,
+          zonaPortagem: p.zonaPortagem,
+          portagensExtra: p.portagensExtra,
+          noitesFora: p.noitesFora,
+          alimentacao: p.alimentacao,
+          nPaletes: p.nPaletes,
+          paleteComprimentoMm: dims?.comprimentoMm ?? null,
+          paleteLarguraMm: dims?.larguraMm ?? null,
+        };
+      })}
     />
   );
 }
