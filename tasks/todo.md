@@ -23,7 +23,7 @@ encontrado pelo Ricardo no carreg. #9: forçar "Ao través" a 10 paletes 1300×1
 - [x] E2E contra a BD real: carreg. #9 com 24/25 forçados a TRAVES → 10/10 em 5
   filas (2400mm cada), 0 sem espaço; estado do #9 restaurado
 - [x] `tasks/lessons.md` (preferência ≠ restrição rígida)
-- [ ] Commit + push
+- [x] Commit + push (`1e78f25`)
 
 ## ☑️ Cargas — rodar as paletes na planta de carga (2026-08-30)
 
