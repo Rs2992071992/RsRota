@@ -24,7 +24,7 @@ paletes da rota, arruma-as com o motor 2D real e avisa quando não cabem.
   multi-viagem sob 1 idRota) e RIC-Francisco Lince Blowtec (34 → 32, carga no
   limite). Banner do escritório confirmado no browser (aparece só quando não
   cabe). Aviso não bloqueia (pior caso — pode avisar a mais)
-- [ ] Commit + push
+- [x] Commit + push (`1c81e59`)
 - [ ] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
   Motorista + `.apk` novo (bundle próprio)
 
