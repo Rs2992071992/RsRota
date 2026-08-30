@@ -7,10 +7,38 @@ import {
   empacotar,
   estimarQuantosCabem,
   expandirPedidosEmUnidades,
+  otimizarOrdem,
   type CaixaInput,
   type PaleteUnidade,
+  type PedidoParaExpandir,
   type ResultadoPacking,
 } from "@/lib/calc/paletePacking";
+
+/** Constrói a lista de caixas (veículo + reboque anexado, por esta ordem) para
+ * o motor de empacotamento. Veículo sem comprimento/largura definidos não entra. */
+export function construirCaixas(
+  veiculo: { nome: string; caixaComprimentoMm: number | null; caixaLarguraMm: number | null },
+  reboque: { id: number; nome: string; comprimentoMm: number; larguraMm: number } | null,
+): CaixaInput[] {
+  const caixas: CaixaInput[] = [];
+  if (veiculo.caixaComprimentoMm != null && veiculo.caixaLarguraMm != null) {
+    caixas.push({
+      id: "veiculo",
+      label: veiculo.nome,
+      comprimentoMm: veiculo.caixaComprimentoMm,
+      larguraMm: veiculo.caixaLarguraMm,
+    });
+  }
+  if (reboque) {
+    caixas.push({
+      id: `reboque-${reboque.id}`,
+      label: reboque.nome,
+      comprimentoMm: reboque.comprimentoMm,
+      larguraMm: reboque.larguraMm,
+    });
+  }
+  return caixas;
+}
 
 export interface SugestaoReboque {
   id: number;
@@ -71,23 +99,7 @@ export async function carregarCarregamento(id: number): Promise<CarregamentoDeta
   const veiculoSemCaixaConfigurada =
     c.veiculo.caixaComprimentoMm == null || c.veiculo.caixaLarguraMm == null;
 
-  const caixas: CaixaInput[] = [];
-  if (!veiculoSemCaixaConfigurada) {
-    caixas.push({
-      id: "veiculo",
-      label: c.veiculo.nome,
-      comprimentoMm: c.veiculo.caixaComprimentoMm as number,
-      larguraMm: c.veiculo.caixaLarguraMm as number,
-    });
-  }
-  if (c.reboque) {
-    caixas.push({
-      id: `reboque-${c.reboque.id}`,
-      label: c.reboque.nome,
-      comprimentoMm: c.reboque.comprimentoMm,
-      larguraMm: c.reboque.larguraMm,
-    });
-  }
+  const caixas = construirCaixas(c.veiculo, c.reboque);
 
   const pedidosPlanos = c.pedidos.map((p) => ({
     id: p.id,
@@ -182,5 +194,89 @@ export async function carregarCarregamento(id: number): Promise<CarregamentoDeta
     packing,
     estimativasRestantes,
     sugestoesReboque,
+  };
+}
+
+export interface SimulacaoOrdem {
+  /** A ordem atual já é a melhor possível — não há reordenação que melhore. */
+  jaOtima: boolean;
+  /** Sequência de carga sugerida, uma entrada por linha de pedido. */
+  ordemSugerida: {
+    pedidoId: number;
+    clienteNome: string;
+    tipoPaleteNome: string;
+    quantidade: number;
+  }[];
+  /** `pedidoId` na ordem sugerida — o endpoint aplica sem repetir o cálculo. */
+  pedidoIdsOrdenados: number[];
+  ganho: {
+    naoColocadosAntes: number;
+    naoColocadosDepois: number;
+    comprimentoAntesMm: number;
+    comprimentoDepoisMm: number;
+    usaReboqueAntes: boolean;
+    usaReboqueDepois: boolean;
+  };
+}
+
+const comprimentoTotalMm = (r: ResultadoPacking) =>
+  r.caixas.reduce((s, cx) => s + cx.comprimentoUsadoMm, 0);
+const usaReboque = (r: ResultadoPacking) =>
+  r.caixas.some((cx) => cx.caixa.id.startsWith("reboque-") && cx.comprimentoUsadoMm > 0);
+
+/** Simula a ordem de carga otimizada de um carregamento e compara com a atual. */
+export async function simularOrdemOtimizada(id: number): Promise<SimulacaoOrdem | null> {
+  const c = await prisma.carregamento.findUnique({
+    where: { id },
+    include: {
+      veiculo: true,
+      reboque: true,
+      pedidos: { orderBy: { ordem: "asc" }, include: { cliente: true, tipoPalete: true } },
+    },
+  });
+  if (!c) return null;
+
+  const caixas = construirCaixas(c.veiculo, c.reboque);
+  const pedidos: PedidoParaExpandir[] = c.pedidos.map((p) => ({
+    pedidoId: p.id,
+    clienteId: p.clienteId,
+    clienteNome: p.cliente.nome,
+    tipoPaleteId: p.tipoPaleteId,
+    tipoPaleteNome: p.tipoPalete.nome,
+    comprimentoMm: p.tipoPalete.comprimentoMm,
+    larguraMm: p.tipoPalete.larguraMm,
+    ordem: p.ordem,
+    quantidade: p.quantidade,
+  }));
+
+  const idsAtuais = pedidos.map((p) => p.pedidoId);
+  const packingAtual = empacotar(caixas, expandirPedidosEmUnidades(pedidos));
+  const { pedidoIdsOrdenados, packing: packingNovo } = otimizarOrdem(caixas, pedidos);
+
+  const jaOtima =
+    idsAtuais.length === pedidoIdsOrdenados.length &&
+    idsAtuais.every((v, i) => v === pedidoIdsOrdenados[i]);
+
+  const porId = new Map(pedidos.map((p) => [p.pedidoId, p]));
+  return {
+    jaOtima,
+    pedidoIdsOrdenados,
+    ordemSugerida: pedidoIdsOrdenados.map((pid) => {
+      const p = porId.get(pid)!;
+      return {
+        pedidoId: pid,
+        clienteNome: p.clienteNome,
+        tipoPaleteNome: p.tipoPaleteNome,
+        quantidade: p.quantidade,
+      };
+    }),
+    ganho: {
+      naoColocadosAntes: packingAtual.naoColocados.length,
+      naoColocadosDepois: packingNovo.naoColocados.length,
+      comprimentoAntesMm: comprimentoTotalMm(packingAtual),
+      comprimentoDepoisMm: comprimentoTotalMm(packingNovo),
+      usaReboqueAntes: usaReboque(packingAtual),
+      usaReboqueDepois: usaReboque(packingNovo),
+    },
   };
 }

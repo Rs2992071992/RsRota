@@ -274,6 +274,13 @@ export interface PedidoParaExpandir {
   quantidade: number;
 }
 
+/** Expande pedidos (com quantidade) em unidades individuais (1 por palete física),
+ * reescrevendo `ordem` pela posição no array — usado quando a ordem de entrada já
+ * reflete a sequência de carga pretendida (`empacotar` reordena por `ordem`). */
+function expandirNaOrdem(pedidos: PedidoParaExpandir[]): PaleteUnidade[] {
+  return expandirPedidosEmUnidades(pedidos.map((p, i) => ({ ...p, ordem: i + 1 })));
+}
+
 /** Expande pedidos (com quantidade) em unidades individuais (1 por palete física). */
 export function expandirPedidosEmUnidades(pedidos: PedidoParaExpandir[]): PaleteUnidade[] {
   const unidades: PaleteUnidade[] = [];
@@ -323,4 +330,121 @@ export function estimarQuantosCabem(
 
   const resultado = empacotar(caixas, [...unidadesExistentes, ...sinteticas]);
   return resultado.colocados.filter((c) => c.pedidoId === -1).length;
+}
+
+// ---------------------------------------------------------------------------
+// Otimização da ordem de carga
+// ---------------------------------------------------------------------------
+//
+// `empacotar` é sensível à ordem (empacotamento por prateleiras, "online"): a
+// mesma lista de paletes numa ordem diferente pode caber toda ou deixar paletes
+// de fora. `otimizarOrdem` procura a melhor ordem SEM tocar no motor — mantém
+// cada cliente num bloco contíguo (as suas paletes ficam juntas no camião, para
+// carga/descarga) e experimenta as ordens possíveis dos blocos.
+
+interface PontuacaoPacking {
+  naoColocados: number;
+  caixasUsadas: number;
+  comprimentoTotalMm: number;
+}
+
+/** Pontua um resultado de empacotamento — menor é melhor, comparado por
+ * `compararPontuacao` (lexicográfico: cabe tudo > menos caixas > carga mais curta). */
+export function pontuarPacking(r: ResultadoPacking): PontuacaoPacking {
+  return {
+    naoColocados: r.naoColocados.length,
+    caixasUsadas: r.caixas.filter((c) => c.comprimentoUsadoMm > 0).length,
+    comprimentoTotalMm: r.caixas.reduce((s, c) => s + c.comprimentoUsadoMm, 0),
+  };
+}
+
+function compararPontuacao(a: PontuacaoPacking, b: PontuacaoPacking): number {
+  if (a.naoColocados !== b.naoColocados) return a.naoColocados - b.naoColocados;
+  if (a.caixasUsadas !== b.caixasUsadas) return a.caixasUsadas - b.caixasUsadas;
+  return a.comprimentoTotalMm - b.comprimentoTotalMm;
+}
+
+function permutacoes<T>(arr: T[]): T[][] {
+  if (arr.length <= 1) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const resto = [...arr.slice(0, i), ...arr.slice(i + 1)];
+    for (const p of permutacoes(resto)) out.push([arr[i], ...p]);
+  }
+  return out;
+}
+
+const areaPedido = (p: PedidoParaExpandir) => p.comprimentoMm * p.larguraMm;
+const somaAreaBloco = (b: PedidoParaExpandir[]) =>
+  b.reduce((s, p) => s + areaPedido(p) * p.quantidade, 0);
+const maiorLadoBloco = (b: PedidoParaExpandir[]) =>
+  Math.max(...b.map((p) => Math.max(p.comprimentoMm, p.larguraMm)));
+const totalPaletesBloco = (b: PedidoParaExpandir[]) => b.reduce((s, p) => s + p.quantidade, 0);
+
+/** Nº de clientes distintos acima do qual se deixa de testar todas as
+ * permutações (n! cresce depressa) e se usa só um punhado de heurísticas. */
+const MAX_CLIENTES_FORCA_BRUTA = 6;
+
+/**
+ * Procura a ordem de carga que melhor aproveita o espaço. Cada cliente é um
+ * bloco contíguo; dentro do bloco as linhas de pedido são ordenadas por área
+ * decrescente (First-Fit Decreasing). Devolve os `pedidoId` na ordem escolhida
+ * e o empacotamento correspondente. Em empate de pontuação, mantém a ordem
+ * atual (o 1º candidato testado), para `jaOtima` poder ser detetado por
+ * comparação direta da lista de ids.
+ */
+export function otimizarOrdem(
+  caixas: CaixaInput[],
+  pedidos: PedidoParaExpandir[],
+): { pedidoIdsOrdenados: number[]; packing: ResultadoPacking } {
+  const ordemAtual = [...pedidos].sort((a, b) => a.ordem - b.ordem);
+
+  if (ordemAtual.length <= 1 || caixas.length === 0) {
+    return {
+      pedidoIdsOrdenados: ordemAtual.map((p) => p.pedidoId),
+      packing: empacotar(caixas, expandirNaOrdem(ordemAtual)),
+    };
+  }
+
+  // Blocos de cliente, na ordem de 1ª aparição.
+  const blocosMap = new Map<number, PedidoParaExpandir[]>();
+  for (const p of ordemAtual) {
+    const b = blocosMap.get(p.clienteId);
+    if (b) b.push(p);
+    else blocosMap.set(p.clienteId, [p]);
+  }
+  // Dentro de cada bloco: linhas maiores primeiro.
+  const blocosFFD = [...blocosMap.values()].map((b) =>
+    [...b].sort((x, y) => areaPedido(y) - areaPedido(x)),
+  );
+
+  let ordensBlocos: PedidoParaExpandir[][][];
+  if (blocosFFD.length <= MAX_CLIENTES_FORCA_BRUTA) {
+    ordensBlocos = permutacoes(blocosFFD);
+  } else {
+    ordensBlocos = [
+      blocosFFD,
+      [...blocosFFD].sort((a, b) => somaAreaBloco(b) - somaAreaBloco(a)),
+      [...blocosFFD].sort((a, b) => maiorLadoBloco(b) - maiorLadoBloco(a)),
+      [...blocosFFD].sort((a, b) => totalPaletesBloco(b) - totalPaletesBloco(a)),
+    ];
+  }
+
+  // 1º candidato: exatamente a ordem atual (sem reordenar blocos nem linhas).
+  const candidatos: PedidoParaExpandir[][] = [ordemAtual, ...ordensBlocos.map((o) => o.flat())];
+
+  let melhor: { pedidos: PedidoParaExpandir[]; packing: ResultadoPacking; score: PontuacaoPacking } | null =
+    null;
+  for (const cand of candidatos) {
+    const packing = empacotar(caixas, expandirNaOrdem(cand));
+    const score = pontuarPacking(packing);
+    if (!melhor || compararPontuacao(score, melhor.score) < 0) {
+      melhor = { pedidos: cand, packing, score };
+    }
+  }
+
+  return {
+    pedidoIdsOrdenados: melhor!.pedidos.map((p) => p.pedidoId),
+    packing: melhor!.packing,
+  };
 }

@@ -2,6 +2,39 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cargas — otimizar disposição das paletes + reordenar clientes (2026-08-30)
+
+Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Pedido do
+Ricardo: rodar as paletes no esquema para ver o melhor aproveitamento ("tetris")
+e poder mudar a ordem dos clientes. O motor `paletePacking` já testava rotação;
+faltava reordenar (por design nunca reordena — empacotamento "online").
+
+- [x] `lib/calc/paletePacking.ts`: `otimizarOrdem(caixas, pedidos)` +
+  `pontuarPacking` — mantém cada cliente num bloco contíguo, linhas do bloco por
+  área desc (FFD), permuta a ordem dos blocos (≤6 clientes: força bruta ≤720;
+  >6: 4 heurísticas). Score lexicográfico: cabe tudo > menos caixas > carga mais
+  curta; empate mantém a ordem atual (para detetar `jaOtima`)
+- [x] `lib/carregamento-ordem.ts` (novo): `moverBlocoCliente` (puro, testável) —
+  move o bloco de um cliente ↑/↓ mantendo as suas paletes juntas
+- [x] `lib/carregamento-service.ts`: `construirCaixas()` extraído (reutilizado);
+  `simularOrdemOtimizada(id)` → `{ jaOtima, ordemSugerida, pedidoIdsOrdenados,
+  ganho }`
+- [x] `POST /api/carregamentos/[id]/otimizar` (`{aplicar?}`: simula, ou reescreve
+  `PedidoPalete.ordem` numa `$transaction`); `PATCH .../pedidos/ordem`
+  (`{ordemPedidoIds}`, valida permutação exata) — ambas só ESCRITORIO
+- [x] `CarregamentoDetalheEditor.tsx`: tabela de Pedidos agrupada por cliente com
+  setas ↑/↓; botão "⚡ Otimizar disposição" + painel (ordem sugerida, frases de
+  ganho, "Aplicar"/"Ignorar"); painel limpa-se em qualquer outra mutação
+- [x] `tests/calc/paletePacking.test.ts` (+4: `otimizarOrdem`) +
+  `tests/calc/carregamentoOrdem.test.ts` (novo, 6). 171 testes verdes,
+  `tsc`/`next build` limpos (2 rotas novas no output)
+- [x] E2E contra a BD de produção (`next start`, sessão HMAC forjada):
+  carregamento real #8 (3 clientes) — simular propõe 22→21→20 (14,3 m em vez de
+  14,7 m); MOTORISTA→403; permutação inválida→400; #999→404; #6 (1 cliente)→
+  `jaOtima`; aplicar reescreve a ordem, reorder manual repõe 20/21/22. Dados de
+  produção repostos ao estado original
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ☑️ Revisão de segurança + upgrade Next.js 14→16 (2026-08-29/30)
 
 Pedido do Ricardo: rever o código quanto a falhas de segurança. Encontrado por

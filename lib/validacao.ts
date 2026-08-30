@@ -389,3 +389,11 @@ export const pedidoPaleteUpdateSchema = z.object({
 });
 
 export type PedidoPaleteUpdateForm = z.infer<typeof pedidoPaleteUpdateSchema>;
+
+/** Nova ordem de carga: `pedidoId` de todos os pedidos do carregamento, na
+ * sequência pretendida. A rota valida que é uma permutação exata dos pedidos. */
+export const reordenarPedidosSchema = z.object({
+  ordemPedidoIds: z.array(z.number().int().positive()).min(1),
+});
+
+export type ReordenarPedidosForm = z.infer<typeof reordenarPedidosSchema>;

@@ -3,8 +3,10 @@ import {
   empacotar,
   estimarQuantosCabem,
   expandirPedidosEmUnidades,
+  otimizarOrdem,
   type CaixaInput,
   type PaleteUnidade,
+  type PedidoParaExpandir,
 } from "@/lib/calc/paletePacking";
 
 // Recria o exemplo do próprio utilizador: camião AO-33-PJ (7500x2480mm),
@@ -183,6 +185,61 @@ describe("empacotar — casos limite", () => {
     expect(r.colocados).toHaveLength(0);
     expect(r.naoColocados).toHaveLength(0);
     expect(r.caixas[0].areaUsadaMm2).toBe(0);
+  });
+});
+
+describe("otimizarOrdem", () => {
+  function pedido(over: Partial<PedidoParaExpandir> & { pedidoId: number }): PedidoParaExpandir {
+    return {
+      clienteId: over.pedidoId,
+      clienteNome: `Cliente ${over.pedidoId}`,
+      tipoPaleteId: 1,
+      tipoPaleteNome: "t",
+      comprimentoMm: 1000,
+      larguraMm: 1000,
+      ordem: over.pedidoId,
+      quantidade: 1,
+      ...over,
+    };
+  }
+
+  it("reordena os clientes quando isso faz caber mais paletes", () => {
+    const caixa: CaixaInput = { id: "veiculo", label: "C", comprimentoMm: 3000, larguraMm: 2480 };
+    // Ordem atual: X (1 palete grande) antes de Y (6 paletes) -> a prateleira do
+    // X desperdiça a largura e só cabem 3 do Y. Invertida, cabem os 6 do Y.
+    const X = pedido({ pedidoId: 1, comprimentoMm: 2400, larguraMm: 1300 });
+    const Y = pedido({ pedidoId: 2, comprimentoMm: 1200, larguraMm: 800, quantidade: 6, ordem: 2 });
+
+    const atual = empacotar([caixa], expandirPedidosEmUnidades([X, Y]));
+    const r = otimizarOrdem([caixa], [X, Y]);
+
+    expect(r.pedidoIdsOrdenados).toEqual([2, 1]);
+    expect(r.packing.naoColocados.length).toBeLessThan(atual.naoColocados.length);
+    expect(r.packing.colocados.filter((c) => c.clienteId === 2)).toHaveLength(6);
+  });
+
+  it("mantém a ordem atual quando já é a melhor (blocos equivalentes)", () => {
+    const caixa: CaixaInput = { id: "veiculo", label: "C", comprimentoMm: 12000, larguraMm: 2480 };
+    const A = pedido({ pedidoId: 1, comprimentoMm: 1200, larguraMm: 1000, quantidade: 2 });
+    const B = pedido({ pedidoId: 2, comprimentoMm: 1200, larguraMm: 1000, quantidade: 2, ordem: 2 });
+
+    const r = otimizarOrdem([caixa], [A, B]);
+    expect(r.pedidoIdsOrdenados).toEqual([1, 2]);
+  });
+
+  it("com mais de 6 clientes não rebenta e devolve uma permutação dos mesmos pedidos", () => {
+    const caixa: CaixaInput = { id: "veiculo", label: "C", comprimentoMm: 20000, larguraMm: 2480 };
+    const pedidos = Array.from({ length: 8 }, (_, i) =>
+      pedido({ pedidoId: i + 1, ordem: i + 1, comprimentoMm: 1000 + i * 50 }),
+    );
+    const r = otimizarOrdem([caixa], pedidos);
+    expect([...r.pedidoIdsOrdenados].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it("1 só linha de pedido -> ordem inalterada", () => {
+    const caixa: CaixaInput = { id: "veiculo", label: "C", comprimentoMm: 8000, larguraMm: 2480 };
+    const r = otimizarOrdem([caixa], [pedido({ pedidoId: 7, quantidade: 4 })]);
+    expect(r.pedidoIdsOrdenados).toEqual([7]);
   });
 });
 

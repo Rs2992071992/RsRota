@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
+import type { CarregamentoDetalhe, SimulacaoOrdem } from "@/lib/carregamento-service";
+import { moverBlocoCliente } from "@/lib/carregamento-ordem";
 import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
 import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
 
@@ -50,6 +51,47 @@ function agruparNaoColocados(naoColocados: Detalhe["packing"]["naoColocados"]) {
   return [...grupos.values()];
 }
 
+/** Blocos de cliente (contíguos) por ordem de 1ª aparição — para a tabela de
+ * pedidos agrupada e as setas de reordenação. */
+function agruparPorCliente(pedidos: Detalhe["pedidos"]) {
+  const ordem: number[] = [];
+  const m = new Map<number, { clienteId: number; clienteNome: string; linhas: Detalhe["pedidos"] }>();
+  for (const p of pedidos) {
+    let bloco = m.get(p.clienteId);
+    if (!bloco) {
+      bloco = { clienteId: p.clienteId, clienteNome: p.clienteNome, linhas: [] };
+      m.set(p.clienteId, bloco);
+      ordem.push(p.clienteId);
+    }
+    bloco.linhas.push(p);
+  }
+  return ordem.map((id) => m.get(id)!);
+}
+
+const metros = (mm: number) => (mm / 1000).toFixed(1);
+
+/** Frases curtas a mostrar no painel "Otimizar disposição". */
+function linhasGanho(g: SimulacaoOrdem["ganho"]): string[] {
+  const linhas: string[] = [];
+  if (g.naoColocadosDepois < g.naoColocadosAntes) {
+    linhas.push(
+      g.naoColocadosDepois === 0
+        ? `Passam a caber todas as paletes (agora ${g.naoColocadosAntes} sem espaço).`
+        : `Menos ${g.naoColocadosAntes - g.naoColocadosDepois} paletes sem espaço (${g.naoColocadosDepois} ainda ficam de fora).`,
+    );
+  }
+  if (g.usaReboqueAntes && !g.usaReboqueDepois) {
+    linhas.push("Deixa de ser preciso usar o reboque.");
+  }
+  if (g.comprimentoAntesMm - g.comprimentoDepoisMm > 50) {
+    linhas.push(
+      `Ocupa ${metros(g.comprimentoDepoisMm)} m em vez de ${metros(g.comprimentoAntesMm)} m de comprimento.`,
+    );
+  }
+  if (linhas.length === 0) linhas.push("Melhora ligeiramente o aproveitamento do espaço.");
+  return linhas;
+}
+
 export default function CarregamentoDetalheEditor({
   detalheInicial,
   clientes,
@@ -82,6 +124,10 @@ export default function CarregamentoDetalheEditor({
   const [aRenomearCliente, setARenomearCliente] = useState(false);
   const [novoNomeCliente, setNovoNomeCliente] = useState("");
   const [aGuardarNome, setAGuardarNome] = useState(false);
+  const [aOtimizar, setAOtimizar] = useState(false);
+  const [simulacao, setSimulacao] = useState<SimulacaoOrdem | null>(null);
+
+  const blocosClientes = agruparPorCliente(detalhe.pedidos);
 
   // Sugestões no combobox: fichas já criadas + todos os nomes conhecidos
   // (rotas/orçamentos), para não obrigar a "criar ficha" antes de poder usar
@@ -182,6 +228,7 @@ export default function CarregamentoDetalheEditor({
       }
       setClienteNome("");
       setQuantidade(1);
+      setSimulacao(null);
       router.refresh();
     } catch {
       setErro("Erro de ligação.");
@@ -200,7 +247,70 @@ export default function CarregamentoDetalheEditor({
       setErro(data.erro || "Erro ao remover.");
       return;
     }
+    setSimulacao(null);
     router.refresh();
+  }
+
+  async function moverCliente(clienteId: number, direcao: "cima" | "baixo") {
+    setErro("");
+    setSimulacao(null);
+    const ordemPedidoIds = moverBlocoCliente(
+      detalhe.pedidos.map((p) => ({ pedidoId: p.id, clienteId: p.clienteId })),
+      clienteId,
+      direcao,
+    );
+    const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/ordem`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ordemPedidoIds }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErro(data.erro || "Erro ao reordenar.");
+      return;
+    }
+    router.refresh();
+  }
+
+  async function otimizar() {
+    setErro("");
+    setAOtimizar(true);
+    try {
+      const res = await fetch(`/api/carregamentos/${detalhe.id}/otimizar`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(data.erro || "Erro ao otimizar.");
+        return;
+      }
+      setSimulacao(data.simulacao as SimulacaoOrdem);
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAOtimizar(false);
+    }
+  }
+
+  async function aplicarOtimizacao() {
+    setErro("");
+    setAOtimizar(true);
+    try {
+      const res = await fetch(`/api/carregamentos/${detalhe.id}/otimizar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aplicar: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(data.erro || "Erro ao aplicar.");
+        return;
+      }
+      setSimulacao(null);
+      router.refresh();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAOtimizar(false);
+    }
   }
 
   async function anexarReboque(reboqueId: number | null) {
@@ -438,49 +548,138 @@ export default function CarregamentoDetalheEditor({
 
       {/* Pedidos */}
       <div className="card">
-        <h3 className="mb-3 font-semibold">Pedidos</h3>
+        <h3 className="mb-1 font-semibold">Pedidos</h3>
         {detalhe.pedidos.length === 0 ? (
           <p className="text-sm text-gray-500">Ainda não há pedidos neste carregamento.</p>
         ) : (
-          <div className="scroll-fade-x overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="th">Cliente</th>
-                  <th className="th">Tipo de palete</th>
-                  <th className="th">Quantidade</th>
-                  <th className="th" />
-                </tr>
-              </thead>
-              <tbody>
-                {detalhe.pedidos.map((p) => (
-                  <tr key={p.id}>
-                    <td className="td">{p.clienteNome}</td>
-                    <td className="td">{p.tipoPaleteNome}</td>
-                    <td className="td">{p.quantidade}</td>
-                    <td className="td">
-                      <button onClick={() => removerPedido(p.id)} className="text-red-500 hover:text-red-700">
-                        ✕
-                      </button>
-                    </td>
+          <>
+            <p className="mb-3 text-xs text-gray-400">
+              As setas mudam a ordem de carga — as paletes de cada cliente entram sempre juntas no
+              camião, na sequência de cima para baixo.
+            </p>
+            <div className="scroll-fade-x overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="th">Cliente / tipo de palete</th>
+                    <th className="th">Quantidade</th>
+                    <th className="th" />
                   </tr>
+                </thead>
+                {blocosClientes.map((bloco, bi) => (
+                  <tbody key={bloco.clienteId} className="border-t border-gray-200">
+                    <tr className="bg-gray-50">
+                      <td className="td font-semibold" colSpan={2}>
+                        {bi + 1}. {bloco.clienteNome}
+                      </td>
+                      <td className="td">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => moverCliente(bloco.clienteId, "cima")}
+                            disabled={bi === 0}
+                            title="Carregar antes"
+                            className="rounded border border-gray-300 px-1.5 leading-none disabled:opacity-30"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => moverCliente(bloco.clienteId, "baixo")}
+                            disabled={bi === blocosClientes.length - 1}
+                            title="Carregar depois"
+                            className="rounded border border-gray-300 px-1.5 leading-none disabled:opacity-30"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {bloco.linhas.map((p) => (
+                      <tr key={p.id}>
+                        <td className="td pl-6">{p.tipoPaleteNome}</td>
+                        <td className="td">{p.quantidade}</td>
+                        <td className="td">
+                          <button
+                            onClick={() => removerPedido(p.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
       {/* Planta de carga */}
       <div className="card">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-semibold">Planta de carga</h3>
-          <DescarregarPdfBotao
-            url={`/api/carregamentos/${detalhe.id}/planta-pdf`}
-            nomeFicheiro={`planta-carga-${detalhe.veiculo.nome}-${new Date(detalhe.data).toISOString().slice(0, 10)}`}
-            label="Imprimir planta de carga"
-          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={otimizar}
+              disabled={aOtimizar || blocosClientes.length < 2}
+              className="btn-secondary text-sm"
+            >
+              {aOtimizar ? "A calcular…" : "⚡ Otimizar disposição"}
+            </button>
+            <DescarregarPdfBotao
+              url={`/api/carregamentos/${detalhe.id}/planta-pdf`}
+              nomeFicheiro={`planta-carga-${detalhe.veiculo.nome}-${new Date(detalhe.data).toISOString().slice(0, 10)}`}
+              label="Imprimir planta de carga"
+            />
+          </div>
         </div>
+
+        {simulacao && (
+          <div className="mb-3 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm">
+            {simulacao.jaOtima ? (
+              <div className="flex items-center justify-between gap-3">
+                <p>A disposição atual já aproveita o espaço da melhor forma possível.</p>
+                <button
+                  onClick={() => setSimulacao(null)}
+                  className="whitespace-nowrap text-gray-500 hover:text-gray-800"
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="mb-1 font-semibold">Ordem de carga sugerida:</p>
+                <ol className="mb-2 list-decimal pl-5">
+                  {simulacao.ordemSugerida
+                    .filter(
+                      (o, i, arr) => i === 0 || arr[i - 1].clienteNome !== o.clienteNome,
+                    )
+                    .map((o) => (
+                      <li key={o.pedidoId}>{o.clienteNome}</li>
+                    ))}
+                </ol>
+                <ul className="mb-3 space-y-0.5 text-gray-700">
+                  {linhasGanho(simulacao.ganho).map((l, i) => (
+                    <li key={i}>• {l}</li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <button onClick={aplicarOtimizacao} disabled={aOtimizar} className="btn text-sm">
+                    Aplicar esta ordem
+                  </button>
+                  <button
+                    onClick={() => setSimulacao(null)}
+                    className="text-sm text-gray-500 hover:text-gray-800"
+                  >
+                    Ignorar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <CarregamentoFloorPlan caixas={detalhe.packing.caixas} />
       </div>
 
