@@ -25,7 +25,7 @@ exprime faixas a ritmos diferentes).
   regride**; #7 (38× 1200×800) mantém 38 (via faixas, MaxRects sozinho dava 36);
   #9 sobe a 11/11 (via MaxRects). Página e PDF do #9 OK, sem "Sem espaço"
 - [x] `tasks/lessons.md` (não assumir que o algoritmo novo domina o antigo)
-- [ ] Commit + push
+- [x] Commit + push (`0ef4ae3`)
 
 ## ☑️ Cargas — "Ao através" deixa de desperdiçar filas (2026-08-30)
 
