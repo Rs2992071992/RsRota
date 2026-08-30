@@ -404,4 +404,10 @@ export const reordenarPedidosSchema = z.object({
   ordemPedidoIds: z.array(z.number().int().positive()).min(1),
 });
 
+/** Quantas paletes separar de uma linha de pedido para uma linha nova (mesmo
+ * cliente/tipo) — para lhes poder dar orientações diferentes. */
+export const dividirPedidoSchema = z.object({
+  quantidade: z.number().int().positive("Tem de ser > 0"),
+});
+
 export type ReordenarPedidosForm = z.infer<typeof reordenarPedidosSchema>;

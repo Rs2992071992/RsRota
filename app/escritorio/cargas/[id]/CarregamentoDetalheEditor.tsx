@@ -288,6 +288,38 @@ export default function CarregamentoDetalheEditor({
     router.refresh();
   }
 
+  async function dividirPedido(pedidoId: number, quantidadeAtual: number) {
+    let separar = 1;
+    if (quantidadeAtual > 2) {
+      const resp = prompt(
+        `Quantas das ${quantidadeAtual} paletes separar para uma linha nova?`,
+        "1",
+      );
+      if (resp === null) return;
+      separar = Number(resp);
+      if (!Number.isInteger(separar) || separar < 1 || separar >= quantidadeAtual) {
+        setErro(`Indique um número entre 1 e ${quantidadeAtual - 1}.`);
+        return;
+      }
+    }
+    setErro("");
+    setSimulacao(null);
+    const res = await fetch(
+      `/api/carregamentos/${detalhe.id}/pedidos/${pedidoId}/dividir`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantidade: separar }),
+      },
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErro(data.erro || "Erro ao dividir a linha.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function otimizar() {
     setErro("");
     setAOtimizar(true);
@@ -631,12 +663,23 @@ export default function CarregamentoDetalheEditor({
                           </select>
                         </td>
                         <td className="td">
-                          <button
-                            onClick={() => removerPedido(p.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            ✕
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {p.quantidade >= 2 && (
+                              <button
+                                onClick={() => dividirPedido(p.id, p.quantidade)}
+                                title="Dividir esta linha (para dar orientações diferentes)"
+                                className="text-xs text-gray-500 hover:text-gray-800"
+                              >
+                                ✂ dividir
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removerPedido(p.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

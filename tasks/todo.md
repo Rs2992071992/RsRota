@@ -2,6 +2,24 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cargas — dividir linha de pedido (orientações diferentes) (2026-08-30)
+
+Pedido do Ricardo: ter 4 paletes 1300×1100 de um cliente e carregar 2 ao comprido
++ 2 ao través. A orientação é por linha de pedido — faltava poder partir uma linha.
+
+- [x] `POST /api/carregamentos/[id]/pedidos/[pedidoId]/dividir` (`{quantidade}`,
+  só ESCRITORIO): separa N paletes para uma linha nova (mesmo cliente/tipo/
+  orientação), logo a seguir; renumera a sequência de carga
+- [x] `lib/validacao.ts`: `dividirPedidoSchema`
+- [x] UI `CarregamentoDetalheEditor.tsx`: botão "✂ dividir" em cada linha com
+  quantidade ≥ 2 (qtd 2 → 1+1 direto; qtd > 2 → pergunta quantas). Cada metade
+  fica com o seu seletor de orientação
+- [x] `tsc`/`vitest` (176)/`next build` limpos (rota nova no output)
+- [x] E2E contra a BD real: dividir ped24 (x5) do #9 → x3 + ped27 x2 (mesma
+  orientação), ordem renumerada; MOTORISTA → 403; separar 99 → 400. Estado do
+  #9 reposto ao original
+- [ ] Commit + push
+
 ## ☑️ Cargas — empacotamento 2D real (MaxRects + faixas, o melhor dos dois) (2026-08-30)
 
 Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Bug real
