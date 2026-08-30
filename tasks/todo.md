@@ -30,7 +30,7 @@ melhor do que o automático. Granularidade escolhida: **por linha de pedido**.
 - [x] E2E contra a BD real (`next start`, sessão HMAC): `PATCH` pedido 20 →
   TRAVES → 4 paletes `rotacionado:true`, planta muda; `{}` → 400; MOTORISTA →
   403. Dados de produção repostos a AUTO
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit + push (`13e40ea`, Vercel builda automaticamente)
 
 ## ☑️ Cargas — otimizar disposição das paletes + reordenar clientes (2026-08-30)
 
