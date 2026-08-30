@@ -33,7 +33,7 @@ faltava reordenar (por design nunca reordena — empacotamento "online").
   14,7 m); MOTORISTA→403; permutação inválida→400; #999→404; #6 (1 cliente)→
   `jaOtima`; aplicar reescreve a ordem, reorder manual repõe 20/21/22. Dados de
   produção repostos ao estado original
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit + push (`ec548ba`, Vercel builda automaticamente)
 
 ## ☑️ Revisão de segurança + upgrade Next.js 14→16 (2026-08-29/30)
 
