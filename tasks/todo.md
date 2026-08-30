@@ -244,7 +244,7 @@ passam a ser desligáveis por motorista, na página de edição já existente.
   sempre os 3 campos, independentemente do motorista
 - [x] `tsc`/`vitest` (156, inalterados)/`next build` limpos; confirmado por
   leitura direta que os 2 motoristas reais mantiveram os defaults `true`
-- [x] Commit + push (`ee54d0f`)
+- [ ] Commit + push
 
 ## 🔲 Meias-paletes (2026-08-28)
 
