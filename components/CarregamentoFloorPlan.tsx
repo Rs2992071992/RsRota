@@ -23,7 +23,15 @@ function raioCanto(comprimento: number, largura: number): number {
   return Math.min(Math.min(comprimento, largura) * 0.12, 60);
 }
 
-export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResultado[] }) {
+export default function CarregamentoFloorPlan({
+  caixas,
+  onRodarPedido,
+}: {
+  caixas: CaixaResultado[];
+  /** Clicar numa palete roda a linha de pedido inteira. Recebe o id do pedido e
+   * a orientação atual (rotacionado) da palete clicada. */
+  onRodarPedido?: (pedidoId: number, rotacionadoAtual: boolean) => void;
+}) {
   const clientes: { id: number; nome: string }[] = [];
   const vistos = new Set<number>();
   for (const cx of caixas) {
@@ -96,7 +104,15 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
                 p.itens.map((item) => {
                   const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
                   return (
-                    <g key={`${item.pedidoId}-${item.x}-${item.y}`}>
+                    <g
+                      key={`${item.pedidoId}-${item.x}-${item.y}`}
+                      onClick={
+                        onRodarPedido
+                          ? () => onRodarPedido(item.pedidoId, item.rotacionado)
+                          : undefined
+                      }
+                      style={onRodarPedido ? { cursor: "pointer" } : undefined}
+                    >
                       <rect
                         x={item.y}
                         y={item.x}
@@ -107,7 +123,10 @@ export default function CarregamentoFloorPlan({ caixas }: { caixas: CaixaResulta
                         stroke="#fff"
                         strokeWidth={6}
                       >
-                        <title>{`${item.clienteNome} — ${item.tipoPaleteNome}`}</title>
+                        <title>
+                          {`${item.clienteNome} — ${item.tipoPaleteNome}`}
+                          {onRodarPedido ? " (clique para rodar)" : ""}
+                        </title>
                       </rect>
                       <foreignObject
                         x={item.y}

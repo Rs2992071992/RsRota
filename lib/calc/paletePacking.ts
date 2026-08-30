@@ -21,6 +21,11 @@ export interface CaixaInput {
   larguraMm: number;
 }
 
+/** Orientação forçada de uma palete na planta de carga.
+ * AUTO = o motor escolhe; COMPRIDO = comprimento ao longo do camião
+ * (rotacionado:false); TRAVES = atravessada (rotacionado:true). */
+export type OrientacaoPalete = "AUTO" | "COMPRIDO" | "TRAVES";
+
 export interface PaleteUnidade {
   pedidoId: number;
   clienteId: number;
@@ -30,6 +35,8 @@ export interface PaleteUnidade {
   comprimentoMm: number;
   larguraMm: number;
   ordem: number;
+  /** Default AUTO se ausente — mantém válidas as chamadas antigas. */
+  orientacao?: OrientacaoPalete;
 }
 
 export interface PaleteColocada extends PaleteUnidade {
@@ -83,7 +90,13 @@ function orientacoesQueCabem(caixa: CaixaInput, unidade: PaleteUnidade): Orienta
     { larguraOcupada: unidade.larguraMm, profundidadeOcupada: unidade.comprimentoMm, rotacionado: false },
     { larguraOcupada: unidade.comprimentoMm, profundidadeOcupada: unidade.larguraMm, rotacionado: true },
   ];
-  return candidatas.filter((o) => o.larguraOcupada <= caixa.larguraMm);
+  const forcada =
+    unidade.orientacao === "COMPRIDO"
+      ? candidatas.filter((o) => !o.rotacionado)
+      : unidade.orientacao === "TRAVES"
+        ? candidatas.filter((o) => o.rotacionado)
+        : candidatas;
+  return forcada.filter((o) => o.larguraOcupada <= caixa.larguraMm);
 }
 
 /**
@@ -272,6 +285,7 @@ export interface PedidoParaExpandir {
   larguraMm: number;
   ordem: number;
   quantidade: number;
+  orientacao?: OrientacaoPalete;
 }
 
 /** Expande pedidos (com quantidade) em unidades individuais (1 por palete física),
@@ -295,6 +309,7 @@ export function expandirPedidosEmUnidades(pedidos: PedidoParaExpandir[]): Palete
         comprimentoMm: p.comprimentoMm,
         larguraMm: p.larguraMm,
         ordem: p.ordem,
+        orientacao: p.orientacao,
       });
     }
   }

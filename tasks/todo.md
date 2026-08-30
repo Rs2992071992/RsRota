@@ -2,6 +2,36 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Cargas — rodar as paletes na planta de carga (2026-08-30)
+
+Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Última
+parte do pedido "tetris": forçar a orientação das paletes quando o Ricardo sabe
+melhor do que o automático. Granularidade escolhida: **por linha de pedido**.
+
+- [x] Schema: `PedidoPalete.orientacao String @default("AUTO")` (AUTO / COMPRIDO
+  / TRAVES) — aditivo, `db push` no Neon (linhas existentes → "AUTO")
+- [x] `lib/calc/paletePacking.ts`: `OrientacaoPalete`; campo opcional
+  `orientacao?` em `PaleteUnidade`/`PedidoParaExpandir` (default AUTO, não quebra
+  callers); filtro em `orientacoesQueCabem` (COMPRIDO→`rotacionado:false`,
+  TRAVES→`rotacionado:true`); passthroughs. `otimizarOrdem`/`estimar` intocados
+- [x] `lib/carregamento-service.ts`: `orientacao` nos 2 maps de pedidos + no tipo
+  `CarregamentoDetalhe.pedidos`
+- [x] `lib/validacao.ts`: `ORIENTACOES_PALETE`; `pedidoPaleteUpdateSchema` passa a
+  ter `quantidade`+`orientacao` opcionais com `.refine` (pelo menos 1)
+- [x] `PATCH /api/carregamentos/[id]/pedidos/[pedidoId]`: grava os campos
+  presentes (só ESCRITORIO, já herdado)
+- [x] UI: `CarregamentoDetalheEditor.tsx` — coluna "Orientação" (select
+  Automática/Ao comprido/Ao través) por linha; `CarregamentoFloorPlan.tsx` ganha
+  prop opcional `onRodarPedido` — clicar numa palete roda a linha inteira
+  (alterna COMPRIDO↔TRAVES a partir do que está desenhado). PDF sem alteração
+  (usa o `packing` já resolvido)
+- [x] +4 testes (`paletePacking.test.ts`: TRAVES/COMPRIDO forçam, forçada que não
+  cabe → NAO_CABE_ORIENTACAO, `expandir` propaga). 175 verdes, `tsc`/`build` OK
+- [x] E2E contra a BD real (`next start`, sessão HMAC): `PATCH` pedido 20 →
+  TRAVES → 4 paletes `rotacionado:true`, planta muda; `{}` → 400; MOTORISTA →
+  403. Dados de produção repostos a AUTO
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ☑️ Cargas — otimizar disposição das paletes + reordenar clientes (2026-08-30)
 
 Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Pedido do

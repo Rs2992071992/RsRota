@@ -272,6 +272,22 @@ export default function CarregamentoDetalheEditor({
     router.refresh();
   }
 
+  async function rodarPedido(pedidoId: number, orientacao: "AUTO" | "COMPRIDO" | "TRAVES") {
+    setErro("");
+    setSimulacao(null);
+    const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/${pedidoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orientacao }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErro(data.erro || "Erro ao rodar a palete.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function otimizar() {
     setErro("");
     setAOtimizar(true);
@@ -562,14 +578,15 @@ export default function CarregamentoDetalheEditor({
                 <thead>
                   <tr>
                     <th className="th">Cliente / tipo de palete</th>
-                    <th className="th">Quantidade</th>
+                    <th className="th">Qtd.</th>
+                    <th className="th">Orientação</th>
                     <th className="th" />
                   </tr>
                 </thead>
                 {blocosClientes.map((bloco, bi) => (
                   <tbody key={bloco.clienteId} className="border-t border-gray-200">
                     <tr className="bg-gray-50">
-                      <td className="td font-semibold" colSpan={2}>
+                      <td className="td font-semibold" colSpan={3}>
                         {bi + 1}. {bloco.clienteNome}
                       </td>
                       <td className="td">
@@ -597,6 +614,22 @@ export default function CarregamentoDetalheEditor({
                       <tr key={p.id}>
                         <td className="td pl-6">{p.tipoPaleteNome}</td>
                         <td className="td">{p.quantidade}</td>
+                        <td className="td">
+                          <select
+                            className="input py-1 text-xs"
+                            value={p.orientacao}
+                            onChange={(e) =>
+                              rodarPedido(
+                                p.id,
+                                e.target.value as "AUTO" | "COMPRIDO" | "TRAVES",
+                              )
+                            }
+                          >
+                            <option value="AUTO">Automática</option>
+                            <option value="COMPRIDO">Ao comprido ↕</option>
+                            <option value="TRAVES">Ao través ↔</option>
+                          </select>
+                        </td>
                         <td className="td">
                           <button
                             onClick={() => removerPedido(p.id)}
@@ -680,7 +713,16 @@ export default function CarregamentoDetalheEditor({
           </div>
         )}
 
-        <CarregamentoFloorPlan caixas={detalhe.packing.caixas} />
+        <CarregamentoFloorPlan
+          caixas={detalhe.packing.caixas}
+          onRodarPedido={(pedidoId, rotacionadoAtual) =>
+            rodarPedido(pedidoId, rotacionadoAtual ? "COMPRIDO" : "TRAVES")
+          }
+        />
+        <p className="mt-2 text-xs text-gray-400">
+          Clica numa palete no desenho para a rodar, ou usa a coluna
+          &quot;Orientação&quot; na tabela de pedidos.
+        </p>
       </div>
 
       {/* Não colocados */}

@@ -513,9 +513,12 @@ model Carregamento {
 /// ocupa primeiro o espaço". Guarda-se mesmo que não caiba fisicamente (o
 /// compromisso ao telefone já foi feito) — a UI só assinala o excesso.
 model PedidoPalete {
-  id         Int @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   quantidade Int
-  ordem      Int @default(0)
+  ordem      Int    @default(0)
+  /// Orientação forçada das paletes desta linha na planta de carga:
+  /// AUTO (motor escolhe) | COMPRIDO (comprimento ao longo do camião) | TRAVES (atravessada)
+  orientacao String @default("AUTO")
 
   carregamentoId Int
   carregamento   Carregamento @relation(fields: [carregamentoId], references: [id], onDelete: Cascade)

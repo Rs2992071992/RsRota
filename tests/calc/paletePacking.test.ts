@@ -243,7 +243,76 @@ describe("otimizarOrdem", () => {
   });
 });
 
+describe("empacotar — orientação forçada por linha", () => {
+  // Palete 1300x1100: 'COMPRIDO' -> largura ocupada 1100 (rotacionado:false);
+  // 'TRAVES' -> largura ocupada 1300 (rotacionado:true).
+  it("'TRAVES' força todas as paletes da linha rotacionadas", () => {
+    const us = unidades(4, {
+      ordemInicial: 1,
+      clienteId: 1,
+      comprimentoMm: 1300,
+      larguraMm: 1100,
+      orientacao: "TRAVES",
+    });
+    const r = empacotar([CAMIAO], us);
+    expect(r.colocados).toHaveLength(4);
+    expect(r.colocados.every((c) => c.rotacionado === true)).toBe(true);
+  });
+
+  it("'COMPRIDO' força todas as paletes da linha não rotacionadas", () => {
+    const us = unidades(4, {
+      ordemInicial: 1,
+      clienteId: 1,
+      comprimentoMm: 1300,
+      larguraMm: 1100,
+      orientacao: "COMPRIDO",
+    });
+    const r = empacotar([CAMIAO], us);
+    expect(r.colocados).toHaveLength(4);
+    expect(r.colocados.every((c) => c.rotacionado === false)).toBe(true);
+  });
+
+  it("orientação forçada que não cabe em nenhum eixo -> NAO_CABE_ORIENTACAO", () => {
+    // Caixa estreita (1200mm); palete 2000x1000 'COMPRIDO' ocupa 1000 de largura
+    // e cabe, mas 'TRAVES' ocuparia 2000 > 1200 -> não cabe.
+    const caixaEstreita: CaixaInput = {
+      id: "veiculo",
+      label: "Estreita",
+      comprimentoMm: 6000,
+      larguraMm: 1200,
+    };
+    const us = unidades(1, {
+      ordemInicial: 1,
+      clienteId: 1,
+      comprimentoMm: 2000,
+      larguraMm: 1000,
+      orientacao: "TRAVES",
+    });
+    const r = empacotar([caixaEstreita], us);
+    expect(r.colocados).toHaveLength(0);
+    expect(r.naoColocados[0].motivo).toBe("NAO_CABE_ORIENTACAO");
+  });
+});
+
 describe("expandirPedidosEmUnidades", () => {
+  it("propaga a orientação forçada para cada unidade", () => {
+    const [u] = expandirPedidosEmUnidades([
+      {
+        pedidoId: 1,
+        clienteId: 1,
+        clienteNome: "A",
+        tipoPaleteId: 1,
+        tipoPaleteNome: "t",
+        comprimentoMm: 1200,
+        larguraMm: 800,
+        ordem: 1,
+        quantidade: 1,
+        orientacao: "TRAVES",
+      },
+    ]);
+    expect(u.orientacao).toBe("TRAVES");
+  });
+
   it("expande a quantidade em unidades individuais, preservando a ordem do pedido", () => {
     const unidadesGeradas = expandirPedidosEmUnidades([
       {

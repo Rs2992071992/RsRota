@@ -30,9 +30,13 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string;
     return NextResponse.json({ erro: "Pedido não encontrado." }, { status: 404 });
   }
 
+  const { quantidade, orientacao } = parsed.data;
   const pedido = await prisma.pedidoPalete.update({
     where: { id: pedidoId },
-    data: { quantidade: parsed.data.quantidade },
+    data: {
+      ...(quantidade !== undefined && { quantidade }),
+      ...(orientacao !== undefined && { orientacao }),
+    },
   });
   return NextResponse.json({ ok: true, pedido });
 }

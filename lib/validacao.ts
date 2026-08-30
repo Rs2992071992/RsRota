@@ -384,9 +384,17 @@ export const pedidoPaleteSchema = z.object({
 
 export type PedidoPaleteForm = z.infer<typeof pedidoPaleteSchema>;
 
-export const pedidoPaleteUpdateSchema = z.object({
-  quantidade: z.number().int().positive("Quantidade deve ser > 0"),
-});
+/** Orientação forçada das paletes de uma linha de pedido na planta de carga. */
+export const ORIENTACOES_PALETE = ["AUTO", "COMPRIDO", "TRAVES"] as const;
+
+export const pedidoPaleteUpdateSchema = z
+  .object({
+    quantidade: z.number().int().positive("Quantidade deve ser > 0").optional(),
+    orientacao: z.enum(ORIENTACOES_PALETE).optional(),
+  })
+  .refine((d) => d.quantidade !== undefined || d.orientacao !== undefined, {
+    message: "Nada para atualizar.",
+  });
 
 export type PedidoPaleteUpdateForm = z.infer<typeof pedidoPaleteUpdateSchema>;
 

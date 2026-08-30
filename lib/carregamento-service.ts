@@ -9,6 +9,7 @@ import {
   expandirPedidosEmUnidades,
   otimizarOrdem,
   type CaixaInput,
+  type OrientacaoPalete,
   type PaleteUnidade,
   type PedidoParaExpandir,
   type ResultadoPacking,
@@ -74,6 +75,7 @@ export interface CarregamentoDetalhe {
     tipoPaleteNome: string;
     comprimentoMm: number;
     larguraMm: number;
+    orientacao: OrientacaoPalete;
   }[];
   packing: ResultadoPacking;
   /** Quantas paletes de cada tipo ativo ainda cabem, dado o estado atual. */
@@ -111,6 +113,7 @@ export async function carregarCarregamento(id: number): Promise<CarregamentoDeta
     tipoPaleteNome: p.tipoPalete.nome,
     comprimentoMm: p.tipoPalete.comprimentoMm,
     larguraMm: p.tipoPalete.larguraMm,
+    orientacao: p.orientacao as OrientacaoPalete,
   }));
 
   const unidades: PaleteUnidade[] = expandirPedidosEmUnidades(
@@ -247,6 +250,7 @@ export async function simularOrdemOtimizada(id: number): Promise<SimulacaoOrdem 
     larguraMm: p.tipoPalete.larguraMm,
     ordem: p.ordem,
     quantidade: p.quantidade,
+    orientacao: p.orientacao as OrientacaoPalete,
   }));
 
   const idsAtuais = pedidos.map((p) => p.pedidoId);
