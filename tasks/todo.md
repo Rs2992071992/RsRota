@@ -33,6 +33,25 @@ de se manter; há ~46 testes sobre rateio). Manter a atribuição manual do vazi
 a funcionar por cima. Ver também: acrescentar atribuição manual de km a troços
 NÃO-vazios (hoje só VAZIO tem `rateioManual`).
 
+**Modelo "por troço" concreto** (Excel do Ricardo, rota-teste RIC-Blo-
+greenopinion, 31/08/2026 — 4/5/13 pal entregues 120 km cada + VAZIO 80 km +
+casimper 22 pal 100 km; capacidade 22): cada cliente paga
+`(nPaletes / capacidade) × kmFeitos-do-seu-troço × €/km`. Vazio à parte (não
+atribuído). Total 360 € vs 525,54 € da app.
+
+| | app (por peso) | Excel (por troço) |
+|---|---|---|
+| greenopinion | 47,78 | 26,18 |
+| plastiagro | 59,72 | 32,73 |
+| Carvidet | 155,27 | 85,09 |
+| casimper | 262,77 | 120,00 |
+| vazio | diluído | 96,00 (à parte) |
+
+Sub-decisões: (a) €/km fixo (Excel usa 1,2) vs custo real derivado (~0,97 €/km
+sem margem; ×1,25 ≈ 1,22); (b) km — 3 entregas partilham 1 troço vs troço
+próprio cada (a app conta 540 km, o Excel 300); (c) o que fazer ao vazio
+(empresa come vs diluir vs atribuição manual).
+
 **Extra pedido de caminho** (independente da decisão acima): coluna "Preço
 mínimo" (custo atribuído × 1,25) e decomposição "dos quais, vazio" na tabela do
 rateio em `/escritorio/rotas/[idRota]`.
