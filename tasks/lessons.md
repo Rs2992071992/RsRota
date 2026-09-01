@@ -2,6 +2,23 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-08-30] | No plano do rateio por segmento Ida/Volta escrevi que a mudança
+  seria um "no-op" para todas as rotas atuais, baseado em que **nenhum teste**
+  (`perRoute.test.ts`) tem entregas/recolhas marcadas `tipoViagem="Volta"` — só
+  paragens VAZIO. A verificação contra a BD real mostrou que **10 das 28 rotas
+  reais** têm mesmo entregas/recolhas "Volta" (backhauls para a Tecfil,
+  sobretudo) e mudaram de rateio, algumas muito (RIC-Percam: Tecfil 162→692 €).
+  A mudança era desejada, mas a expectativa "nada muda" estava errada e teria
+  sido uma surpresa desagradável se não se tivesse feito o diff. | As fixtures
+  de teste NÃO são uma amostra representativa dos dados de produção —
+  especialmente para campos "de fluxo" que o motorista preenche (tipoViagem,
+  recolha, faturarCliente). Antes de afirmar "esta alteração não afeta nada" ou
+  "é retro-compatível", correr sempre o cálculo novo vs o antigo sobre **todas
+  as rotas/registos reais** (`carregarRotas({})` + diff), não só os testes. O
+  diff foi trivial de escrever (script `tsx` que imprime o rateio por cliente
+  antes via `git stash` e depois) e mudou a conversa com o utilizador de "nada
+  muda" para "estas 10 rotas mudam, confirma".
+
 - [2026-08-30] | Ao fazer o aviso de sobreocupação de espaço da rota
   (`verificarEspacoCarga`), perguntei ao Ricardo como contar as paletes e ele
   escolheu "somar todas as paletes da rota (pior caso)". Implementei isso à
