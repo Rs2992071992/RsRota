@@ -2,9 +2,22 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
-## 🔲 DECISÃO PENDENTE — modelo de rateio: "por peso" vs "por troço" (2026-08-30)
+## ✅ DECIDIDO — modelo de rateio: MANTER o atual "por paletes / espaço" (2026-08-30)
 
-O Ricardo vai perguntar ao cliente e depois decidimos. **Não implementar ainda.**
+O cliente decidiu **manter o modelo atual**: faturação por paletes/espaço
+ocupado (`coeficienteReal / Σcoef × custoTotal`), km a vazio diluídos por todos
+os clientes por defeito, com a atribuição manual de km do vazio disponível para
+ajustar caso a caso (`rateioManual`, já existe). O modelo "por troço" fica
+**arquivado** — não implementar.
+
+Consequência aceite: numa rota com uma viagem à parte (ida + vazio + recolha), a
+carga maior paga sempre uma fatia proporcional do custo total, mesmo dos troços
+que não fez (ex. RIC-Blo-greenopinion: casimper 22 pal = 50 %). A atribuição
+manual do vazio não corrige isto (o vazio é só parte da fatia). Se algum dia o
+cliente mudar de ideias, ver a análise abaixo — a alternativa seria "por paletes
+MAS por segmento" (ida/volta ratreadas à parte).
+
+--- análise arquivada (para não se re-derivar se voltar à conversa) ---
 
 **Problema encontrado** (rota real RIC-Plas-Sonae): o rateio atual reparte
 **todo** o custo não-manual por peso/capacidade (`coeficienteReal / Σcoef`),
