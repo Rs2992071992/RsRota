@@ -52,6 +52,22 @@ sem margem; ×1,25 ≈ 1,22); (b) km — 3 entregas partilham 1 troço vs troço
 próprio cada (a app conta 540 km, o Excel 300); (c) o que fazer ao vazio
 (empresa come vs diluir vs atribuição manual).
 
+**Refinamento do Ricardo (2026-08-30, conversa a seguir):** a rota parte-se em
+**segmentos nos vazios** (mesma segmentação já usada no aviso de espaço).
+- Segmento de IDA (várias entregas): cada cliente paga só o seu troço
+  (paletes a bordo × km do troço × €/km). O cliente da recolha/volta **NÃO
+  entra** no rateio deste segmento — não tem nada a ver com a ida.
+- Vazio entre a última entrega e a recolha: **50 % repartido pelos clientes da
+  ida** (levaram o camião para lá) + **50 % ao cliente da recolha** (o camião
+  reposiciona-se para o ir buscar). O `rateioManual` do vazio já permite isto à
+  mão hoje — o 50/50 seria o *default* automático, ajustável.
+- Segmento de VOLTA/recolha: esse cliente paga o seu troço + a sua metade do
+  vazio. Sem fatia proporcional do custo total da rota.
+- O campo `tipoViagem` (Ida/Volta) NÃO é preciso para isto — a segmentação por
+  vazio chega. (Ida/Volta continua só para `pesosEmTransito`.)
+Ponto explícito do Ricardo: o cliente da recolha não deve ter "o preço total
+dividido pelas suas paletes" — só paga o que a recolha custou + vazio.
+
 **Extra pedido de caminho** (independente da decisão acima): coluna "Preço
 mínimo" (custo atribuído × 1,25) e decomposição "dos quais, vazio" na tabela do
 rateio em `/escritorio/rotas/[idRota]`.
