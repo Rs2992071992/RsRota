@@ -259,17 +259,6 @@ export interface RateioCliente {
   quota: number;
   custoAtribuido: number;
   receitaPaga: number;
-  /** Só preenchido dentro de `RotaCalc.rateioPorSegmento` (Ida/Volta). No
-   * `rateio` fundido (uma linha por cliente) fica ausente. */
-  segmento?: "Ida" | "Volta";
-}
-
-/** Rateio de um segmento (Ida ou Volta) — ver `RotaCalc.rateioPorSegmento`. */
-export interface RateioSegmento {
-  segmento: "Ida" | "Volta";
-  /** Custo total imputado a este segmento (troços do segmento + fatia do vazio). */
-  custo: number;
-  clientes: RateioCliente[];
 }
 
 /** Resultado do cálculo de uma rota. */
@@ -291,10 +280,8 @@ export interface RotaCalc {
   receitaTotal: number;
   lucro: number;
   alerta: "🔴 PREJUÍZO" | "🟢 OK";
-  // Rateio por cliente (auditável) — uma linha por cliente, fundida entre segmentos.
+  // Rateio por cliente (auditável)
   rateio: RateioCliente[];
-  /** Detalhe Ida/Volta — só quando a rota tem entregas/recolhas nos dois. */
-  rateioPorSegmento?: RateioSegmento[];
   // Métricas úteis
   kmTotais: number;
   totalKgCarregados: number;

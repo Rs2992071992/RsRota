@@ -1,13 +1,10 @@
-// Verifica se as paletes de uma rota cabem no veículo (+ reboque), usando o
-// motor de empacotamento 2D real (o mesmo das Cargas do escritório). Puro —
-// sem DB/framework. Usado ao vivo no registo do motorista e na página da rota
-// do escritório.
+// Verifica se as paletes de uma rota inteira cabem no veículo (+ reboque),
+// usando o motor de empacotamento 2D real (o mesmo das Cargas do escritório).
+// Puro — sem DB/framework. Usado ao vivo no registo do motorista e na página
+// da rota do escritório.
 //
-// Uma rota é dada em SEGMENTOS: um trajeto VAZIO esvazia o camião, por isso
-// corta a carga em segmentos que nunca coexistem (mesma lógica de
-// `pesosEmTransito` em perRoute.ts). Verifica cada segmento e devolve o PIOR
-// (mais paletes sem espaço). Dentro de um segmento é o pior caso — soma tudo.
-// Meias-paletes não entram — não ocupam base própria.
+// Conta o PIOR CASO: soma todas as paletes registadas na rota (o camião
+// sai/acaba cheio). Meias-paletes não entram — não ocupam base própria.
 
 import {
   empacotar,
@@ -53,8 +50,20 @@ export interface EspacoCarga {
   verificavel: boolean;
 }
 
-function empacotarSegmento(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarga {
-  const pedidos = linhas.map((l, i) => ({
+export function verificarEspacoCarga(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarga {
+  const validas = linhas.filter(
+    (l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0,
+  );
+  const totalPaletes = validas.reduce((s, l) => s + Math.floor(l.nPaletes), 0);
+
+  if (caixas.length === 0) {
+    return { totalPaletes, colocadas: totalPaletes, semEspaco: 0, cabemTodas: true, verificavel: false };
+  }
+  if (totalPaletes === 0) {
+    return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
+  }
+
+  const pedidos = validas.map((l, i) => ({
     pedidoId: i + 1,
     clienteId: i + 1,
     clienteNome: l.clienteNome ?? "",
@@ -65,48 +74,13 @@ function empacotarSegmento(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCa
     ordem: i + 1,
     quantidade: Math.floor(l.nPaletes),
   }));
-  const total = pedidos.reduce((s, p) => s + p.quantidade, 0);
+
   const r = empacotar(caixas, expandirPedidosEmUnidades(pedidos));
   return {
-    totalPaletes: total,
+    totalPaletes,
     colocadas: r.colocados.length,
     semEspaco: r.naoColocados.length,
     cabemTodas: r.naoColocados.length === 0,
     verificavel: true,
   };
-}
-
-/**
- * `segmentos` = a carga da rota partida nos trajetos VAZIO (cada segmento é o
- * conjunto de paletes que estão no camião ao mesmo tempo). Devolve o segmento
- * pior (mais paletes sem espaço).
- */
-export function verificarEspacoCarga(caixas: CaixaInput[], segmentos: LinhaCarga[][]): EspacoCarga {
-  const segs = segmentos
-    .map((linhas) => linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0))
-    .filter((linhas) => linhas.length > 0);
-  const totalGeral = segs.reduce(
-    (s, linhas) => s + linhas.reduce((a, l) => a + Math.floor(l.nPaletes), 0),
-    0,
-  );
-
-  if (caixas.length === 0) {
-    return { totalPaletes: totalGeral, colocadas: totalGeral, semEspaco: 0, cabemTodas: true, verificavel: false };
-  }
-  if (segs.length === 0) {
-    return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
-  }
-
-  let pior: EspacoCarga | null = null;
-  for (const linhas of segs) {
-    const cand = empacotarSegmento(caixas, linhas);
-    if (
-      !pior ||
-      cand.semEspaco > pior.semEspaco ||
-      (cand.semEspaco === pior.semEspaco && cand.totalPaletes > pior.totalPaletes)
-    ) {
-      pior = cand;
-    }
-  }
-  return pior!;
 }

@@ -2,38 +2,19 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
-- [2026-08-30] | No plano do rateio por segmento Ida/Volta escrevi que a mudança
-  seria um "no-op" para todas as rotas atuais, baseado em que **nenhum teste**
-  (`perRoute.test.ts`) tem entregas/recolhas marcadas `tipoViagem="Volta"` — só
-  paragens VAZIO. A verificação contra a BD real mostrou que **10 das 28 rotas
-  reais** têm mesmo entregas/recolhas "Volta" (backhauls para a Tecfil,
-  sobretudo) e mudaram de rateio, algumas muito (RIC-Percam: Tecfil 162→692 €).
-  A mudança era desejada, mas a expectativa "nada muda" estava errada e teria
-  sido uma surpresa desagradável se não se tivesse feito o diff. | As fixtures
-  de teste NÃO são uma amostra representativa dos dados de produção —
-  especialmente para campos "de fluxo" que o motorista preenche (tipoViagem,
-  recolha, faturarCliente). Antes de afirmar "esta alteração não afeta nada" ou
-  "é retro-compatível", correr sempre o cálculo novo vs o antigo sobre **todas
-  as rotas/registos reais** (`carregarRotas({})` + diff), não só os testes. O
-  diff foi trivial de escrever (script `tsx` que imprime o rateio por cliente
-  antes via `git stash` e depois) e mudou a conversa com o utilizador de "nada
-  muda" para "estas 10 rotas mudam, confirma".
-
-- [2026-08-30] | Ao fazer o aviso de sobreocupação de espaço da rota
-  (`verificarEspacoCarga`), perguntei ao Ricardo como contar as paletes e ele
-  escolheu "somar todas as paletes da rota (pior caso)". Implementei isso à
-  letra — e logo a seguir ele mostrou a RIC-Plas-Sonae: entrega Plas-Sonae (34
-  pal), **trajeto VAZIO de 259 km** (camião esvazia), depois recolhe Tecfil (20
-  pal). Somava 54 e avisava "19 sem espaço" quando as duas cargas nunca
-  coexistem. | Sempre que um cálculo agrega paletes/peso/carga "ao longo da
-  rota", o trajeto `VAZIO` é uma **fronteira real** — corta a carga em
-  segmentos que não coexistem (já estava assim em `pesosEmTransito`,
-  `perRoute.ts`, desde 2026-08-22; esqueci de aplicar o mesmo aqui). A pergunta
-  ao utilizador foi mal colocada: "somar tudo vs pico real ao longo da
-  sequência" — a resposta certa era sempre "somar dentro de cada segmento
-  VAZIO", que é simples e não precisava de escolha. Antes de perguntar ao
-  utilizador como agregar carga numa rota, verificar como as agregações
-  existentes já tratam o VAZIO e seguir o mesmo.
+- [2026-08-30] | Ao planear uma alteração ao motor de cálculo (rateio por
+  segmento Ida/Volta) escrevi que seria um "no-op" para as rotas atuais,
+  baseado em que **nenhum teste** (`perRoute.test.ts`) tinha entregas/recolhas
+  marcadas `tipoViagem="Volta"` — só paragens VAZIO. O diff contra a BD real
+  mostrou **10 das 28 rotas reais** com entregas/recolhas "Volta" (backhauls
+  p/ Tecfil) que mudavam de rateio, algumas muito (RIC-Percam: 162→692 €). |
+  As fixtures de teste NÃO são amostra representativa de produção, sobretudo
+  para campos "de fluxo" que o motorista preenche (tipoViagem, recolha,
+  faturarCliente). Antes de afirmar "não afeta nada" / "é retro-compatível",
+  correr o cálculo novo vs o antigo sobre **todos os registos reais**
+  (`carregarRotas({})` + `git stash` + diff), não só os testes. (Esta feature
+  acabou revertida a pedido do Ricardo — mas o diff foi o que evitou a
+  surpresa.)
 
 - [2026-08-30] | O motor de empacotamento da planta de carga arrumava só por
   "prateleiras" (filas ao longo da largura, cursor único no comprimento). O

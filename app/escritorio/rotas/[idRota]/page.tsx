@@ -115,25 +115,15 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       larguraMm: veicRota.reboqueHabitual.larguraMm,
     });
   }
-  // Segmenta a carga pelos trajetos VAZIO — a Plas-Sonae entregue e a Tecfil
-  // recolhida depois de um VAZIO nunca estão no camião ao mesmo tempo.
-  const segmentosCarga: { tipoPaleteId: number; comprimentoMm: number; larguraMm: number; nPaletes: number; clienteNome: string }[][] = [[]];
-  for (const p of paragensRaw) {
-    if (p.tipoVeiculo === "VAZIO") {
-      if (segmentosCarga[segmentosCarga.length - 1].length > 0) segmentosCarga.push([]);
-      continue;
-    }
-    const dims = dimensoesPaleteParagem(p);
-    if (dims && p.nPaletes > 0) {
-      segmentosCarga[segmentosCarga.length - 1].push({
-        tipoPaleteId: p.tipoPaleteId ?? 0,
-        ...dims,
-        nPaletes: p.nPaletes,
-        clienteNome: p.cliente,
-      });
-    }
-  }
-  const espacoCarga = verificarEspacoCarga(caixasRota, segmentosCarga);
+  const espacoCarga = verificarEspacoCarga(
+    caixasRota,
+    paragensRaw.flatMap((p) => {
+      const dims = dimensoesPaleteParagem(p);
+      return dims
+        ? [{ tipoPaleteId: p.tipoPaleteId ?? 0, ...dims, nPaletes: p.nPaletes, clienteNome: p.cliente }]
+        : [];
+    }),
+  );
 
   return (
     <div className="space-y-5">
@@ -337,15 +327,12 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         <h2 className="mb-1 font-semibold">Rateio do custo por cliente</h2>
         <p className="mb-3 text-xs text-gray-500">
           Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
-          quota é a fração ocupada por cada cliente (paletes/espaço), normalizada para somar 100 %.
-          {rota.rateioPorSegmento
-            ? " A ida e a volta são ratreadas à parte — cada cliente só paga o seu segmento. O custo dos trajetos a vazio reparte-se 50 % ida / 50 % volta."
-            : " Os trajetos a vazio são repartidos automaticamente pelos clientes."}{" "}
-          O escritório pode atribuir manualmente km de um troço vazio a clientes específicos ao editar
-          a paragem (o que não for atribuído continua a diluir-se). Custos gerais (noites,
-          alimentação, horas extra, portagens da tabela) repartem-se por todos os clientes da rota.
-          As paragens "recolha → Cliente" somam o seu custo à quota desse cliente. O coef. real
-          (paletes/espaço) é só indicador: acima de 1 indica sobrecarga.
+          quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
+          somar 100 %. Os trajetos a vazio são repartidos automaticamente pelos clientes — a menos
+          que o escritório atribua manualmente km desse troço a clientes específicos, ao editar a
+          paragem (o que não for atribuído continua a diluir-se como sempre). As paragens marcadas
+          "recolha → Cliente" somam o seu custo à quota desse cliente em vez de gerarem linha própria.
+          O coef. real (peso/capacidade) é só indicador: acima de 1 indica sobrecarga.
         </p>
         <div className="scroll-fade-x overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -359,38 +346,23 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                 <th className="th text-right">Margem</th>
               </tr>
             </thead>
-            {(rota.rateioPorSegmento
-              ? rota.rateioPorSegmento.map((s) => ({
-                  titulo: `${s.segmento} — ${fmtEuro(s.custo)}`,
-                  clientes: s.clientes,
-                }))
-              : [{ titulo: null as string | null, clientes: rota.rateio }]
-            ).map((secao, si) => (
-              <tbody key={si} className="divide-y divide-gray-100 border-t border-gray-200">
-                {secao.titulo && (
-                  <tr className="bg-gray-50">
-                    <td className="td text-xs font-semibold uppercase tracking-wide text-gray-500" colSpan={6}>
-                      {secao.titulo}
+            <tbody className="divide-y divide-gray-100">
+              {rota.rateio.map((c) => {
+                const margem = c.receitaPaga - c.custoAtribuido;
+                return (
+                  <tr key={c.cliente}>
+                    <td className="td font-medium">{c.cliente}</td>
+                    <td className="td text-right">{fmtNum2(c.coefReal)}</td>
+                    <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
+                    <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
+                    <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
+                    <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>
+                      {fmtEuro(margem)}
                     </td>
                   </tr>
-                )}
-                {secao.clientes.map((c) => {
-                  const margem = c.receitaPaga - c.custoAtribuido;
-                  return (
-                    <tr key={`${si}-${c.cliente}`}>
-                      <td className="td font-medium">{c.cliente}</td>
-                      <td className="td text-right">{fmtNum2(c.coefReal)}</td>
-                      <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
-                      <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
-                      <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
-                      <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>
-                        {fmtEuro(margem)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            ))}
+                );
+              })}
+            </tbody>
           </table>
         </div>
       </div>

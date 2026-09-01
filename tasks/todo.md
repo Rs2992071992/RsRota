@@ -2,40 +2,29 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
-## ☑️ Rateio separado por segmento Ida/Volta (2026-08-30)
+## ✅ DECIDIDO — modelo de rateio: MANTER o atual "por paletes / espaço" (2026-08-30)
 
-Plano: `C:\Users\Ricardo\.claude\plans\flickering-discovering-dawn.md`. Depois de
-discutir "manter o atual", o Ricardo decidiu (com o cliente): **manter por
-paletes/espaço MAS separar o rateio por Ida e por Volta** — cada segmento como
-uma rota à parte.
+O cliente decidiu **manter o modelo atual**: faturação por paletes/espaço
+ocupado (`coeficienteReal / Σcoef × custoTotal`), km a vazio diluídos por todos
+os clientes por defeito, com a atribuição manual de km do vazio disponível para
+ajustar caso a caso (`rateioManual`, já existe). O modelo "por troço" fica
+**arquivado** — não implementar.
 
-- [x] `lib/calc/perRoute.ts`: bloco do rateio reescrito. Buckets por
-  `tipoViagem` ("Volta" vs resto→"Ida"); cada bucket ratreado com os seus
-  troços + fatia do vazio. Vazio (menos o manual): 50 % ida / 50 % volta se os
-  2 têm troços, senão 100 % ao ativo. Pool de nível de rota (noites,
-  alimentação, horas extra, portagens tabela) repartida por TODOS os clientes.
-  `rateioManual` do vazio inalterado.
-- [x] `RotaCalc.rateioPorSegmento?` novo (só quando há os 2 segmentos);
-  `rateio` continua **uma linha por cliente** (fundida) → dashboard/
-  clientes-service/testes sem alteração. `RateioCliente.segmento?`
-- [x] `/escritorio/rotas/[idRota]`: tabela do rateio agrupada "Ida"/"Volta"
-  quando aplicável + texto atualizado
-- [x] 8 testes novos (`perRoute.test.ts`, rota-teste ida+volta); **194 verdes**,
-  HILP01 = 1487,73 € e todos os invariantes intactos; `tsc`/`build` limpos
-- [x] E2E: diff antes/depois de todas as rotas reais — **10 de 28 mudam** (as
-  que têm entregas/recolhas "Volta"). Padrão: quem está na volta (backhaul p/
-  Tecfil) passa a pagar o seu troço de regresso em vez de o diluir na ida. Σ =
-  custoTotalRota em todas. Ex.: RIC-Percam Tecfil 162→692 €; RIC-armazém Tecfil
-  34→336 €. Confirmado com o Ricardo
-- [ ] Commit + push
-- App Android: sem alteração (o rateio não aparece na app Motorista)
+> **Nota (2026-09-01):** o rateio separado por Ida/Volta chegou a ser
+> implementado e deployado (`64be64d`) e a segmentar por VAZIO o aviso de
+> sobreocupação (`841c4c0`), mas o Ricardo pediu para **reverter os dois** (a
+> base — coef por paragem — não aguenta paletes de tamanhos diferentes no mesmo
+> cliente, questão a resolver primeiro). Revert em `82be237`. O aviso de
+> sobreocupação volta a somar as paletes de toda a rota (sem cortar no VAZIO).
 
-### Nota — a decisão anterior ("manter o atual") foi revertida na mesma conversa
+Consequência aceite: numa rota com uma viagem à parte (ida + vazio + recolha), a
+carga maior paga sempre uma fatia proporcional do custo total, mesmo dos troços
+que não fez (ex. RIC-Blo-greenopinion: casimper 22 pal = 50 %). A atribuição
+manual do vazio não corrige isto (o vazio é só parte da fatia). Se algum dia o
+cliente mudar de ideias, ver a análise abaixo — a alternativa seria "por paletes
+MAS por segmento" (ida/volta ratreadas à parte).
 
-O Ricardo primeiro disse para não mexer, depois ("vamos utilizar o volta como se
-fosse uma volta diferente") pediu a segmentação Ida/Volta. Implementado acima.
-
---- análise arquivada (números da discussão) ---
+--- análise arquivada (para não se re-derivar se voltar à conversa) ---
 
 **Problema encontrado** (rota real RIC-Plas-Sonae): o rateio atual reparte
 **todo** o custo não-manual por peso/capacidade (`coeficienteReal / Σcoef`),
@@ -126,14 +115,6 @@ paletes da rota, arruma-as com o motor 2D real e avisa quando não cabem.
   limite). Banner do escritório confirmado no browser (aparece só quando não
   cabe). Aviso não bloqueia (pior caso — pode avisar a mais)
 - [x] Commit + push (`1c81e59`)
-- [x] **Fix (mesmo dia, reportado pelo Ricardo)**: o VAZIO estava a ser
-  ignorado — a Plas-Sonae entregue + a Tecfil recolhida depois de um trajeto
-  VAZIO eram somadas (54 pal) quando nunca coexistem no camião.
-  `verificarEspacoCarga` passa a receber **segmentos** (a carga cortada nos
-  VAZIO, mesma lógica de `pesosEmTransito`) e devolve o pior segmento.
-  RIC-Plas-Sonae deixa de avisar (pior segmento = 34, cabe); RIC-Francisco
-  Lince Blowtec continua (1 segmento, 34 pal 1200×1000, carga mesmo no
-  limite). 186 testes verdes. Commit + push
 - [ ] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
   Motorista + `.apk` novo (bundle próprio)
 
