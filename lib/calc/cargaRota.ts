@@ -97,19 +97,25 @@ export interface EspacoCarga {
   verificavel: boolean;
 }
 
-export function verificarEspacoCarga(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarga {
-  const validas = linhas.filter(
-    (l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0,
-  );
-  const totalPaletes = validas.reduce((s, l) => s + Math.floor(l.nPaletes), 0);
+/** Uma paragem da rota, para a simulação de ocupação de espaço. */
+export interface ParagemCarga {
+  /** Linhas de palete desta paragem — ver `linhasCargaParagem`. */
+  linhas: LinhaCarga[];
+  /** Recolha (carga que ENTRA aqui) vs entrega (carga que já vinha a bordo). */
+  recolha: boolean;
+  /** "VAZIO" corta a rota em segmentos — o camião esvaziou ali. */
+  tipoVeiculo: string;
+  /** Ordenação: sequência física real (mesmo critério de `pesosEmTransito`). */
+  kmInicial: number;
+}
 
-  if (caixas.length === 0) {
-    return { totalPaletes, colocadas: totalPaletes, semEspaco: 0, cabemTodas: true, verificavel: false };
-  }
+/** Arruma um conjunto de linhas (um "momento" da rota) e devolve o resultado. */
+function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarga {
+  const validas = linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0);
+  const totalPaletes = validas.reduce((s, l) => s + Math.floor(l.nPaletes), 0);
   if (totalPaletes === 0) {
     return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
   }
-
   const pedidos = validas.map((l, i) => ({
     pedidoId: i + 1,
     clienteId: i + 1,
@@ -121,7 +127,6 @@ export function verificarEspacoCarga(caixas: CaixaInput[], linhas: LinhaCarga[])
     ordem: i + 1,
     quantidade: Math.floor(l.nPaletes),
   }));
-
   const r = empacotar(caixas, expandirPedidosEmUnidades(pedidos));
   return {
     totalPaletes,
@@ -130,4 +135,63 @@ export function verificarEspacoCarga(caixas: CaixaInput[], linhas: LinhaCarga[])
     cabemTodas: r.naoColocados.length === 0,
     verificavel: true,
   };
+}
+
+const pior = (a: EspacoCarga, b: EspacoCarga): EspacoCarga =>
+  b.semEspaco > a.semEspaco || (b.semEspaco === a.semEspaco && b.totalPaletes > a.totalPaletes) ? b : a;
+
+/**
+ * Verifica se as paletes cabem no veículo (+ reboque) SIMULANDO a ocupação ao
+ * longo da rota — não a soma de tudo. Cada entrega vem a bordo desde o início do
+ * segmento e sai na sua paragem; cada recolha entra na sua paragem e fica até ao
+ * fim do segmento. Um trajeto `VAZIO` corta a rota em segmentos que nunca
+ * coexistem (mesma lógica de `pesosEmTransito`). Devolve o **pior momento**
+ * (mais paletes sem espaço); `totalPaletes` = paletes a bordo nesse momento.
+ */
+export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
+  const comLinhas = paragens.map((p) => ({
+    ...p,
+    linhas: p.linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0),
+  }));
+  const totalGeral = comLinhas.reduce(
+    (s, p) => s + p.linhas.reduce((a, l) => a + Math.floor(l.nPaletes), 0),
+    0,
+  );
+
+  if (caixas.length === 0) {
+    return { totalPaletes: totalGeral, colocadas: totalGeral, semEspaco: 0, cabemTodas: true, verificavel: false };
+  }
+  if (totalGeral === 0) {
+    return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
+  }
+
+  // Ordena pela sequência física e corta em segmentos nos trajetos VAZIO.
+  const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
+  const segmentos: (typeof ordenadas)[] = [];
+  let atual: typeof ordenadas = [];
+  for (const p of ordenadas) {
+    if (p.tipoVeiculo === "VAZIO") {
+      if (atual.length) segmentos.push(atual);
+      atual = [];
+      continue;
+    }
+    atual.push(p);
+  }
+  if (atual.length) segmentos.push(atual);
+
+  let resultado: EspacoCarga | null = null;
+  for (const seg of segmentos) {
+    // Estado j (j = 0..n): entregas em índice >= j (ainda a bordo) +
+    // recolhas em índice < j (já apanhadas).
+    for (let j = 0; j <= seg.length; j++) {
+      const aBordo: LinhaCarga[] = [];
+      seg.forEach((p, i) => {
+        if ((!p.recolha && i >= j) || (p.recolha && i < j)) aBordo.push(...p.linhas);
+      });
+      const estado = empacotarEstado(caixas, aBordo);
+      resultado = resultado ? pior(resultado, estado) : estado;
+    }
+  }
+
+  return resultado ?? { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
 }

@@ -71,6 +71,9 @@ export default async function RegistoPage(
               paleteLarguraMm: true,
               tipoPalete: true,
               paletes: true,
+              recolha: true,
+              tipoVeiculo: true,
+              kmInicial: true,
             },
             orderBy: { id: "asc" },
           })
@@ -124,6 +127,9 @@ export default async function RegistoPage(
           larguraMm: l.larguraMm,
           nPaletes: l.nPaletes,
         })),
+        recolha: p.recolha,
+        tipoVeiculo: p.tipoVeiculo,
+        kmInicial: p.kmInicial,
       }))}
     />
   );

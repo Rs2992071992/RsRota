@@ -2,6 +2,34 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Aviso de espaço: simular a ocupação ao longo da rota (2026-09-02)
+
+Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. O aviso de
+sobreocupação somava TODAS as paletes da rota ("pior caso") — falso quando o
+motorista entrega umas e recolhe outras pelo caminho (o camião nunca teve tudo
+ao mesmo tempo). Ex. real: RIC-Plas-Sonae "cabem 35 de 54". O Ricardo passa a
+marcar "Recolha" nas recolhas.
+
+- [x] `lib/calc/cargaRota.ts`: `verificarEspacoCarga(caixas, ParagemCarga[])` —
+  ordena por km, corta em segmentos nos VAZIO, e por segmento simula os estados
+  a bordo (entregas a bordo desde o início→saem na sua paragem; recolhas
+  entram→ficam até ao fim) arrumando cada estado com o motor 2D; devolve o pior.
+  `totalPaletes` passa a ser "paletes a bordo no pior momento"
+- [x] `rotas/[idRota]/page.tsx` (novo formato + texto do banner), `RegistoForm`
+  (`ParagemRotaResumo` +recolha/tipoVeiculo/kmInicial, `espacoCargaRota`),
+  `registo/page.tsx` (select + map)
+- [x] `tests/calc/cargaRota.test.ts` reescrito (12 casos: entrega-depois-recolha,
+  pico misto, VAZIO corta, só recolhas, tamanhos diferentes). 195 verdes,
+  tsc/build limpos
+- [x] Comparação em TODAS as rotas reais: 3 avisos falsos limpos (greenopinion
+  44→22, Carvidet 48→37, Plas-Sonae 54→34), 1 overflow real mantém-se
+  (Francisco Lince Blowtec 34, sem recolha/vazio). Nenhuma rota que transborda
+  a sério perdeu o aviso
+- [ ] Commit + push
+- [ ] Follow-up possível: modo "Entrega e recolha" numa paragem (3 estados +
+  nº descarregado/carregado), se registar 2 linhas p/ mistas incomodar
+- [ ] Porte Android Motorista (RegistoForm) + `.apk`
+
 ## ☑️ Paletes de tamanhos diferentes na mesma paragem (2026-09-01)
 
 Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. Pedido do

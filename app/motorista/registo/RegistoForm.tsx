@@ -57,6 +57,10 @@ interface ParagemRotaResumo {
   alimentacao: number;
   /** Uma entrada por linha de palete da paragem (tamanhos podem diferir). */
   linhasPalete: { comprimentoMm: number; larguraMm: number; nPaletes: number }[];
+  /** Para a simulação de ocupação de espaço ao longo da rota. */
+  recolha: boolean;
+  tipoVeiculo: string;
+  kmInicial: number;
 }
 
 // "12 €, 8 € e 5 €" — junta com vírgula e liga o último item com "e".
@@ -189,8 +193,8 @@ export default function RegistoForm({
         larguraMm: veiculoSel.caixaReboqueLarguraMm,
       });
     }
-    const linhas = paragensRota.flatMap((p) =>
-      p.linhasPalete
+    const paragensCarga = paragensRota.map((p) => ({
+      linhas: p.linhasPalete
         .filter((l) => l.nPaletes > 0 && l.comprimentoMm && l.larguraMm)
         .map((l) => ({
           tipoPaleteId: 0,
@@ -199,21 +203,27 @@ export default function RegistoForm({
           nPaletes: l.nPaletes,
           clienteNome: p.cliente,
         })),
-    );
+      recolha: p.recolha,
+      tipoVeiculo: p.tipoVeiculo,
+      kmInicial: p.kmInicial,
+    }));
     if (mostrarPaletes) {
-      for (const l of linhasPaleteResolvidas) {
-        linhas.push({
+      paragensCarga.push({
+        linhas: linhasPaleteResolvidas.map((l) => ({
           tipoPaleteId: l.tipo.id,
           comprimentoMm: l.tipo.comprimentoMm,
           larguraMm: l.tipo.larguraMm,
           nPaletes: l.n,
           clienteNome: f.cliente.trim() || "esta paragem",
-        });
-      }
+        })),
+        recolha,
+        tipoVeiculo: f.tipoVeiculo,
+        kmInicial: num(f.kmInicial),
+      });
     }
-    return verificarEspacoCarga(caixas, linhas);
+    return verificarEspacoCarga(caixas, paragensCarga);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, JSON.stringify(linhasPaleteResolvidas), f.cliente]);
+  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, recolha, f.tipoVeiculo, f.kmInicial, JSON.stringify(linhasPaleteResolvidas), f.cliente]);
   const custoNoites = num(f.noitesFora) * valorNoite;
 
   // VAZIO: não há cliente a faturar (repositionamento) nem carga a bordo,
@@ -358,6 +368,9 @@ export default function RegistoForm({
             larguraMm: l.tipo.larguraMm,
             nPaletes: l.n,
           })),
+          recolha: payload.recolha,
+          tipoVeiculo: payload.tipoVeiculo,
+          kmInicial: payload.kmInicial,
         },
       ]);
       setMsg({

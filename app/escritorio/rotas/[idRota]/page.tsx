@@ -120,7 +120,12 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   }
   const espacoCarga = verificarEspacoCarga(
     caixasRota,
-    paragensRaw.flatMap((p) => linhasCargaParagem(p)),
+    paragensRaw.map((p) => ({
+      linhas: linhasCargaParagem(p),
+      recolha: p.recolha,
+      tipoVeiculo: p.tipoVeiculo,
+      kmInicial: p.kmInicial,
+    })),
   );
 
   return (
@@ -142,9 +147,9 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
           ⚠ As paletes registadas não cabem todas
           {veicRota ? ` no ${veicRota.nome}` : " no veículo"}
-          {rotaTemReboque ? " + reboque" : ""}: cabem {espacoCarga.colocadas} de{" "}
-          {espacoCarga.totalPaletes} ({espacoCarga.semEspaco} sem espaço). Contagem do pior
-          caso (soma de toda a rota).
+          {rotaTemReboque ? " + reboque" : ""}: no momento de maior carga da rota cabem{" "}
+          {espacoCarga.colocadas} de {espacoCarga.totalPaletes} ({espacoCarga.semEspaco} sem
+          espaço). Simulação da ocupação ao longo da rota (entregas saem, recolhas entram).
         </div>
       )}
 
