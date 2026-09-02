@@ -86,9 +86,28 @@ export interface FiltrosRota {
  * motorista + veículo da paragem; senão (3) defaults globais (legado/importado).
  */
 export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): ParagemInput {
-  const snapshot =
-    (p.snapshot as ParagemSnapshot | null) ??
-    snapshotDeEntidades(baseSnap, p.motorista, p.veiculo);
+  const frozen = p.snapshot as ParagemSnapshot | null;
+  let snapshot: ParagemSnapshot;
+  if (frozen) {
+    // A caixa de carga (mm) e o fator de ocupação são factos físicos do veículo,
+    // não custos a congelar — snapshots antigos (congelados antes destes campos
+    // existirem, ou antes de o veículo ter medidas) não os têm, e sem eles a
+    // capacidade de paletes por dimensão dá 0 → coeficiente 0 → rateio parte-se.
+    // Preenche a partir do veículo atual quando faltam (mesmo princípio da
+    // lição de 2026-08-22 para capacidadePaleteA/B).
+    snapshot = {
+      ...frozen,
+      caixaComprimentoMm: frozen.caixaComprimentoMm ?? p.veiculo?.caixaComprimentoMm ?? null,
+      caixaLarguraMm: frozen.caixaLarguraMm ?? p.veiculo?.caixaLarguraMm ?? null,
+      caixaReboqueComprimentoMm:
+        frozen.caixaReboqueComprimentoMm ?? p.veiculo?.reboqueHabitual?.comprimentoMm ?? null,
+      caixaReboqueLarguraMm:
+        frozen.caixaReboqueLarguraMm ?? p.veiculo?.reboqueHabitual?.larguraMm ?? null,
+      fatorOcupacaoPalete: frozen.fatorOcupacaoPalete ?? p.veiculo?.fatorOcupacaoPalete ?? 1,
+    };
+  } else {
+    snapshot = snapshotDeEntidades(baseSnap, p.motorista, p.veiculo);
+  }
   return {
     id: p.id,
     snapshot,

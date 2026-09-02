@@ -2,6 +2,27 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-02] | O Ricardo converteu **todas** as rotas de kg → paletes (botão
+  "Converter para paletes" no `ParagemEditor`). Resultado: 21 das 25 rotas com o
+  rateio partido — cada cliente a receber uma fatia igual (1/n) em vez de
+  proporcional às paletes. Causa: `PATCH /api/paragens` só recongela o
+  `snapshot` **quando o veículo muda**; converter para paletes não muda o
+  veículo, por isso os 98 snapshots (congelados em 2026-07-09, antes de os
+  campos `caixaComprimentoMm`/`fatorOcupacaoPalete` existirem) continuaram sem a
+  caixa de carga. `capacidadePaleteDimensoes` sem caixa → 0 →
+  `coeficienteCarga` = 0 → `somaCoef` = 0 → cai no ramo de emergência
+  "reparte igualmente". Não apanhado por `tsc`/testes — só a correr
+  `carregarRotas({})` sobre os dados reais e a verificar `coeficienteCarga`
+  paragem a paragem. | A caixa de carga e o `fatorOcupacaoPalete` são **factos
+  físicos do veículo, não custos** — não devem depender de estar no snapshot.
+  `paragemToInput` (`lib/rotas-service.ts`) passa a preencher esses 5 campos a
+  partir do `p.veiculo` atual sempre que faltam no snapshot congelado (mesmo
+  princípio da lição de 2026-08-22 para `capacidadePaleteA/B`: fallback no
+  motor, não um script de migração). Auto-corrige os 98 registos sem tocar em
+  dados. Regra geral: sempre que um campo do snapshot passa a alimentar um
+  cálculo novo, verificar se os snapshots antigos o têm — e se não for um
+  custo, preencher no `paragemToInput` a partir da entidade viva.
+
 - [2026-09-02] | A decisão de 2026-08-28 ("meia-palete cabe sempre em cima de
   outra, nunca ocupa base própria, nunca entra no aviso de espaço") assumia que
   há sempre bases suficientes por baixo. O Ricardo pediu para registar uma
