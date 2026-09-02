@@ -2,6 +2,22 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-02] | A decisão de 2026-08-28 ("meia-palete cabe sempre em cima de
+  outra, nunca ocupa base própria, nunca entra no aviso de espaço") assumia que
+  há sempre bases suficientes por baixo. O Ricardo pediu para registar uma
+  paragem **só com meia palete** (0 inteiras) — impossível (`nPaletes > 0` era
+  obrigatório) — e confirmou que uma meia solta ocupa chão, 2 por lugar. |
+  Reversão parcial registada, não apagada: `linhasCargaParagem`
+  (`lib/calc/cargaRota.ts`) passa a contar `ceil(max(0, meias − Σ bases) / 2)`
+  lugares de chão; a validação aceita paletes **ou** meias. O rateio ficou
+  intocado (as meias já contavam `0,5` cada no coeficiente). Ao aplicar a regra
+  nova aos dados reais apareceu **RIC-Plas-Sonae / Plas-Sonae com
+  `nMeiasPaletes = 50`** — provavelmente um engano de registo, mas a regra nova
+  fá-lo contar como 25 lugares e a rota volta a assinalar falta de espaço.
+  Lição: ao mudar como um campo entra no cálculo, correr sempre a regra nova
+  sobre TODOS os valores reais desse campo — um outlier (50 meias) muda o
+  resultado de uma rota e só se vê a fazer o diff, não nos testes.
+
 - [2026-08-30] | Ao planear uma alteração ao motor de cálculo (rateio por
   segmento Ida/Volta) escrevi que seria um "no-op" para as rotas atuais,
   baseado em que **nenhum teste** (`perRoute.test.ts`) tinha entregas/recolhas

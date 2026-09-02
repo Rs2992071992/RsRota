@@ -208,14 +208,32 @@ export default function RegistoForm({
       kmInicial: p.kmInicial,
     }));
     if (mostrarPaletes) {
+      const linhasForm = linhasPaleteResolvidas.map((l) => ({
+        tipoPaleteId: l.tipo.id,
+        comprimentoMm: l.tipo.comprimentoMm,
+        larguraMm: l.tipo.larguraMm,
+        nPaletes: l.n,
+        clienteNome: f.cliente.trim() || "esta paragem",
+      }));
+      // Meias-paletes que não têm base por baixo -> chão, 2 por lugar.
+      const dimRef =
+        linhasForm[0] ??
+        (tipoPaleteSel
+          ? {
+              tipoPaleteId: tipoPaleteSel.id,
+              comprimentoMm: tipoPaleteSel.comprimentoMm,
+              larguraMm: tipoPaleteSel.larguraMm,
+              nPaletes: 0,
+              clienteNome: f.cliente.trim() || "esta paragem",
+            }
+          : null);
+      const meiasNoChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalPaletesForm);
+      const slotsMeias = Math.ceil(meiasNoChao / 2);
+      if (slotsMeias > 0 && dimRef) {
+        linhasForm.push({ ...dimRef, nPaletes: slotsMeias });
+      }
       paragensCarga.push({
-        linhas: linhasPaleteResolvidas.map((l) => ({
-          tipoPaleteId: l.tipo.id,
-          comprimentoMm: l.tipo.comprimentoMm,
-          larguraMm: l.tipo.larguraMm,
-          nPaletes: l.n,
-          clienteNome: f.cliente.trim() || "esta paragem",
-        })),
+        linhas: linhasForm,
         recolha,
         tipoVeiculo: f.tipoVeiculo,
         kmInicial: num(f.kmInicial),
@@ -223,7 +241,7 @@ export default function RegistoForm({
     }
     return verificarEspacoCarga(caixas, paragensCarga);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, recolha, f.tipoVeiculo, f.kmInicial, JSON.stringify(linhasPaleteResolvidas), f.cliente]);
+  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, recolha, f.tipoVeiculo, f.kmInicial, f.tipoPaleteId, f.nMeiasPaletes, totalPaletesForm, JSON.stringify(linhasPaleteResolvidas), f.cliente]);
   const custoNoites = num(f.noitesFora) * valorNoite;
 
   // VAZIO: não há cliente a faturar (repositionamento) nem carga a bordo,
@@ -246,15 +264,12 @@ export default function RegistoForm({
   // Avisos (não bloqueiam).
   const avisos = useMemo(() => {
     const a: string[] = [];
-    // Meias-paletes não entram na verificação de propósito — não ocupam base
-    // própria (cabem em cima de outra já contada).
+    // Meias-paletes que cabem em cima das bases não ocupam chão; as que sobram
+    // contam a 2 por lugar (ver linhasCargaParagem).
     if (mostrarPaletes && espacoCargaRota?.verificavel && !espacoCargaRota.cabemTodas) {
       a.push(
         `As paletes desta rota já não cabem no veículo: cabem ~${espacoCargaRota.colocadas} de ${espacoCargaRota.totalPaletes} (${espacoCargaRota.semEspaco} sem espaço).`,
       );
-    }
-    if (mostrarPaletes && num(f.nMeiasPaletes) > totalPaletesForm) {
-      a.push("Não pode haver mais meias-paletes do que paletes de base (cada meia precisa de uma base por baixo).");
     }
     if (f.zonaPortagem.trim() && !zonas.some((z) => z.toLowerCase() === f.zonaPortagem.trim().toLowerCase())) {
       a.push(`A zona de portagem "${f.zonaPortagem}" não existe na tabela.`);
@@ -274,7 +289,7 @@ export default function RegistoForm({
       }
     }
     return a;
-  }, [f.tipoVeiculo, f.zonaPortagem, totalPaletesForm, f.nMeiasPaletes, espacoCargaRota, mostrarPaletes, zonas, veiculoSel]);
+  }, [f.zonaPortagem, espacoCargaRota, mostrarPaletes, zonas, veiculoSel]);
 
   function validar(): boolean {
     const e: Record<string, string> = {};
@@ -291,7 +306,10 @@ export default function RegistoForm({
     }
     if (mostrarPaletes) {
       if (!f.tipoPaleteId) e.tipoPaleteId = "Escolha o tipo de palete";
-      if (!f.nPaletes || num(f.nPaletes) <= 0) e.nPaletes = "Indique o nº de paletes";
+      // Basta paletes inteiras OU meias-paletes (uma meia sozinha é válida).
+      if (num(f.nPaletes) <= 0 && num(f.nMeiasPaletes) <= 0) {
+        e.nPaletes = "Indique o nº de paletes ou de meias-paletes";
+      }
       linhasExtra.forEach((l, i) => {
         if (!l.tipoPaleteId) e[`linhaExtra${i}Tipo`] = "Escolha o tipo de palete";
         if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";
@@ -363,11 +381,22 @@ export default function RegistoForm({
           portagensExtra: payload.portagensExtra,
           noitesFora: payload.noitesFora,
           alimentacao: payload.alimentacao,
-          linhasPalete: linhasPaleteResolvidas.map((l) => ({
-            comprimentoMm: l.tipo.comprimentoMm,
-            larguraMm: l.tipo.larguraMm,
-            nPaletes: l.n,
-          })),
+          linhasPalete: (() => {
+            const ls = linhasPaleteResolvidas.map((l) => ({
+              comprimentoMm: l.tipo.comprimentoMm,
+              larguraMm: l.tipo.larguraMm,
+              nPaletes: l.n,
+            }));
+            const dimRef =
+              ls[0] ??
+              (tipoPaleteSel
+                ? { comprimentoMm: tipoPaleteSel.comprimentoMm, larguraMm: tipoPaleteSel.larguraMm, nPaletes: 0 }
+                : null);
+            const noChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalPaletesForm);
+            const slots = Math.ceil(noChao / 2);
+            if (slots > 0 && dimRef) ls.push({ ...dimRef, nPaletes: slots });
+            return ls;
+          })(),
           recolha: payload.recolha,
           tipoVeiculo: payload.tipoVeiculo,
           kmInicial: payload.kmInicial,
@@ -586,12 +615,13 @@ export default function RegistoForm({
               {erros.tipoPaleteId && <p className="mt-1 text-xs text-red-600">{erros.tipoPaleteId}</p>}
             </div>
             <div>
-              <label className="label">Nº de paletes</label>
+              <label className="label">Nº de paletes inteiras</label>
               <input
                 type="number"
                 inputMode="numeric"
                 step="1"
                 min="0"
+                placeholder="0 se for só meias-paletes"
                 className="input"
                 value={f.nPaletes}
                 onChange={(e) => set("nPaletes", e.target.value)}
@@ -663,13 +693,13 @@ export default function RegistoForm({
             </div>
 
             <div>
-              <label className="label">Nº de meias-paletes — opcional</label>
+              <label className="label">Nº de meias-paletes</label>
               <input
                 type="number"
                 inputMode="numeric"
                 step="1"
                 min="0"
-                placeholder="Em cima de outras, não ocupam base"
+                placeholder="Em cima de outras ou sozinhas no chão"
                 className="input"
                 value={f.nMeiasPaletes}
                 onChange={(e) => set("nMeiasPaletes", e.target.value)}

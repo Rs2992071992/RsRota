@@ -166,4 +166,36 @@ describe("linhasCargaParagem", () => {
       { tipoPaleteId: 5, comprimentoMm: 1200, larguraMm: 800, nPaletes: 12, clienteNome: "Cli" },
     ]);
   });
+
+  const escalar = (nPaletes: number, nMeiasPaletes: number) =>
+    linhasCargaParagem({
+      paletes: null,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      tipoPalete: null,
+      tipoPaleteId: 5,
+      nPaletes,
+      nMeiasPaletes,
+      cliente: "Cli",
+    });
+
+  it("só 1 meia-palete (0 inteiras) → 1 lugar", () => {
+    expect(escalar(0, 1).reduce((s, l) => s + l.nPaletes, 0)).toBe(1);
+  });
+
+  it("4 meias soltas → 2 lugares (2 por lugar)", () => {
+    expect(escalar(0, 4).reduce((s, l) => s + l.nPaletes, 0)).toBe(2);
+  });
+
+  it("meias que cabem em cima das bases não ocupam chão", () => {
+    expect(escalar(5, 3)).toEqual([
+      { tipoPaleteId: 5, comprimentoMm: 1200, larguraMm: 800, nPaletes: 5, clienteNome: "Cli" },
+    ]);
+  });
+
+  it("bases 5 + 9 meias → 5 + ceil((9-5)/2)=2 = linha extra de 2", () => {
+    const r = escalar(5, 9);
+    expect(r).toHaveLength(2);
+    expect(r.reduce((s, l) => s + l.nPaletes, 0)).toBe(7);
+  });
 });

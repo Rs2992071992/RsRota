@@ -113,10 +113,12 @@ export const paragemSchema = z
           message: "Escolha o tipo de palete",
           path: ["tipoPaleteId"],
         });
-      } else if (!d.nPaletes || d.nPaletes <= 0) {
+      } else if ((!d.nPaletes || d.nPaletes <= 0) && (!d.nMeiasPaletes || d.nMeiasPaletes <= 0)) {
+        // Basta ter paletes inteiras OU meias-paletes (uma meia sozinha, sem
+        // base por baixo, é uma carga válida — ocupa chão no camião).
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Indique o nº de paletes",
+          message: "Indique o nº de paletes ou de meias-paletes",
           path: ["nPaletes"],
         });
       }

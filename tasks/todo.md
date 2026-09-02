@@ -2,6 +2,32 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Meia palete sozinha (sem base por baixo) (2026-09-02)
+
+Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. O Ricardo
+não conseguia registar uma paragem cuja carga é só meia palete (`nPaletes > 0`
+era obrigatório). Decisões: (1) meia solta ocupa chão, 2 meias = 1 lugar;
+(2) tirar a regra "meias ≤ paletes de base".
+
+- [x] `lib/validacao.ts`: `paragemSchema` aceita paletes **OU** meias (tipoPalete
+  continua obrigatório). `RegistoForm.validar` + `ParagemEditor.guardar` idem
+- [x] `RegistoForm`: removido o aviso "meias > bases"; rótulos ("Nº de paletes
+  inteiras" / "sozinhas no chão")
+- [x] `lib/calc/cargaRota.ts::linhasCargaParagem`: `nMeiasPaletes?` novo —
+  `meiasNoChao = max(0, meias − Σ bases)`, `slots = ceil(meiasNoChao/2)`, linha
+  extra da mesma dimensão. Reverte parcialmente a decisão de 2026-08-28 (meias
+  "nunca ocupam espaço") — ver `tasks/lessons.md`
+- [x] Motor de rateio **intocado** (`linhasPaleteEfetivas`/`coefPaletesDimensao`
+  já tratavam `nPaletes:0 + meias>0`; teste já existia: 6 meias → 3/38)
+- [x] `registo/page.tsx` (+`nMeiasPaletes` no select). +5 testes (199 verdes),
+  tsc/build limpos
+- [x] Verificado contra produção: 2 paragens reais com meias.
+  **RIC-Plas-Sonae / Plas-Sonae tem `nMeiasPaletes = 50`** (+1 palete inteira) →
+  com a regra nova conta como 25 lugares de chão e a rota volta a mostrar o aviso
+  de espaço. **A confirmar com o Ricardo se os 50 estão certos.**
+- [ ] Commit + push
+- [ ] Porte Android Motorista
+
 ## ☑️ Aviso de espaço: simular a ocupação ao longo da rota (2026-09-02)
 
 Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. O aviso de

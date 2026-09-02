@@ -53,6 +53,11 @@ export interface PaleteLinhaParagem {
  * Uma `LinhaCarga` por linha de palete de uma paragem: o array `paletes`
  * (vários tamanhos na mesma paragem) ou, em fallback, uma linha só a partir
  * dos campos escalares / do mapa legado. `[]` = paragem por peso.
+ *
+ * Meias-paletes: as que cabem em cima das paletes de base (≤ Σ bases) não
+ * ocupam chão; as que sobram vão para o chão a **2 por lugar** (ceil), como
+ * uma linha extra da mesma dimensão. Uma paragem só de meias (0 bases) conta
+ * na mesma.
  */
 export function linhasCargaParagem(p: {
   paletes?: unknown;
@@ -61,31 +66,47 @@ export function linhasCargaParagem(p: {
   tipoPalete: string | null;
   tipoPaleteId?: number | null;
   nPaletes: number;
+  nMeiasPaletes?: number;
   cliente?: string;
 }): LinhaCarga[] {
   const arr = Array.isArray(p.paletes) ? (p.paletes as PaleteLinhaParagem[]) : null;
+  const base: LinhaCarga[] = [];
+  let dimRef: { comprimentoMm: number; larguraMm: number; tipoPaleteId: number } | null = null;
+
   if (arr && arr.length > 0) {
-    return arr
-      .filter((l) => l && l.comprimentoMm > 0 && l.larguraMm > 0 && l.nPaletes > 0)
-      .map((l) => ({
-        tipoPaleteId: l.tipoPaleteId ?? 0,
-        comprimentoMm: l.comprimentoMm,
-        larguraMm: l.larguraMm,
-        nPaletes: l.nPaletes,
-        clienteNome: p.cliente,
-      }));
+    for (const l of arr) {
+      if (l && l.comprimentoMm > 0 && l.larguraMm > 0 && l.nPaletes > 0) {
+        base.push({
+          tipoPaleteId: l.tipoPaleteId ?? 0,
+          comprimentoMm: l.comprimentoMm,
+          larguraMm: l.larguraMm,
+          nPaletes: l.nPaletes,
+          clienteNome: p.cliente,
+        });
+      }
+    }
+    if (base[0]) dimRef = { comprimentoMm: base[0].comprimentoMm, larguraMm: base[0].larguraMm, tipoPaleteId: base[0].tipoPaleteId };
+  } else {
+    const dims = dimensoesPaleteParagem(p);
+    if (dims) {
+      dimRef = { comprimentoMm: dims.comprimentoMm, larguraMm: dims.larguraMm, tipoPaleteId: p.tipoPaleteId ?? 0 };
+      if (p.nPaletes > 0) {
+        base.push({ ...dimRef, nPaletes: p.nPaletes, clienteNome: p.cliente });
+      }
+    }
   }
-  const dims = dimensoesPaleteParagem(p);
-  if (!dims || !(p.nPaletes > 0)) return [];
-  return [
-    {
-      tipoPaleteId: p.tipoPaleteId ?? 0,
-      comprimentoMm: dims.comprimentoMm,
-      larguraMm: dims.larguraMm,
-      nPaletes: p.nPaletes,
-      clienteNome: p.cliente,
-    },
-  ];
+
+  const meias = Math.floor(p.nMeiasPaletes ?? 0);
+  if (meias > 0 && dimRef) {
+    const totalBases = base.reduce((s, l) => s + l.nPaletes, 0);
+    const noChao = Math.max(0, meias - totalBases);
+    const slots = Math.ceil(noChao / 2);
+    if (slots > 0) {
+      base.push({ ...dimRef, nPaletes: slots, clienteNome: p.cliente });
+    }
+  }
+
+  return base;
 }
 
 export interface EspacoCarga {

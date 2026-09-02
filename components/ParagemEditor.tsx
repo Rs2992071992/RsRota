@@ -171,8 +171,8 @@ export default function ParagemEditor({
       return;
     }
     if (modo === "paletes" && f.tipoVeiculo !== "VAZIO") {
-      if (!f.tipoPaleteId || Number(f.nPaletes) <= 0) {
-        setErro("Escolha o tipo de palete e o nº de paletes.");
+      if (!f.tipoPaleteId || (Number(f.nPaletes) <= 0 && Number(f.nMeiasPaletes) <= 0)) {
+        setErro("Escolha o tipo de palete e o nº de paletes (inteiras ou meias).");
         return;
       }
       if (linhasExtra.some((l) => !l.tipoPaleteId || Number(l.nPaletes) <= 0)) {
