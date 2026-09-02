@@ -455,3 +455,72 @@ describe("coeficienteReal — paletes por dimensão (2026-08-28)", () => {
     expect(coeficienteReal("CAMIAO+REBOQUE", 0, eff, 0, false, null, 1200, 800, 0)).toBe(1);
   });
 });
+
+// Paletes de tamanhos diferentes na MESMA paragem (2026-09): o coeficiente é a
+// soma, por linha, de nPaletes / capacidade dessa dimensão.
+describe("paletes multi-linha — tamanhos diferentes na mesma paragem", () => {
+  const eff = snapshotComCaixa(); // 1200×800 -> cap 38 ; 1200×1000 -> cap 30
+
+  const p2linhas = (over = {}) =>
+    paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      snapshot: eff,
+      paletes: [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10 },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 6 },
+      ],
+      ...over,
+    });
+
+  it("calcularParagem: coeficiente = Σ (nPaletesᵢ / capacidadeᵢ)", () => {
+    const r = calcularParagem(p2linhas(), ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(10 / 38 + 6 / 30, 6);
+    expect(r.nPaletes).toBe(16); // agregado das linhas
+    expect(r.paletes).toHaveLength(2);
+  });
+
+  it("coeficienteReal: mesma soma via o parâmetro `paletes`", () => {
+    const coef = coeficienteReal(
+      "CAMIAO+REBOQUE",
+      0,
+      eff,
+      0,
+      false,
+      null,
+      null,
+      null,
+      0,
+      [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10 },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 6 },
+      ],
+    );
+    expect(coef).toBeCloseTo(10 / 38 + 6 / 30, 6);
+  });
+
+  it("uma só linha em `paletes` == campos escalares equivalentes", () => {
+    const viaArray = calcularParagem(
+      p2linhas({ paletes: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 19 }] }),
+      ctx,
+    );
+    const viaEscalar = calcularParagem(
+      paragemBase({
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        kmFinal: 100,
+        snapshot: eff,
+        nPaletes: 19,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+      }),
+      ctx,
+    );
+    expect(viaArray.coeficienteCarga).toBeCloseTo(viaEscalar.coeficienteCarga, 9);
+    expect(viaArray.coeficienteCarga).toBeCloseTo(0.5, 6);
+  });
+
+  it("meias-paletes usam a capacidade da 1.ª linha", () => {
+    const r = calcularParagem(p2linhas({ nMeiasPaletes: 4 }), ctx);
+    expect(r.coeficienteCarga).toBeCloseTo(10 / 38 + 6 / 30 + (4 * 0.5) / 38, 6);
+  });
+});

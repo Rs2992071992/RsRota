@@ -37,6 +37,9 @@ export interface ParagemEditavel {
   nMeiasPaletes: number;
   // Palete desta paragem (2026-08-28 em diante).
   tipoPaleteId: number | null;
+  // Várias linhas de palete na mesma paragem (2026-09+) — tamanhos diferentes.
+  // null = paragem de linha única (usa tipoPaleteId/nPaletes acima).
+  paletes: { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number }[] | null;
   pesoAproximado: number | null;
   zonaPortagem: string;
   portagensExtra: number;
@@ -85,10 +88,27 @@ export default function ParagemEditor({
   onClose,
 }: Props) {
   const router = useRouter();
+  // Linhas de palete (2026-09+): a 1.ª vive em f.tipoPaleteId/f.nPaletes; as
+  // restantes em `linhasExtra`. Para paragens já multi-linha, arranca do array.
+  const linha0 = paragem.paletes?.[0] ?? null;
+  const [linhasExtra, setLinhasExtra] = useState<{ tipoPaleteId: string; nPaletes: string }[]>(
+    (paragem.paletes ?? []).slice(1).map((l) => ({
+      tipoPaleteId: l.tipoPaleteId === null ? "" : String(l.tipoPaleteId),
+      nPaletes: String(l.nPaletes),
+    })),
+  );
+  const tinhaPaletesMulti = (paragem.paletes?.length ?? 0) > 1;
+
   const [f, setF] = useState({
     ...paragem,
     veiculoId: paragem.veiculoId === null ? "" : String(paragem.veiculoId),
-    tipoPaleteId: paragem.tipoPaleteId === null ? "" : String(paragem.tipoPaleteId),
+    tipoPaleteId:
+      linha0?.tipoPaleteId != null
+        ? String(linha0.tipoPaleteId)
+        : paragem.tipoPaleteId === null
+          ? ""
+          : String(paragem.tipoPaleteId),
+    nPaletes: linha0 ? linha0.nPaletes : paragem.nPaletes,
     pesoAproximado: paragem.pesoAproximado === null ? "" : String(paragem.pesoAproximado),
     data: paragem.data.slice(0, 10),
   });
@@ -119,6 +139,7 @@ export default function ParagemEditor({
 
   // VAZIO: não há carga nenhuma.
   function setTipoVeiculo(v: string) {
+    if (v === "VAZIO") setLinhasExtra([]);
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
@@ -149,9 +170,15 @@ export default function ParagemEditor({
       setErro("KM Final deve ser ≥ KM Inicial.");
       return;
     }
-    if (modo === "paletes" && f.tipoVeiculo !== "VAZIO" && (!f.tipoPaleteId || Number(f.nPaletes) <= 0)) {
-      setErro("Escolha o tipo de palete e o nº de paletes.");
-      return;
+    if (modo === "paletes" && f.tipoVeiculo !== "VAZIO") {
+      if (!f.tipoPaleteId || Number(f.nPaletes) <= 0) {
+        setErro("Escolha o tipo de palete e o nº de paletes.");
+        return;
+      }
+      if (linhasExtra.some((l) => !l.tipoPaleteId || Number(l.nPaletes) <= 0)) {
+        setErro("Cada linha de palete precisa de tipo e nº de paletes.");
+        return;
+      }
     }
     setEstado("a-gravar");
     try {
@@ -171,6 +198,20 @@ export default function ParagemEditor({
         nPaletes: modo === "kg" ? 0 : Number(f.nPaletes),
         nMeiasPaletes: modo === "paletes" ? Number(f.nMeiasPaletes) || 0 : 0,
         tipoPaleteId: modo === "paletes" && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
+        // `paletes`: só quando há (ou havia) mais do que uma linha. Array vazio
+        // = voltar a linha única. Ausente = linha única, sem mexer.
+        paletes:
+          modo === "paletes" && f.tipoVeiculo !== "VAZIO" && (linhasExtra.length > 0 || tinhaPaletesMulti)
+            ? linhasExtra.length > 0
+              ? [
+                  { tipoPaleteId: Number(f.tipoPaleteId), nPaletes: Number(f.nPaletes) },
+                  ...linhasExtra.map((l) => ({
+                    tipoPaleteId: Number(l.tipoPaleteId),
+                    nPaletes: Number(l.nPaletes),
+                  })),
+                ]
+              : []
+            : undefined,
         pesoAproximado: f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
@@ -401,6 +442,62 @@ export default function ParagemEditor({
                   onChange={(e) => set("nPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
                 />
               </div>
+
+              {linhasExtra.map((l, i) => (
+                <div key={i} className="col-span-2 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-2">
+                  <div>
+                    <label className="label">Tipo de palete</label>
+                    <select
+                      className="input"
+                      value={l.tipoPaleteId}
+                      onChange={(e) =>
+                        setLinhasExtra((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, tipoPaleteId: e.target.value } : x)),
+                        )
+                      }
+                    >
+                      <option value="">— escolher —</option>
+                      {tiposPalete.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Nº de paletes</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      className="input"
+                      value={l.nPaletes}
+                      onChange={(e) =>
+                        setLinhasExtra((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, nPaletes: e.target.value } : x)),
+                        )
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="col-span-2 text-left text-xs font-medium text-red-600"
+                    onClick={() => setLinhasExtra((prev) => prev.filter((_, j) => j !== i))}
+                  >
+                    ✕ remover esta palete
+                  </button>
+                </div>
+              ))}
+              <div className="col-span-2">
+                <button
+                  type="button"
+                  className="text-sm font-medium text-brand hover:underline"
+                  onClick={() => setLinhasExtra((prev) => [...prev, { tipoPaleteId: "", nPaletes: "" }])}
+                >
+                  + Adicionar palete (outro tamanho, mesmo cliente)
+                </button>
+              </div>
+
               <div>
                 <label className="label">Nº de meias-paletes — opcional</label>
                 <input

@@ -233,6 +233,16 @@ model Paragem {
   paleteComprimentoMm Float?
   paleteLarguraMm     Float?
 
+  // Várias linhas de palete na MESMA paragem (2026-09 em diante) — o mesmo
+  // cliente, na mesma descarga, com paletes de tamanhos diferentes (ex.: 4×
+  // 1300×1100 + 2× 1200×800). Forma: [{ tipoPaleteId, comprimentoMm, larguraMm,
+  // nPaletes }], dimensões congeladas no registo (fonte de verdade, como
+  // paleteComprimentoMm/LarguraMm acima). null = paragem de linha única — o
+  // motor cai nos campos escalares acima (todo o histórico, zero migração).
+  // Quando preenchido, os escalares acima ficam com o agregado (nPaletes = Σ,
+  // tipoPaleteId/dims = 1.ª linha) só para leitores antigos/exportação.
+  paletes Json?
+
   // Nº de meias-paletes empilhadas em cima das paletes de base desta paragem
   // (nPaletes acima) — não têm dimensões próprias, nunca entram no cálculo
   // de capacidade/espaço (não ocupam uma base própria), só valem metade de

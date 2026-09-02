@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { verificarEspacoCarga, type LinhaCarga } from "@/lib/calc/cargaRota";
+import { verificarEspacoCarga, linhasCargaParagem, type LinhaCarga } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
 
 const CAMIAO: CaixaInput = { id: "veiculo", label: "AO-33-PJ", comprimentoMm: 7500, larguraMm: 2480 };
@@ -51,6 +51,37 @@ describe("verificarEspacoCarga", () => {
     expect(r.verificavel).toBe(true);
     expect(r.cabemTodas).toBe(true);
     expect(r.totalPaletes).toBe(0);
+  });
+
+  it("mesma paragem com 2 tamanhos → 2 linhas de carga", () => {
+    const linhas = linhasCargaParagem({
+      paletes: [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 4 },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 2 },
+      ],
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      tipoPalete: null,
+      nPaletes: 6,
+      cliente: "Cli",
+    });
+    expect(linhas).toHaveLength(2);
+    expect(linhas.reduce((s, l) => s + l.nPaletes, 0)).toBe(6);
+  });
+
+  it("paragem de linha única (só escalares) → 1 linha de carga", () => {
+    const linhas = linhasCargaParagem({
+      paletes: null,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      tipoPalete: null,
+      tipoPaleteId: 5,
+      nPaletes: 12,
+      cliente: "Cli",
+    });
+    expect(linhas).toEqual([
+      { tipoPaleteId: 5, comprimentoMm: 1200, larguraMm: 800, nPaletes: 12, clienteNome: "Cli" },
+    ]);
   });
 
   it("tipos de palete diferentes na mesma rota somam certo", () => {

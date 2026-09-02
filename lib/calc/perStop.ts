@@ -2,6 +2,7 @@ import { consumoPorCarga, valorPortagem } from "./lookups";
 import type {
   CustosDerivados,
   EscalaoConsumo,
+  PaleteLinha,
   ParagemCalc,
   ParagemInput,
   ParagemSnapshot,
@@ -176,6 +177,61 @@ function capacidadePaleteDimensoes(
 }
 
 /**
+ * Linhas de palete "novas" (dimensão própria congelada) de uma paragem: o array
+ * `paletes` (vários tamanhos na mesma paragem, 2026-09+) ou, em fallback, uma
+ * linha só a partir dos campos escalares. `[]` = paragem sem palete de dimensão
+ * própria (cai no caminho legado `tipoPalete`/`volume` ou no peso).
+ */
+export function linhasPaleteEfetivas(p: {
+  paletes?: PaleteLinha[] | null;
+  tipoPaleteId?: number | null;
+  paleteComprimentoMm?: number | null;
+  paleteLarguraMm?: number | null;
+  nPaletes?: number;
+}): PaleteLinha[] {
+  if (p.paletes && p.paletes.length > 0) {
+    return p.paletes.filter((l) => l.comprimentoMm > 0 && l.larguraMm > 0);
+  }
+  if (p.paleteComprimentoMm && p.paleteLarguraMm) {
+    return [
+      {
+        tipoPaleteId: p.tipoPaleteId ?? null,
+        comprimentoMm: p.paleteComprimentoMm,
+        larguraMm: p.paleteLarguraMm,
+        nPaletes: p.nPaletes ?? 0,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Coeficiente de carga da parte "paletes por dimensão": soma, por linha,
+ * nº paletes / capacidade dessa dimensão (fração do camião que cada linha
+ * ocupa). As meias-paletes (0,5 cada, sem dimensão própria) usam a capacidade
+ * da 1.ª linha. Com uma só linha é matematicamente idêntico ao cálculo antigo
+ * `(nPaletes + nMeias×0,5) / capacidade`. Devolve 0 quando não há paletes nem
+ * capacidade — o chamador decide se isso vira 1 (rateio) ou fica 0 (métrica).
+ */
+function coefPaletesDimensao(
+  tipoVeiculo: string,
+  linhas: PaleteLinha[],
+  nMeiasPaletes: number,
+  cap: ComCapacidadesArea,
+): number {
+  let coef = 0;
+  for (const l of linhas) {
+    const c = capacidadePaleteDimensoes(tipoVeiculo, l.comprimentoMm, l.larguraMm, cap);
+    if (c > 0) coef += (l.nPaletes || 0) / c;
+  }
+  if (nMeiasPaletes > 0) {
+    const capRef = capacidadePaleteDimensoes(tipoVeiculo, linhas[0].comprimentoMm, linhas[0].larguraMm, cap);
+    if (capRef > 0) coef += (nMeiasPaletes * 0.5) / capRef;
+  }
+  return coef;
+}
+
+/**
  * Calcula todos os valores de uma paragem (§4.1). Funções puras, sem efeitos.
  * Trata peso 0 e dados em falta de forma graciosa (sem divisão por zero).
  */
@@ -191,35 +247,29 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // consumo — coeficienteCarga/precoPorKg continuam a refletir o peso
   // próprio do cliente (rateio inalterado, ver lib/calc/perRoute.ts).
   const pesoParaConsumo = p.pesoEmTransito ?? peso;
-  const nPaletes = p.nPaletes || 0;
-  // Meias-paletes empilhadas (2026-08-28+): não têm base própria, por isso só
-  // entram no NUMERADOR do coeficiente (valem metade), nunca na capacidade
-  // (denominador) — ver capacidadeNova/capacidadePalete abaixo, que não
-  // dependem de nMeiasPaletes.
-  const nPaletesEquivalente = nPaletes + (p.nMeiasPaletes || 0) * 0.5;
+  const nMeiasPaletes = p.nMeiasPaletes || 0;
 
   // Palete desta paragem: dimensão própria congelada (2026-08-28 em diante, único
   // caminho para paragens novas) tem sempre prioridade sobre o caminho legado
   // (tipoPalete string / volume, ou o fallback de tipoVeiculo literal
   // pré-migração) — ver `paleteEfetiva`. Decidido só pela presença das
   // dimensões, nunca por `p.volume` (que fica vestígio, só para paragens antigas).
-  const paleteNova =
-    p.paleteComprimentoMm && p.paleteLarguraMm
-      ? { comprimentoMm: p.paleteComprimentoMm, larguraMm: p.paleteLarguraMm }
-      : null;
+  // `linhasNovas` cobre 1 ou várias linhas de palete (tamanhos diferentes na
+  // mesma paragem, 2026-09+); vazio = cai no legado/peso.
+  const linhasNovas = linhasPaleteEfetivas(p);
+  const paleteNova = linhasNovas.length > 0;
   const legado = paleteEfetiva(p.tipoVeiculo, p.volume, p.tipoPalete);
   const ehPalete = paleteNova ? true : legado.ehPalete;
+  // nPaletes efetivo (agregado das linhas quando há várias); as meias contam
+  // sempre a 0,5 e nunca ocupam base própria (não entram na capacidade).
+  const nPaletes = paleteNova ? linhasNovas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
+  const nPaletesEquivalente = nPaletes + nMeiasPaletes * 0.5;
 
   // Coeficiente de carga: paletes -> nº paletes/capacidade (área, se dimensão
   // própria; senão nº fixo legado) — uma palete leve ocupa o mesmo "slot" físico,
   // o peso não reflete a ocupação real; senão peso / capacidade (kg).
-  const capacidadeNova = paleteNova
-    ? capacidadePaleteDimensoes(p.tipoVeiculo, paleteNova.comprimentoMm, paleteNova.larguraMm, eff)
-    : 0;
   const coeficienteCarga: number = paleteNova
-    ? capacidadeNova > 0
-      ? nPaletesEquivalente / capacidadeNova
-      : 0
+    ? coefPaletesDimensao(p.tipoVeiculo, linhasNovas, nMeiasPaletes, eff)
     : legado.ehPalete
       ? nPaletesEquivalente / capacidadePalete(legado.tipoVeiculoEfetivo, legado.tipo, eff)
       : peso / capacidade(p.tipoVeiculo, eff);
@@ -280,6 +330,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     tipoPaleteId: p.tipoPaleteId ?? null,
     paleteComprimentoMm: p.paleteComprimentoMm ?? null,
     paleteLarguraMm: p.paleteLarguraMm ?? null,
+    paletes: p.paletes && p.paletes.length > 0 ? p.paletes : null,
     pesoAproximado: p.pesoAproximado ?? null,
     kmFeitos,
     coeficienteCarga,
@@ -331,12 +382,16 @@ export function coeficienteReal(
   paleteComprimentoMm: number | null = null,
   paleteLarguraMm: number | null = null,
   nMeiasPaletes = 0,
+  paletes: PaleteLinha[] | null = null,
 ): number {
   const nPaletesEquivalente = nPaletes + nMeiasPaletes * 0.5;
-  if (paleteComprimentoMm && paleteLarguraMm) {
-    if (nPaletes <= 0 && nMeiasPaletes <= 0) return 1;
-    const capacidade = capacidadePaleteDimensoes(tipoVeiculo, paleteComprimentoMm, paleteLarguraMm, cap);
-    return capacidade > 0 ? nPaletesEquivalente / capacidade : 0;
+  // Palete por dimensão — 1 linha (paleteComprimento/Largura) ou várias
+  // (`paletes`, tamanhos diferentes na mesma paragem).
+  const linhasNovas = linhasPaleteEfetivas({ paletes, paleteComprimentoMm, paleteLarguraMm, nPaletes });
+  if (linhasNovas.length > 0) {
+    const totalPaletes = linhasNovas.reduce((s, l) => s + (l.nPaletes || 0), 0);
+    if (totalPaletes <= 0 && nMeiasPaletes <= 0) return 1;
+    return coefPaletesDimensao(tipoVeiculo, linhasNovas, nMeiasPaletes, cap);
   }
   const { ehPalete, tipo, tipoVeiculoEfetivo } = paleteEfetiva(tipoVeiculo, volume, tipoPalete);
   if (ehPalete) {

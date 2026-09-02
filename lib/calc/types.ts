@@ -118,6 +118,19 @@ export interface ParagemSnapshot {
   fatorOcupacaoPalete?: number;
 }
 
+/**
+ * Uma linha de palete de uma paragem (ver `ParagemInput.paletes`). As dimensões
+ * são a cópia congelada no momento do registo — fonte de verdade do cálculo,
+ * imune a edições posteriores do catálogo `TipoPalete`. `tipoPaleteId` é só
+ * referência/label.
+ */
+export interface PaleteLinha {
+  tipoPaleteId: number | null;
+  comprimentoMm: number;
+  larguraMm: number;
+  nPaletes: number;
+}
+
 /** Dados de uma paragem necessários ao cálculo. */
 export interface ParagemInput {
   id?: number;
@@ -165,6 +178,14 @@ export interface ParagemInput {
    */
   paleteComprimentoMm?: number | null;
   paleteLarguraMm?: number | null;
+  /**
+   * Várias linhas de palete na MESMA paragem (2026-09+) — tamanhos diferentes
+   * para o mesmo cliente/descarga. Quando presente e não-vazio, é a fonte de
+   * verdade: `coeficienteCarga` = Σ (nPaletesᵢ / capacidade(dimᵢ)), e os campos
+   * escalares acima (`nPaletes`/`paleteComprimentoMm`/…) ficam só como agregado
+   * para leitores antigos. Ausente/vazio -> caminho de linha única (escalares).
+   */
+  paletes?: PaleteLinha[] | null;
   /** Peso aproximado (kg), só para a tabela de consumos — nunca entra no rateio. */
   pesoAproximado?: number | null;
   zonaPortagem: string;
@@ -220,6 +241,8 @@ export interface ParagemCalc {
   tipoPaleteId: number | null;
   paleteComprimentoMm: number | null;
   paleteLarguraMm: number | null;
+  /** Passthrough — ver ParagemInput.paletes. null = paragem de linha única. */
+  paletes: PaleteLinha[] | null;
   /** Passthrough — ver ParagemInput.pesoAproximado. */
   pesoAproximado: number | null;
   kmFeitos: number;

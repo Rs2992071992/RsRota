@@ -41,6 +41,53 @@ export function dimensoesPaleteParagem(p: {
   return (p.tipoPalete && DIMENSOES_PALETE_LEGADO[p.tipoPalete]) || null;
 }
 
+/** Linha de palete guardada em `Paragem.paletes` (Json) — ver `PaleteLinha`. */
+export interface PaleteLinhaParagem {
+  tipoPaleteId: number | null;
+  comprimentoMm: number;
+  larguraMm: number;
+  nPaletes: number;
+}
+
+/**
+ * Uma `LinhaCarga` por linha de palete de uma paragem: o array `paletes`
+ * (vários tamanhos na mesma paragem) ou, em fallback, uma linha só a partir
+ * dos campos escalares / do mapa legado. `[]` = paragem por peso.
+ */
+export function linhasCargaParagem(p: {
+  paletes?: unknown;
+  paleteComprimentoMm: number | null;
+  paleteLarguraMm: number | null;
+  tipoPalete: string | null;
+  tipoPaleteId?: number | null;
+  nPaletes: number;
+  cliente?: string;
+}): LinhaCarga[] {
+  const arr = Array.isArray(p.paletes) ? (p.paletes as PaleteLinhaParagem[]) : null;
+  if (arr && arr.length > 0) {
+    return arr
+      .filter((l) => l && l.comprimentoMm > 0 && l.larguraMm > 0 && l.nPaletes > 0)
+      .map((l) => ({
+        tipoPaleteId: l.tipoPaleteId ?? 0,
+        comprimentoMm: l.comprimentoMm,
+        larguraMm: l.larguraMm,
+        nPaletes: l.nPaletes,
+        clienteNome: p.cliente,
+      }));
+  }
+  const dims = dimensoesPaleteParagem(p);
+  if (!dims || !(p.nPaletes > 0)) return [];
+  return [
+    {
+      tipoPaleteId: p.tipoPaleteId ?? 0,
+      comprimentoMm: dims.comprimentoMm,
+      larguraMm: dims.larguraMm,
+      nPaletes: p.nPaletes,
+      clienteNome: p.cliente,
+    },
+  ];
+}
+
 export interface EspacoCarga {
   totalPaletes: number;
   colocadas: number;

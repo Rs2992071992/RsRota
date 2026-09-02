@@ -1,4 +1,11 @@
-import { calcularParagem, coeficienteReal, efetivos, pesoTransportado, type ContextoCalculo } from "./perStop";
+import {
+  calcularParagem,
+  coeficienteReal,
+  efetivos,
+  linhasPaleteEfetivas,
+  pesoTransportado,
+  type ContextoCalculo,
+} from "./perStop";
 import { valorPortagem } from "./lookups";
 import type { ParagemInput, RateioCliente, RotaCalc } from "./types";
 
@@ -215,6 +222,7 @@ export function calcularRota(
       p.paleteComprimentoMm ?? null,
       p.paleteLarguraMm ?? null,
       p.nMeiasPaletes || 0,
+      p.paletes ?? null,
     );
     // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
     // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.
@@ -275,17 +283,15 @@ export function calcularRota(
   // false/vestigial nesse caso, por isso não basta olhar para p.volume).
   // Meias-paletes contam a 0,5 (nunca ocuparam base própria, mas contam para
   // o total transportado).
-  const totalPaletes = paragens.reduce(
-    (a, p) =>
-      a +
-      (p.volume ||
-      p.tipoVeiculo === "PALETE_120X80" ||
-      p.tipoVeiculo === "PALETE_120X100" ||
-      (p.paleteComprimentoMm && p.paleteLarguraMm)
-        ? (p.nPaletes || 0) + (p.nMeiasPaletes || 0) * 0.5
-        : 0),
-    0,
-  );
+  const totalPaletes = paragens.reduce((a, p) => {
+    const linhas = linhasPaleteEfetivas(p);
+    const ehPaleteLegado =
+      p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
+    if (linhas.length === 0 && !ehPaleteLegado) return a;
+    const nBase =
+      linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
+    return a + nBase + (p.nMeiasPaletes || 0) * 0.5;
+  }, 0);
 
   // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
   const tempos = paragens

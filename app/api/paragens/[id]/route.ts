@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
-import { resolverPaleteDimensoes } from "@/lib/rotas-service";
+import { resolverPaleteDimensoes, resolverPaleteDimensoesMuitas } from "@/lib/rotas-service";
 
 // Atualização parcial — usada para editar a receita (escritório) ou corrigir uma
 // paragem (escritório, ou o próprio motorista nas suas paragens).
@@ -93,10 +93,29 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
     data.snapshot = snapshot as unknown as Prisma.InputJsonValue;
   }
 
+  // Várias linhas de palete (tamanhos diferentes na mesma paragem): `paletes` é
+  // a fonte de verdade; os escalares ficam com o agregado. Array vazio -> volta
+  // a linha única (paletes = null). Tem prioridade sobre `tipoPaleteId` abaixo.
+  const tipoVeiculoEfetivo = d.tipoVeiculo ?? auth.paragem.tipoVeiculo;
+  if (d.paletes !== undefined) {
+    delete data.paletes;
+    const linhas =
+      tipoVeiculoEfetivo !== "VAZIO" ? await resolverPaleteDimensoesMuitas(d.paletes) : null;
+    if (linhas) {
+      data.paletes = linhas as unknown as Prisma.InputJsonValue;
+      data.nPaletes = linhas.reduce((s, l) => s + l.nPaletes, 0);
+      data.tipoPaleteId = linhas[0].tipoPaleteId;
+      data.paleteComprimentoMm = linhas[0].comprimentoMm;
+      data.paleteLarguraMm = linhas[0].larguraMm;
+    } else {
+      data.paletes = Prisma.JsonNull;
+    }
+  }
+
   // Trocar o tipo de palete recongela as dimensões (fonte de verdade do
   // cálculo) — mesmo princípio do snapshot acima: nunca uma referência viva
-  // ao catálogo TipoPalete.
-  if (d.tipoPaleteId !== undefined) {
+  // ao catálogo TipoPalete. (Ignorado se `paletes` acima já tratou tudo.)
+  if (d.tipoPaleteId !== undefined && data.paletes === undefined) {
     const paleteDimensoes = await resolverPaleteDimensoes(d.tipoPaleteId);
     data.paleteComprimentoMm = paleteDimensoes.paleteComprimentoMm;
     data.paleteLarguraMm = paleteDimensoes.paleteLarguraMm;

@@ -5,7 +5,7 @@ import { getSessaoInfo } from "@/lib/session";
 import { paragemSchema } from "@/lib/validacao";
 import { snapshotParaRegisto } from "@/lib/snapshot-service";
 import { iniciais, gerarIdRota } from "@/lib/rota-id";
-import { resolverPaleteDimensoes } from "@/lib/rotas-service";
+import { resolverPaleteDimensoes, resolverPaleteDimensoesMuitas } from "@/lib/rotas-service";
 
 // POST /api/paragens — cria uma paragem (motorista ou escritório).
 export async function POST(req: Request) {
@@ -37,10 +37,27 @@ export async function POST(req: Request) {
     idRota = await gerarIdRota(iniciais(user?.nome, user?.codigo ?? "ROTA"), d.cliente);
   }
 
-  const [snapshot, paleteDimensoes] = await Promise.all([
+  const [snapshot, paleteDimensoes, paletesLinhas] = await Promise.all([
     snapshotParaRegisto(motoristaId, veiculoId),
     resolverPaleteDimensoes(d.tipoPaleteId),
+    d.tipoVeiculo !== "VAZIO" ? resolverPaleteDimensoesMuitas(d.paletes) : Promise.resolve(null),
   ]);
+
+  // Modo multi-linha: `paletes` é a fonte de verdade; os campos escalares
+  // ficam com o agregado (Σ nPaletes, 1.ª linha para tipo/dimensões) só para
+  // leitores antigos / exportação. Modo linha única: escalares como sempre.
+  const agregado = paletesLinhas
+    ? {
+        tipoPaleteId: paletesLinhas[0].tipoPaleteId,
+        nPaletes: paletesLinhas.reduce((s, l) => s + l.nPaletes, 0),
+        paleteComprimentoMm: paletesLinhas[0].comprimentoMm,
+        paleteLarguraMm: paletesLinhas[0].larguraMm,
+      }
+    : {
+        tipoPaleteId: d.tipoPaleteId ?? null,
+        nPaletes: d.nPaletes,
+        ...paleteDimensoes,
+      };
 
   const criada = await prisma.paragem.create({
     data: {
@@ -59,10 +76,14 @@ export async function POST(req: Request) {
       kgDescarregados: d.kgDescarregados,
       volume: d.volume,
       tipoPalete: d.volume ? (d.tipoPalete ?? null) : null,
-      nPaletes: d.nPaletes,
       nMeiasPaletes: d.nMeiasPaletes,
-      tipoPaleteId: d.tipoPaleteId ?? null,
-      ...paleteDimensoes,
+      nPaletes: agregado.nPaletes,
+      tipoPaleteId: agregado.tipoPaleteId,
+      paleteComprimentoMm: agregado.paleteComprimentoMm,
+      paleteLarguraMm: agregado.paleteLarguraMm,
+      paletes: paletesLinhas
+        ? (paletesLinhas as unknown as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
       pesoAproximado: d.pesoAproximado ?? null,
       litrosAbastecidos: d.litrosAbastecidos,
       custoAbastecido: d.custoAbastecido,

@@ -264,6 +264,37 @@ describe("calcularRota — meias-paletes no rateio (não ocupam base própria)",
   });
 });
 
+describe("calcularRota — paletes de tamanhos diferentes na mesma paragem (2026-09)", () => {
+  const multi: ParagemInput[] = [
+    paragemBase({ cliente: "Cliente Peso", kmInicial: 0, kmFinal: 300, kgCarregados: 12000, receitaPaga: 1000 }),
+    paragemBase({
+      cliente: "Cliente Multi",
+      kmInicial: 300,
+      kmFinal: 450,
+      snapshot: snapshotDimensao,
+      // 10× 1200×800 (cap 38) + 6× 1200×1000 (cap 30)
+      paletes: [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10 },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 6 },
+      ],
+      receitaPaga: 500,
+    }),
+  ];
+  const r = calcularRota("MULTIPAL01", multi, ctx);
+
+  it("Σ quotas = 100 % e Σ custo atribuído = custo total", () => {
+    expect(r.rateio.reduce((a, c) => a + c.quota, 0)).toBeCloseTo(1, 6);
+    expect(r.rateio.reduce((a, c) => a + c.custoAtribuido, 0)).toBeCloseTo(r.custoTotalRota, 6);
+  });
+  it("coefReal do cliente multi = 10/38 + 6/30", () => {
+    const c = r.rateio.find((x) => x.cliente === "Cliente Multi")!;
+    expect(c.coefReal).toBeCloseTo(10 / 38 + 6 / 30, 6);
+  });
+  it("totalPaletes soma todas as linhas (10 + 6 = 16)", () => {
+    expect(r.totalPaletes).toBe(16);
+  });
+});
+
 describe("calcularRota — atribuição manual de km num troço VAZIO (rateioManual)", () => {
   function cenario(rateioManual?: { cliente: string; km: number }[]): ReturnType<typeof calcularRota> {
     const paragens: ParagemInput[] = [

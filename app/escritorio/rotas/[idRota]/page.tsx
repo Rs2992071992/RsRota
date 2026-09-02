@@ -5,7 +5,7 @@ import { carregarRota } from "@/lib/rotas-service";
 import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
-import { verificarEspacoCarga, dimensoesPaleteParagem } from "@/lib/calc/cargaRota";
+import { verificarEspacoCarga, linhasCargaParagem } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { AlertaBadge } from "@/components/Badge";
 import ParagemAcoes from "@/components/ParagemAcoes";
@@ -80,6 +80,9 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       nPaletes: p.nPaletes,
       nMeiasPaletes: p.nMeiasPaletes,
       tipoPaleteId: p.tipoPaleteId,
+      paletes: Array.isArray(p.paletes)
+        ? (p.paletes as { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number }[])
+        : null,
       pesoAproximado: p.pesoAproximado,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,
@@ -117,12 +120,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   }
   const espacoCarga = verificarEspacoCarga(
     caixasRota,
-    paragensRaw.flatMap((p) => {
-      const dims = dimensoesPaleteParagem(p);
-      return dims
-        ? [{ tipoPaleteId: p.tipoPaleteId ?? 0, ...dims, nPaletes: p.nPaletes, clienteNome: p.cliente }]
-        : [];
-    }),
+    paragensRaw.flatMap((p) => linhasCargaParagem(p)),
   );
 
   return (

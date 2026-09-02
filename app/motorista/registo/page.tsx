@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSessaoInfo } from "@/lib/session";
-import { dimensoesPaleteParagem } from "@/lib/calc/cargaRota";
+import { linhasCargaParagem } from "@/lib/calc/cargaRota";
 import RegistoForm from "./RegistoForm";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +70,7 @@ export default async function RegistoPage(
               paleteComprimentoMm: true,
               paleteLarguraMm: true,
               tipoPalete: true,
+              paletes: true,
             },
             orderBy: { id: "asc" },
           })
@@ -112,19 +113,18 @@ export default async function RegistoPage(
       rotasRecentes={rotasRecentes.map((r) => r.idRota)}
       clientes={clientes}
       inicial={inicial}
-      paragensRotaIniciais={paragensRotaAtiva.map((p) => {
-        const dims = dimensoesPaleteParagem(p);
-        return {
-          cliente: p.cliente,
-          zonaPortagem: p.zonaPortagem,
-          portagensExtra: p.portagensExtra,
-          noitesFora: p.noitesFora,
-          alimentacao: p.alimentacao,
-          nPaletes: p.nPaletes,
-          paleteComprimentoMm: dims?.comprimentoMm ?? null,
-          paleteLarguraMm: dims?.larguraMm ?? null,
-        };
-      })}
+      paragensRotaIniciais={paragensRotaAtiva.map((p) => ({
+        cliente: p.cliente,
+        zonaPortagem: p.zonaPortagem,
+        portagensExtra: p.portagensExtra,
+        noitesFora: p.noitesFora,
+        alimentacao: p.alimentacao,
+        linhasPalete: linhasCargaParagem(p).map((l) => ({
+          comprimentoMm: l.comprimentoMm,
+          larguraMm: l.larguraMm,
+          nPaletes: l.nPaletes,
+        })),
+      }))}
     />
   );
 }

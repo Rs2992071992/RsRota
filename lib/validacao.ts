@@ -40,6 +40,14 @@ export const paragemSchema = z
     // Palete desta paragem (2026-08-28 em diante) — catálogo TipoPalete, único
     // modo para paragens novas exceto VAZIO (ver superRefine abaixo).
     tipoPaleteId: z.number().int().positive().nullable().optional(),
+    // Várias linhas de palete na MESMA paragem (2026-09+) — tamanhos diferentes
+    // para o mesmo cliente/descarga. Quando presente e não-vazio, substitui o
+    // par tipoPaleteId/nPaletes acima (que a API preenche com o agregado). As
+    // dimensões são resolvidas server-side a partir de cada tipoPaleteId.
+    paletes: z
+      .array(z.object({ tipoPaleteId: z.number().int().positive(), nPaletes: numNaoNeg }))
+      .max(20)
+      .optional(),
     pesoAproximado: numOpcional,
     litrosAbastecidos: numNaoNeg.default(0),
     custoAbastecido: numNaoNeg.default(0),
@@ -88,7 +96,18 @@ export const paragemSchema = z
     // Paletes por dimensão são o único modo de rateio para paragens novas
     // (exceto VAZIO, que não transporta nada) — ver tasks/lessons.md 2026-08-28.
     if (d.tipoVeiculo !== "VAZIO") {
-      if (!d.tipoPaleteId) {
+      if (d.paletes && d.paletes.length > 0) {
+        // Modo multi-linha: cada linha precisa de nº de paletes > 0.
+        d.paletes.forEach((l, i) => {
+          if (!l.nPaletes || l.nPaletes <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Indique o nº de paletes",
+              path: ["paletes", i, "nPaletes"],
+            });
+          }
+        });
+      } else if (!d.tipoPaleteId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Escolha o tipo de palete",

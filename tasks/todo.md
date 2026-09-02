@@ -2,6 +2,37 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Paletes de tamanhos diferentes na mesma paragem (2026-09-01)
+
+Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. Pedido do
+Ricardo: o mesmo cliente, na mesma descarga, com paletes de tamanhos diferentes
+— botão "+ Adicionar palete" ao lado de "Recolha" no registo. Era a limitação
+que fez reverter o rateio Ida/Volta.
+
+- [x] Schema: `Paragem.paletes Json?` — `[{ tipoPaleteId, comprimentoMm,
+  larguraMm, nPaletes }]`, dimensões congeladas no registo. `null` = linha única
+  (todo o histórico, zero migração). Aditivo. **`db push` pendente — bloqueado
+  pelo classificador, o Ricardo corre `npm run db:push`**
+- [x] `lib/calc/types.ts` (`PaleteLinha`, `ParagemInput.paletes`, passthrough em
+  `ParagemCalc`); `perStop.ts` (`linhasPaleteEfetivas()` + `coefPaletesDimensao()`
+  — coeficiente = Σ nPaletesᵢ/capacidade(dimᵢ); meias usam a cap. da 1.ª linha;
+  1 linha == campos escalares, provado por teste); `perRoute.ts` (`totalPaletes`
+  + `coeficienteReal` por linhas); `cargaRota.ts` (`linhasCargaParagem()`)
+- [x] `lib/validacao.ts` (`paragemSchema.paletes` + superRefine); `rotas-service.ts`
+  (`resolverPaleteDimensoesMuitas` + passthrough); `POST`/`PATCH /api/paragens`
+  (resolve dims por linha, grava `paletes` + escalares agregados; PATCH aceita
+  `[]` p/ voltar a linha única)
+- [x] UI: `RegistoForm.tsx` + `ParagemEditor.tsx` (modo paletes) — 1.ª linha nos
+  campos de sempre, botão "+ Adicionar palete" + linhas extra com "✕ remover";
+  avisos de sobreocupação iteram as linhas. `registo/page.tsx` +
+  `rotas/[idRota]/page.tsx` + `historico/page.tsx` passam `paletes`
+- [x] Só envia `paletes` quando há > 1 linha — 1 linha = payload de sempre, zero
+  mudança de comportamento
+- [x] +9 testes (perStop/perRoute/cargaRota), 191 verdes, `tsc`/`next build` limpos
+- [ ] **Pendente (Ricardo)**: `npm run db:push`; depois E2E contra produção +
+  `git push`; porte manual p/ app Android Motorista + `.apk` novo
+- [ ] Orçamentos ficam com 1 linha de palete (fora de âmbito, decisão do Ricardo)
+
 ## ✅ DECIDIDO — modelo de rateio: MANTER o atual "por paletes / espaço" (2026-08-30)
 
 O cliente decidiu **manter o modelo atual**: faturação por paletes/espaço

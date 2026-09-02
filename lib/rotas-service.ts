@@ -6,7 +6,13 @@ import {
   snapshotDeEntidades,
   type BaseSnapshot,
 } from "@/lib/snapshot-service";
-import type { ParagemInput, ParagemSnapshot, RateioManualItem, RotaCalc } from "@/lib/calc/types";
+import type {
+  PaleteLinha,
+  ParagemInput,
+  ParagemSnapshot,
+  RateioManualItem,
+  RotaCalc,
+} from "@/lib/calc/types";
 import type { Paragem, Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
 
 /** Paragem com as relações necessárias para resolver o snapshot efetivo. */
@@ -36,6 +42,33 @@ export async function resolverPaleteDimensoes(
   const tipo = await prisma.tipoPalete.findUnique({ where: { id: tipoPaleteId } });
   if (!tipo) return { paleteComprimentoMm: null, paleteLarguraMm: null };
   return { paleteComprimentoMm: tipo.comprimentoMm, paleteLarguraMm: tipo.larguraMm };
+}
+
+/**
+ * Resolve várias linhas de palete (tamanhos diferentes na mesma paragem),
+ * congelando as dimensões de cada `tipoPaleteId` — ver `Paragem.paletes`.
+ * Linhas com `tipoPaleteId` desconhecido ou `nPaletes <= 0` são descartadas.
+ * Devolve `null` quando não há linhas válidas (a paragem fica de linha única).
+ */
+export async function resolverPaleteDimensoesMuitas(
+  linhas: { tipoPaleteId: number; nPaletes: number }[] | undefined,
+): Promise<PaleteLinha[] | null> {
+  if (!linhas || linhas.length === 0) return null;
+  const ids = Array.from(new Set(linhas.map((l) => l.tipoPaleteId)));
+  const tipos = await prisma.tipoPalete.findMany({ where: { id: { in: ids } } });
+  const porId = new Map(tipos.map((t) => [t.id, t]));
+  const resolvidas: PaleteLinha[] = [];
+  for (const l of linhas) {
+    const t = porId.get(l.tipoPaleteId);
+    if (!t || !(l.nPaletes > 0)) continue;
+    resolvidas.push({
+      tipoPaleteId: t.id,
+      comprimentoMm: t.comprimentoMm,
+      larguraMm: t.larguraMm,
+      nPaletes: l.nPaletes,
+    });
+  }
+  return resolvidas.length > 0 ? resolvidas : null;
 }
 
 export interface FiltrosRota {
@@ -75,6 +108,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     tipoPaleteId: p.tipoPaleteId,
     paleteComprimentoMm: p.paleteComprimentoMm,
     paleteLarguraMm: p.paleteLarguraMm,
+    paletes: Array.isArray(p.paletes) ? (p.paletes as unknown as PaleteLinha[]) : null,
     pesoAproximado: p.pesoAproximado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
