@@ -83,17 +83,22 @@ export interface VeiculoForm {
 // cálculo usa os km anuais do motorista que conduz).
 export const REF_KM_ANUAIS = 95000;
 
-/** Custos financeiros — sempre mostrados (Ligeiro e Pesado). */
+/** Custos anuais simples — sempre mostrados (Ligeiro e Pesado). */
 export const CAMPOS_CUSTO_COMUM: [keyof VeiculoForm, string][] = [
-  ["valorAquisicao", "Valor de aquisição (€)"],
-  ["valorResidual", "Valor residual (€)"],
-  ["vidaUtilAnos", "Vida útil (anos)"],
   ["iucAnual", "IUC anual (€)"],
-  ["taxaJuros", "Taxa de juros (fração)"],
   ["seguroAnual", "Seguro anual (€)"],
   ["reparacoesAnuais", "Reparações anuais (€)"],
   ["revisaoAnual", "Revisão anual (€)"],
   ["inspecaoAnual", "Inspeção anual (€)"],
+];
+
+/** Depreciação/amortização — só faz sentido para um camião (valor de aquisição
+ * alto, vida útil plurianual); para um ligeiro não se pede esta contabilidade. */
+export const CAMPOS_DEPRECIACAO: [keyof VeiculoForm, string][] = [
+  ["valorAquisicao", "Valor de aquisição (€)"],
+  ["valorResidual", "Valor residual (€)"],
+  ["vidaUtilAnos", "Vida útil (anos)"],
+  ["taxaJuros", "Taxa de juros (fração)"],
 ];
 
 /** Capacidade de carga — só faz sentido para Pesado. */
@@ -179,4 +184,33 @@ export function updConsumo(
     ...pr,
     consumo: pr.consumo.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)),
   }));
+}
+
+/** Label legível por campo do formulário — usado para traduzir os erros do Zod
+ * (ver `formatarErrosVeiculo`) em vez de mostrar só "Dados inválidos.". */
+const LABELS_CAMPO: Record<string, string> = Object.fromEntries([
+  ["nome", "Nome"],
+  ["matricula", "Matrícula"],
+  ["dataLimiteInspecao", "Data limite de inspeção"],
+  ...CAMPOS_CUSTO_COMUM,
+  ...CAMPOS_DEPRECIACAO,
+  ...CAMPOS_CAPACIDADE,
+]);
+
+/**
+ * Traduz `parsed.error.flatten()` (zod, devolvido pela API em `detalhes`) numa
+ * frase legível ("Vida útil (anos): Deve ser > 0"). Sem isto, um único campo
+ * inválido rejeita o payload inteiro e a única mensagem visível era "Dados
+ * inválidos." — sem dizer qual campo, o que já causou confusão (ver
+ * tasks/lessons.md, 2026-09-05).
+ */
+export function formatarErrosVeiculo(
+  detalhes: { fieldErrors?: Record<string, string[] | undefined> } | undefined,
+): string | null {
+  const fieldErrors = detalhes?.fieldErrors;
+  if (!fieldErrors) return null;
+  const partes = Object.entries(fieldErrors)
+    .filter((e): e is [string, string[]] => !!e[1] && e[1].length > 0)
+    .map(([campo, msgs]) => `${LABELS_CAMPO[campo] ?? campo}: ${msgs[0]}`);
+  return partes.length > 0 ? partes.join(" · ") : null;
 }

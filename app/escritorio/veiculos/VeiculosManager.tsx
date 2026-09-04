@@ -8,6 +8,7 @@ import { fmtEuro, fmtNum, fmtNum2 } from "@/lib/format";
 import {
   REF_KM_ANUAIS,
   custoVeiculoKm,
+  formatarErrosVeiculo,
   veiculoParaForm,
   type ConsumoForm,
   type PneuForm,
@@ -107,11 +108,13 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes, 
                 <p className="text-sm text-gray-500">
                   {v.matricula || "sem matrícula"} · {v.nParagens} paragem(ns)
                 </p>
-                <p className="mt-2 text-sm">
-                  Custo veículo / km:{" "}
-                  <span className="font-bold">{fmtNum2(custoVeiculoKm(veiculoParaForm(v)))} €</span>{" "}
-                  <span className="text-xs text-gray-400">(ref. {REF_KM_ANUAIS.toLocaleString("pt-PT")} km/ano)</span>
-                </p>
+                {v.categoria === "PESADO" && (
+                  <p className="mt-2 text-sm">
+                    Custo veículo / km:{" "}
+                    <span className="font-bold">{fmtNum2(custoVeiculoKm(veiculoParaForm(v)))} €</span>{" "}
+                    <span className="text-xs text-gray-400">(ref. {REF_KM_ANUAIS.toLocaleString("pt-PT")} km/ano)</span>
+                  </p>
+                )}
                 <p className="mt-2 border-t border-gray-100 pt-2 text-xs text-gray-500">
                   {v.manutencoes.length === 0
                     ? "Sem manutenções registadas"
@@ -169,7 +172,7 @@ function NovoVeiculoModal({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setErro(data.erro || "Erro ao guardar.");
+        setErro(formatarErrosVeiculo(data.detalhes) ?? data.erro ?? "Erro ao guardar.");
         setEstado("idle");
         return;
       }

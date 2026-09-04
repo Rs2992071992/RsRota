@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { custoVeiculoKm, type VeiculoForm } from "@/lib/veiculo-form";
+import { custoVeiculoKm, formatarErrosVeiculo, type VeiculoForm } from "@/lib/veiculo-form";
 import { fmtNum2 } from "@/lib/format";
 import VeiculoCamposForm from "@/components/VeiculoCamposForm";
 import ManutencoesModal, { type ManutencaoBD } from "../ManutencoesModal";
+import PedidoManutencaoModal from "../PedidoManutencaoModal";
 
 export default function VeiculoDetalheEditor({
   veiculoId,
@@ -25,6 +26,7 @@ export default function VeiculoDetalheEditor({
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
   const [erro, setErro] = useState("");
   const [manutencoesAbertas, setManutencoesAbertas] = useState(false);
+  const [pedidoAberto, setPedidoAberto] = useState(false);
 
   const custoKm = useMemo(() => custoVeiculoKm(f), [f]);
 
@@ -44,7 +46,7 @@ export default function VeiculoDetalheEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setErro(data.erro || "Erro ao guardar.");
+        setErro(formatarErrosVeiculo(data.detalhes) ?? data.erro ?? "Erro ao guardar.");
         setEstado("idle");
         return;
       }
@@ -77,12 +79,21 @@ export default function VeiculoDetalheEditor({
   return (
     <div className="card">
       <div className="mb-4 flex items-center justify-between">
-        <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
-          Custo veículo / km: <span className="font-bold">{fmtNum2(custoKm)} €</span>
+        {f.categoria === "PESADO" ? (
+          <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
+            Custo veículo / km: <span className="font-bold">{fmtNum2(custoKm)} €</span>
+          </div>
+        ) : (
+          <div />
+        )}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setPedidoAberto(true)} className="btn-secondary text-sm">
+            + Pedido de manutenção
+          </button>
+          <button onClick={() => setManutencoesAbertas(true)} className="btn-secondary text-sm">
+            Manutenções
+          </button>
         </div>
-        <button onClick={() => setManutencoesAbertas(true)} className="btn-secondary text-sm">
-          Manutenções
-        </button>
       </div>
 
       {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
@@ -105,6 +116,15 @@ export default function VeiculoDetalheEditor({
           manutencoesIniciais={manutencoesIniciais}
           onClose={() => setManutencoesAbertas(false)}
           onChanged={() => router.refresh()}
+        />
+      )}
+
+      {pedidoAberto && (
+        <PedidoManutencaoModal
+          veiculoId={veiculoId}
+          veiculoNome={veiculoNome}
+          onClose={() => setPedidoAberto(false)}
+          onCreated={() => router.refresh()}
         />
       )}
     </div>

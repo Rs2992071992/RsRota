@@ -1,7 +1,14 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { CAMPOS_CAPACIDADE, CAMPOS_CUSTO_COMUM, updConsumo, updPneu, type VeiculoForm } from "@/lib/veiculo-form";
+import {
+  CAMPOS_CAPACIDADE,
+  CAMPOS_CUSTO_COMUM,
+  CAMPOS_DEPRECIACAO,
+  updConsumo,
+  updPneu,
+  type VeiculoForm,
+} from "@/lib/veiculo-form";
 
 /**
  * Campos de custo + tabela de pneus de um veículo. Partilhado entre o modal
@@ -64,6 +71,18 @@ export default function VeiculoCamposForm({
         ))}
         {pesado && (
           <>
+            {CAMPOS_DEPRECIACAO.map(([k, label]) => (
+              <div key={k}>
+                <label className="label">{label}</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="input"
+                  value={f[k] as number}
+                  onChange={(e) => setNum(k, e.target.value)}
+                />
+              </div>
+            ))}
             {CAMPOS_CAPACIDADE.map(([k, label]) => (
               <div key={k}>
                 <label className="label">{label}</label>
