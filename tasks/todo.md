@@ -25,7 +25,15 @@ segmentação de hoje).
 - [x] Verificado contra 2 rotas reais (RIC-Plas-Sonae, RIC-Percam): peso
   aproximado/nPaletes/consumoL100 todos plausíveis; vazio de RIC-Plas-Sonae
   (248,57 €) reparte 76,78 €/171,79 € — soma certa
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] **Extra (mesmo dia)**: Ricardo notou que as portagens extra
+  (`portagensExtra`, registadas por paragem) não tinham linha própria na
+  "Decomposição do custo da rota" — só as portagens de tabela apareciam.
+  Adicionada linha "— dos quais, portagens extra" logo a seguir a "Custos das
+  paragens" (é um subconjunto, não uma parcela nova — daí o "dos quais", para
+  não parecer que o total deixa de bater certo). Verificado contra 5 rotas
+  reais com valor > 0 (RIC-Tec-coop faial 25 €, RIC-Blo-coop Valpaços 62,90 €,
+  etc.)
+- [x] Commit + push (Vercel builda automaticamente)
 
 ## ☑️ Rateio segmentado por troço Ida/Volta — retoma a variante revertida em agosto (2026-09-04)
 

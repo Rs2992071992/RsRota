@@ -218,6 +218,10 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         <h2 className="mb-3 font-semibold">Decomposição do custo da rota</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
           <Item label="Custos das paragens" valor={rota.somaCustoParagens} />
+          <Item
+            label="— dos quais, portagens extra"
+            valor={rota.paragens.reduce((a, p) => a + p.portagensExtra, 0)}
+          />
           <Item label="Noites" valor={rota.somaNoites} />
           <Item label="Alimentação" valor={rota.somaAlimentacao} />
           <Item label="Horas extra (valorizadas)" valor={rota.somaHorasExtraValor} />
