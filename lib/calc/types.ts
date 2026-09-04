@@ -116,6 +116,13 @@ export interface ParagemSnapshot {
   caixaReboqueLarguraMm?: number | null;
   /** Multiplicador de segurança do veículo sobre a capacidade geométrica. Default 1. */
   fatorOcupacaoPalete?: number;
+  /**
+   * Tabela de consumo (L/100km por escalão de carga) do veículo usado nesta
+   * paragem, congelada no registo — mesmo princípio das capacidades acima.
+   * Ausente (snapshots antigos, ou veículo sem tabela própria) -> `efetivos()`
+   * cai na tabela global do contexto atual (ver lib/calc/perStop.ts).
+   */
+  tabelaConsumo?: EscalaoConsumo[];
 }
 
 /**

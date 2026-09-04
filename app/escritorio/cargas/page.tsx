@@ -14,7 +14,7 @@ export default async function CargasPage() {
       },
     }),
     prisma.veiculo.findMany({
-      where: { ativo: true },
+      where: { ativo: true, categoria: "PESADO" },
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true, caixaComprimentoMm: true, caixaLarguraMm: true },
     }),

@@ -19,6 +19,7 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
       where: { id },
       include: {
         pneus: { orderBy: { ordem: "asc" } },
+        consumoTabela: { orderBy: { cargaKg: "asc" } },
         manutencoes: { orderBy: { data: "desc" } },
       },
     }),
@@ -27,7 +28,10 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
   ]);
   if (!veiculo) notFound();
 
-  const custoKm = custoVeiculoKm(veiculoParaForm(veiculo));
+  // veiculoParaForm espera `consumo` (nome do campo no formulário) — o Prisma
+  // devolve a relação como `consumoTabela`.
+  const veiculoForm = veiculoParaForm({ ...veiculo, categoria: veiculo.categoria as "LIGEIRO" | "PESADO", consumo: veiculo.consumoTabela });
+  const custoKm = custoVeiculoKm(veiculoForm);
 
   return (
     <div className="space-y-5">
@@ -61,7 +65,7 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
 
       <VeiculoDetalheEditor
         veiculoId={veiculo.id}
-        inicial={veiculoParaForm(veiculo)}
+        inicial={veiculoForm}
         veiculoNome={veiculo.nome}
         manutencoesIniciais={veiculo.manutencoes.map((m) => ({
           id: m.id,

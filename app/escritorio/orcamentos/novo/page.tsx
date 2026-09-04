@@ -14,7 +14,7 @@ export default async function NovoOrcamentoPage(
   const [clientes, veiculos, motoristas, portagens, tiposPalete] = await Promise.all([
     listarClientesParaOrcamento(),
     prisma.veiculo.findMany({
-      where: { ativo: true },
+      where: { ativo: true, categoria: "PESADO" },
       orderBy: { nome: "asc" },
       select: { id: true, nome: true },
     }),

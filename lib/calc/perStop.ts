@@ -68,6 +68,7 @@ export function efetivos(p: ParagemInput, ctx: ContextoCalculo): ParagemSnapshot
     valorNoite: ctx.params.valorNoite,
     valorHoraExtra: ctx.params.valorHoraExtra,
     margemMinima: ctx.params.margemMinima,
+    tabelaConsumo: ctx.tabelaConsumo,
   };
   return p.snapshot ? { ...defaults, ...p.snapshot } : defaults;
 }
@@ -236,7 +237,7 @@ function coefPaletesDimensao(
  * Trata peso 0 e dados em falta de forma graciosa (sem divisão por zero).
  */
 export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemCalc {
-  const { tabelaConsumo, tabelaPortagens } = ctx;
+  const { tabelaPortagens } = ctx;
   const eff = efetivos(p, ctx);
 
   const kmFeitos = (p.kmFinal || 0) - (p.kmInicial || 0);
@@ -278,7 +279,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // rateio é a ocupação em espaço/base, não o peso — mas o consumo passa a usar
   // o peso aproximado (2026-08-28), quando preenchido, tal como a carga normal.
   // Sem peso aproximado -> trata como vazio (0), como sempre foi.
-  const consumoL100 = consumoPorCarga(ehPalete ? p.pesoAproximado || 0 : pesoParaConsumo, tabelaConsumo);
+  const consumoL100 = consumoPorCarga(ehPalete ? p.pesoAproximado || 0 : pesoParaConsumo, eff.tabelaConsumo ?? []);
   const litrosGastos = (consumoL100 / 100) * kmFeitos;
   const precoCombUsado =
     p.precoCombRefOverride != null ? p.precoCombRefOverride : eff.precoCombRef;

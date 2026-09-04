@@ -19,7 +19,7 @@ export default async function OrcamentoDetalhePage(props: { params: Promise<{ id
     prisma.devis.findUnique({ where: { id } }),
     listarClientesParaOrcamento(),
     prisma.veiculo.findMany({
-      where: { ativo: true },
+      where: { ativo: true, categoria: "PESADO" },
       orderBy: { nome: "asc" },
       select: { id: true, nome: true },
     }),

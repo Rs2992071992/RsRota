@@ -2,6 +2,32 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Categorias de veículo (Ligeiro/Pesado) + consumo por veículo + fix data de inspeção (2026-09-04)
+
+Plano completo: `C:\Users\Ricardo\.claude\plans\quizzical-squishing-ocean.md`. Pedido
+do Ricardo: ligeiros só precisam de nome/matrícula/data de inspeção/manutenções/custo
+(sem capacidades de carga); pesados passam a poder ter uma tabela de consumo
+(L/100km por carga) própria, com fallback para a tabela global de Parâmetros.
+O formulário único obrigar capacidades > 0 explicava também o bug "a data de
+inspeção não fica guardada" (payload todo rejeitado ao zerar campos irrelevantes).
+
+- [x] `prisma/schema.prisma`: `Veiculo.categoria` (LIGEIRO|PESADO, default PESADO)
+      + `TabelaConsumo.veiculoId` opcional (`@@unique([veiculoId, cargaKg])`) — `db push`
+      feito na BD real (Neon), sem perda de dados (a unique antiga em `cargaKg`
+      já garantia que não havia duplicados)
+- [x] Motor: `ParagemSnapshot.tabelaConsumo?` congelado via `calcularSnapshot`/
+      `snapshot-service.ts` (mesmo padrão de custo/km e capacidades); `perStop.ts`
+      usa `eff.tabelaConsumo` em vez de `ctx.tabelaConsumo` — orçamentos herdam de graça
+- [x] `lib/veiculo-form.ts` + `VeiculoCamposForm.tsx`: seletor de categoria; Ligeiro
+      esconde capacidades/caixa/reboque/consumo; Pesado ganha tabela de consumo editável
+- [x] `lib/validacao.ts` + API `veiculos` (POST/PATCH): `categoria` + `consumo[]`
+- [x] Excluir `categoria=LIGEIRO` dos seletores de veículo em registo/rotas/orçamentos/
+      cargas (não em histórico/avarias/gestão de frota)
+- [x] `tsc --noEmit`, `npm run build` e `npm test` (217 testes) verdes; `prisma db push`
+      aplicado na BD real
+- [ ] Teste manual (ligeiro grava data; pesado com/sem tabela própria dá custo certo)
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ☑️ "Continuar rota recente" (dropdown no próprio registo) não puxava o KM Inicial (2026-09-04)
 
 Pedido do Ricardo: "quando fazemos continuar rota actual, falta ao sistema

@@ -9,6 +9,7 @@ export default async function VeiculosPage() {
       orderBy: { criadoEm: "asc" },
       include: {
         pneus: { orderBy: { ordem: "asc" } },
+        consumoTabela: { orderBy: { cargaKg: "asc" } },
         manutencoes: { orderBy: { data: "desc" } },
         _count: { select: { paragens: true } },
       },
@@ -23,6 +24,7 @@ export default async function VeiculosPage() {
   const template = {
     nome: "",
     matricula: "",
+    categoria: "PESADO" as const,
     valorAquisicao: params?.valorAquisicao ?? 127000,
     valorResidual: params?.valorResidual ?? 88000,
     vidaUtilAnos: params?.vidaUtilAnos ?? 3,
@@ -43,6 +45,7 @@ export default async function VeiculosPage() {
     reboqueHabitualId: null,
     fatorOcupacaoPalete: 1,
     pneus: pneusGlobais.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
+    consumo: [],
   };
 
   const lista: VeiculoBD[] = veiculos.map((v) => ({
@@ -50,6 +53,7 @@ export default async function VeiculosPage() {
     nome: v.nome,
     matricula: v.matricula,
     ativo: v.ativo,
+    categoria: v.categoria as "LIGEIRO" | "PESADO",
     valorAquisicao: v.valorAquisicao,
     valorResidual: v.valorResidual,
     vidaUtilAnos: v.vidaUtilAnos,
@@ -71,6 +75,7 @@ export default async function VeiculosPage() {
     fatorOcupacaoPalete: v.fatorOcupacaoPalete,
     nParagens: v._count.paragens,
     pneus: v.pneus.map((p) => ({ eixo: p.eixo, custo: p.custo, km: p.km })),
+    consumo: v.consumoTabela.map((c) => ({ cargaKg: c.cargaKg, consumoL100: c.consumoL100 })),
     manutencoes: v.manutencoes.map((m) => ({
       id: m.id,
       descricao: m.descricao,

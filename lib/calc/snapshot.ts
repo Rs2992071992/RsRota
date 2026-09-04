@@ -1,5 +1,5 @@
 import { derivarCustos } from "./params";
-import type { ParagemSnapshot, ParametrosCusto, PneuItem } from "./types";
+import type { EscalaoConsumo, ParagemSnapshot, ParametrosCusto, PneuItem } from "./types";
 
 /** Campos salariais próprios de um motorista (subconjunto de ParametrosCusto). */
 export type MotoristaParams = Pick<
@@ -63,6 +63,14 @@ export function calcularSnapshot(
   veiculo: VeiculoParams | null,
   pneus: PneuItem[],
   caixa: VeiculoCaixa | null = null,
+  /**
+   * Tabela de consumo própria do veículo usado (já resolvida pelo chamador —
+   * ver lib/snapshot-service.ts::snapshotDeEntidades). Vazio (default,
+   * incl. chamadas antigas/testes sem este argumento) -> não entra no
+   * snapshot, para `efetivos()` cair no fallback do contexto atual em vez de
+   * congelar um array vazio.
+   */
+  tabelaConsumo: EscalaoConsumo[] = [],
 ): ParagemSnapshot {
   const merged: ParametrosCusto = {
     ...base,
@@ -90,5 +98,6 @@ export function calcularSnapshot(
     caixaReboqueComprimentoMm: caixa?.caixaReboqueComprimentoMm ?? null,
     caixaReboqueLarguraMm: caixa?.caixaReboqueLarguraMm ?? null,
     fatorOcupacaoPalete: caixa?.fatorOcupacaoPalete ?? 1,
+    ...(tabelaConsumo.length > 0 ? { tabelaConsumo } : {}),
   };
 }

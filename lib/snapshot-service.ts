@@ -5,12 +5,17 @@ import {
   type VeiculoCaixa,
   type VeiculoParams,
 } from "@/lib/calc/snapshot";
-import type { ParagemSnapshot, ParametrosCusto, PneuItem } from "@/lib/calc/types";
-import type { Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
+import type { EscalaoConsumo, ParagemSnapshot, ParametrosCusto, PneuItem } from "@/lib/calc/types";
+import type { Pneu, Reboque, TabelaConsumo, Utilizador, Veiculo } from "@prisma/client";
 
-type VeiculoComPneus = Veiculo & { pneus: Pneu[]; reboqueHabitual: Reboque | null };
+type VeiculoComPneus = Veiculo & {
+  pneus: Pneu[];
+  reboqueHabitual: Reboque | null;
+  consumoTabela: TabelaConsumo[];
+};
 
 const toPneuItem = (p: Pneu): PneuItem => ({ custo: p.custo, km: p.km });
+const toEscalaoConsumo = (c: TabelaConsumo): EscalaoConsumo => ({ cargaKg: c.cargaKg, consumoL100: c.consumoL100 });
 
 /** Extrai os 7 campos salariais de um motorista (ou null para usar os defaults). */
 function motoristaParams(u: Utilizador | null): MotoristaParams | null {
@@ -48,19 +53,25 @@ function veiculoParams(v: Veiculo | null): VeiculoParams | null {
   };
 }
 
-/** Parâmetros globais (singleton) + pneus-template para o fallback. */
+/** Parâmetros globais (singleton) + pneus-template e tabela de consumo globais (fallback). */
 export interface BaseSnapshot {
   base: ParametrosCusto;
   pneusGlobais: PneuItem[];
+  tabelaConsumoGlobal: EscalaoConsumo[];
 }
 
 export async function carregarBaseSnapshot(): Promise<BaseSnapshot> {
-  const [base, pneus] = await Promise.all([
+  const [base, pneus, consumo] = await Promise.all([
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
+    prisma.tabelaConsumo.findMany({ where: { veiculoId: null }, orderBy: { cargaKg: "asc" } }),
   ]);
   if (!base) throw new Error("Parâmetros não inicializados. Corra `npm run db:seed`.");
-  return { base: base as ParametrosCusto, pneusGlobais: pneus.map(toPneuItem) };
+  return {
+    base: base as ParametrosCusto,
+    pneusGlobais: pneus.map(toPneuItem),
+    tabelaConsumoGlobal: consumo.map(toEscalaoConsumo),
+  };
 }
 
 /**
@@ -81,12 +92,21 @@ function veiculoCaixa(v: VeiculoComPneus | null): VeiculoCaixa | null {
 
 /** Snapshot a partir das entidades já carregadas (motorista/veículo incluídos). */
 export function snapshotDeEntidades(
-  { base, pneusGlobais }: BaseSnapshot,
+  { base, pneusGlobais, tabelaConsumoGlobal }: BaseSnapshot,
   motorista: Utilizador | null,
   veiculo: VeiculoComPneus | null,
 ): ParagemSnapshot {
   const pneus = veiculo && veiculo.pneus.length > 0 ? veiculo.pneus.map(toPneuItem) : pneusGlobais;
-  return calcularSnapshot(base, motoristaParams(motorista), veiculoParams(veiculo), pneus, veiculoCaixa(veiculo));
+  const tabelaConsumo =
+    veiculo && veiculo.consumoTabela.length > 0 ? veiculo.consumoTabela.map(toEscalaoConsumo) : tabelaConsumoGlobal;
+  return calcularSnapshot(
+    base,
+    motoristaParams(motorista),
+    veiculoParams(veiculo),
+    pneus,
+    veiculoCaixa(veiculo),
+    tabelaConsumo,
+  );
 }
 
 /**
@@ -103,7 +123,11 @@ export async function snapshotParaRegisto(
     veiculoId
       ? prisma.veiculo.findUnique({
           where: { id: veiculoId },
-          include: { pneus: { orderBy: { ordem: "asc" } }, reboqueHabitual: true },
+          include: {
+            pneus: { orderBy: { ordem: "asc" } },
+            reboqueHabitual: true,
+            consumoTabela: { orderBy: { cargaKg: "asc" } },
+          },
         })
       : null,
   ]);

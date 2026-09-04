@@ -25,6 +25,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.veiculo.findMany({
+      where: { categoria: "PESADO" },
       orderBy: { nome: "asc" },
       select: { id: true, nome: true, matricula: true },
     }),

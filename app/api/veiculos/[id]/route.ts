@@ -21,7 +21,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       { status: 400 },
     );
   }
-  const { pneus, dataLimiteInspecao, inspecaoVerificada, ...dados } = parsed.data;
+  const { pneus, consumo, dataLimiteInspecao, inspecaoVerificada, ...dados } = parsed.data;
 
   const existe = await prisma.veiculo.findUnique({ where: { id } });
   if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
@@ -44,6 +44,10 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
     prisma.pneu.deleteMany({ where: { veiculoId: id } }),
     prisma.pneu.createMany({
       data: pneus.map((p, i) => ({ veiculoId: id, eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })),
+    }),
+    prisma.tabelaConsumo.deleteMany({ where: { veiculoId: id } }),
+    prisma.tabelaConsumo.createMany({
+      data: consumo.map((c) => ({ veiculoId: id, cargaKg: c.cargaKg, consumoL100: c.consumoL100 })),
     }),
   ]);
   return NextResponse.json({ ok: true });

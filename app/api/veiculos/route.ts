@@ -12,6 +12,7 @@ export async function GET() {
     orderBy: { criadoEm: "asc" },
     include: {
       pneus: { orderBy: { ordem: "asc" } },
+      consumoTabela: { orderBy: { cargaKg: "asc" } },
       _count: { select: { paragens: true } },
     },
   });
@@ -31,15 +32,16 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { pneus, dataLimiteInspecao, ...dados } = parsed.data;
+  const { pneus, consumo, dataLimiteInspecao, ...dados } = parsed.data;
 
   const veiculo = await prisma.veiculo.create({
     data: {
       ...dados,
       dataLimiteInspecao: dataLimiteInspecao ? new Date(dataLimiteInspecao) : null,
       pneus: { create: pneus.map((p, i) => ({ eixo: p.eixo, custo: p.custo, km: p.km, ordem: i + 1 })) },
+      consumoTabela: { create: consumo.map((c) => ({ cargaKg: c.cargaKg, consumoL100: c.consumoL100 })) },
     },
-    include: { pneus: { orderBy: { ordem: "asc" } } },
+    include: { pneus: { orderBy: { ordem: "asc" } }, consumoTabela: { orderBy: { cargaKg: "asc" } } },
   });
   return NextResponse.json({ ok: true, veiculo }, { status: 201 });
 }

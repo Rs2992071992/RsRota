@@ -13,19 +13,25 @@ import type {
   RateioManualItem,
   RotaCalc,
 } from "@/lib/calc/types";
-import type { Paragem, Pneu, Reboque, Utilizador, Veiculo } from "@prisma/client";
+import type { Paragem, Pneu, Reboque, TabelaConsumo, Utilizador, Veiculo } from "@prisma/client";
 
 /** Paragem com as relações necessárias para resolver o snapshot efetivo. */
 type ParagemComRelacoes = Paragem & {
   motorista: Utilizador | null;
-  veiculo: (Veiculo & { pneus: Pneu[]; reboqueHabitual: Reboque | null }) | null;
+  veiculo:
+    | (Veiculo & { pneus: Pneu[]; reboqueHabitual: Reboque | null; consumoTabela: TabelaConsumo[] })
+    | null;
 };
 
-/** Include reutilizável para carregar paragens com motorista + veículo (+ pneus + reboque habitual). */
+/** Include reutilizável para carregar paragens com motorista + veículo (+ pneus + reboque habitual + consumo). */
 export const includeRelacoes = {
   motorista: true,
   veiculo: {
-    include: { pneus: { orderBy: { ordem: "asc" as const } }, reboqueHabitual: true },
+    include: {
+      pneus: { orderBy: { ordem: "asc" as const } },
+      reboqueHabitual: true,
+      consumoTabela: { orderBy: { cargaKg: "asc" as const } },
+    },
   },
 };
 

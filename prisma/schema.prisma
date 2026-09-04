@@ -92,6 +92,10 @@ model Veiculo {
   nome      String
   matricula String?
   ativo     Boolean @default(true)
+  // LIGEIRO = só ficha de frota (custo/manutenção/inspeção, sem capacidade de
+  // carga nem consumo próprio — nunca aparece nos seletores de veículo de
+  // rota/paragem/orçamento/carga). PESADO = camião, comportamento de sempre.
+  categoria String  @default("PESADO") // LIGEIRO | PESADO
 
   valorAquisicao          Float @default(127000)
   valorResidual           Float @default(88000)
@@ -144,6 +148,10 @@ model Veiculo {
   manutencoes   Manutencao[]
   avarias       Avaria[]
   carregamentos Carregamento[]
+  // Tabela de consumo (L/100km por escalão de carga) própria deste veículo —
+  // opcional; sem linhas, o cálculo cai na tabela global (TabelaConsumo com
+  // veiculoId null, ver abaixo).
+  consumoTabela TabelaConsumo[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -200,9 +208,17 @@ model TabelaPortagem {
 
 /// Curva de consumo por carga (lookup aproximado por escalão inferior).
 model TabelaConsumo {
-  id          Int   @id @default(autoincrement())
-  cargaKg     Float @unique
+  id        Int      @id @default(autoincrement())
+  // null = tabela global (Parâmetros, fallback); preenchido = tabela própria
+  // de um veículo (ver Veiculo.consumoTabela) — usada em vez da global
+  // sempre que esse veículo tiver pelo menos uma linha.
+  veiculoId Int?
+  veiculo   Veiculo? @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  cargaKg     Float
   consumoL100 Float // litros / 100 km
+
+  @@unique([veiculoId, cargaKg])
 }
 
 /// Registo Diário (§3.1) — cada linha é uma paragem.

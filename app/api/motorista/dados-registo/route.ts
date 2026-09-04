@@ -26,7 +26,7 @@ export async function GET() {
         take: 15,
       }),
       prisma.veiculo.findMany({
-        where: { ativo: true },
+        where: { ativo: true, categoria: "PESADO" },
         orderBy: { nome: "asc" },
         select: {
           id: true,

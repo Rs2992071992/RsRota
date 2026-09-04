@@ -67,12 +67,11 @@ async function main() {
     { cargaKg: 24000, consumoL100: 38 },
     { cargaKg: 27000, consumoL100: 45 },
   ];
-  for (const c of consumo) {
-    await prisma.tabelaConsumo.upsert({
-      where: { cargaKg: c.cargaKg },
-      update: { consumoL100: c.consumoL100 },
-      create: c,
-    });
+  // veiculoId (null = tabela global) é opcional na unique compound — Prisma não
+  // tipa upsert por where composto com null, por isso usa-se o mesmo padrão dos
+  // pneus acima (só semeia se a tabela global ainda estiver vazia).
+  if ((await prisma.tabelaConsumo.count({ where: { veiculoId: null } })) === 0) {
+    await prisma.tabelaConsumo.createMany({ data: consumo });
   }
 
   // --- Utilizadores ---

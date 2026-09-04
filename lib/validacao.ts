@@ -150,6 +150,9 @@ export const veiculoSchema = z.object({
   nome: z.string().trim().min(1, "Nome obrigatório"),
   matricula: z.string().trim().nullable().optional(),
   ativo: z.boolean().optional(),
+  // LIGEIRO = só ficha de frota (sem capacidade/consumo — ver components/VeiculoCamposForm.tsx);
+  // PESADO = camião, comportamento de sempre.
+  categoria: z.enum(["LIGEIRO", "PESADO"]).default("PESADO"),
   valorAquisicao: n,
   valorResidual: n,
   vidaUtilAnos: n.positive("Deve ser > 0"),
@@ -178,6 +181,9 @@ export const veiculoSchema = z.object({
   dataLimiteInspecao: z.string().trim().nullable().optional(),
   inspecaoVerificada: z.boolean().optional(),
   pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
+  // Tabela de consumo própria (L/100km por escalão de carga) — só PESADO;
+  // vazia = usa a tabela global de Parâmetros (ver lib/snapshot-service.ts).
+  consumo: z.array(z.object({ cargaKg: n, consumoL100: n })).default([]),
 });
 
 export type VeiculoForm = z.infer<typeof veiculoSchema>;

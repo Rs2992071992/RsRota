@@ -9,6 +9,7 @@ import {
   REF_KM_ANUAIS,
   custoVeiculoKm,
   veiculoParaForm,
+  type ConsumoForm,
   type PneuForm,
   type VeiculoForm,
 } from "@/lib/veiculo-form";
@@ -20,6 +21,7 @@ export interface VeiculoBD {
   nome: string;
   matricula: string | null;
   ativo: boolean;
+  categoria: "LIGEIRO" | "PESADO";
   valorAquisicao: number;
   valorResidual: number;
   vidaUtilAnos: number;
@@ -41,6 +43,7 @@ export interface VeiculoBD {
   fatorOcupacaoPalete: number;
   nParagens: number;
   pneus: PneuForm[];
+  consumo: ConsumoForm[];
   manutencoes: ManutencaoBD[];
 }
 
@@ -94,7 +97,12 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes, 
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{v.nome}</span>
-                  {!v.ativo && <span className="text-xs text-gray-400">inativo</span>}
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                      {v.categoria === "LIGEIRO" ? "Ligeiro" : "Pesado"}
+                    </span>
+                    {!v.ativo && <span className="text-xs text-gray-400">inativo</span>}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-500">
                   {v.matricula || "sem matrícula"} · {v.nParagens} paragem(ns)

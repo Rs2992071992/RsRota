@@ -6,12 +6,17 @@ import { derivarCustos } from "@/lib/calc/params";
 import type { ParametrosCusto, PneuItem } from "@/lib/calc/types";
 
 export type PneuForm = { eixo: string; custo: number; km: number };
+export type ConsumoForm = { cargaKg: number; consumoL100: number };
 
 /** Forma mínima de onde se consegue derivar um VeiculoForm (estrutural — aceita
  * o VeiculoBD da lista, o template de defaults, ou o veículo cru vindo do Prisma). */
 export interface VeiculoLike {
   nome: string;
   matricula: string | null;
+  /** LIGEIRO = só ficha de frota (nome/matrícula/inspeção/manutenção/custo, sem
+   * capacidade de carga nem consumo próprio). PESADO = camião, como sempre.
+   * Ausente (templates antigos) -> assume-se PESADO. */
+  categoria?: "LIGEIRO" | "PESADO";
   valorAquisicao: number;
   valorResidual: number;
   vidaUtilAnos: number;
@@ -34,11 +39,15 @@ export interface VeiculoLike {
   dataLimiteInspecao?: Date | string | null;
   inspecaoVerificada?: boolean;
   pneus: PneuForm[];
+  /** Tabela de consumo própria (L/100km por escalão de carga) — só relevante
+   * para PESADO; vazia = usa a tabela global de Parâmetros. */
+  consumo?: ConsumoForm[];
 }
 
 export interface VeiculoForm {
   nome: string;
   matricula: string;
+  categoria: "LIGEIRO" | "PESADO";
   valorAquisicao: number;
   valorResidual: number;
   vidaUtilAnos: number;
@@ -65,13 +74,17 @@ export interface VeiculoForm {
   dataLimiteInspecao: string | null;
   inspecaoVerificada: boolean;
   pneus: PneuForm[];
+  /** Tabela de consumo própria (L/100km por escalão de carga, só PESADO) —
+   * vazia = usa a tabela global de Parâmetros. */
+  consumo: ConsumoForm[];
 }
 
 // km anuais de referência só para a pré-visualização do custo/km (o valor real do
 // cálculo usa os km anuais do motorista que conduz).
 export const REF_KM_ANUAIS = 95000;
 
-export const CAMPOS_CUSTO: [keyof VeiculoForm, string][] = [
+/** Custos financeiros — sempre mostrados (Ligeiro e Pesado). */
+export const CAMPOS_CUSTO_COMUM: [keyof VeiculoForm, string][] = [
   ["valorAquisicao", "Valor de aquisição (€)"],
   ["valorResidual", "Valor residual (€)"],
   ["vidaUtilAnos", "Vida útil (anos)"],
@@ -81,6 +94,10 @@ export const CAMPOS_CUSTO: [keyof VeiculoForm, string][] = [
   ["reparacoesAnuais", "Reparações anuais (€)"],
   ["revisaoAnual", "Revisão anual (€)"],
   ["inspecaoAnual", "Inspeção anual (€)"],
+];
+
+/** Capacidade de carga — só faz sentido para Pesado. */
+export const CAMPOS_CAPACIDADE: [keyof VeiculoForm, string][] = [
   ["capacidadeCamiao", "Capacidade camião (kg)"],
   ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
   ["capacidadePaleteA", "Capacidade paletes 120x80, camião+reboque (nº)"],
@@ -93,6 +110,7 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
   return {
     nome: v.nome,
     matricula: v.matricula ?? "",
+    categoria: v.categoria ?? "PESADO",
     valorAquisicao: v.valorAquisicao,
     valorResidual: v.valorResidual,
     vidaUtilAnos: v.vidaUtilAnos,
@@ -117,6 +135,7 @@ export function veiculoParaForm(v: VeiculoLike): VeiculoForm {
       : null,
     inspecaoVerificada: v.inspecaoVerificada ?? false,
     pneus: v.pneus.map((p) => ({ ...p })),
+    consumo: (v.consumo ?? []).map((c) => ({ ...c })),
   };
 }
 
@@ -147,5 +166,17 @@ export function updPneu(
   setF((pr) => ({
     ...pr,
     pneus: pr.pneus.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)),
+  }));
+}
+
+export function updConsumo(
+  setF: Dispatch<SetStateAction<VeiculoForm>>,
+  i: number,
+  campo: keyof ConsumoForm,
+  valor: number,
+) {
+  setF((pr) => ({
+    ...pr,
+    consumo: pr.consumo.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)),
   }));
 }
