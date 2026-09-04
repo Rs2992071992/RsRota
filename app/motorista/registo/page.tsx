@@ -123,12 +123,11 @@ export default async function RegistoPage(
         portagensExtra: p.portagensExtra,
         noitesFora: p.noitesFora,
         alimentacao: p.alimentacao,
-        linhasPalete: linhasCargaParagem(p).map((l) => ({
-          comprimentoMm: l.comprimentoMm,
-          larguraMm: l.larguraMm,
-          nPaletes: l.nPaletes,
-        })),
-        recolha: p.recolha,
+        ...(() => {
+          const { entregues, recolhidas } = linhasCargaParagem(p);
+          const semTipo = (ls: typeof entregues) => ls.map((l) => ({ comprimentoMm: l.comprimentoMm, larguraMm: l.larguraMm, nPaletes: l.nPaletes }));
+          return { entregues: semTipo(entregues), recolhidas: semTipo(recolhidas) };
+        })(),
         tipoVeiculo: p.tipoVeiculo,
         kmInicial: p.kmInicial,
       }))}

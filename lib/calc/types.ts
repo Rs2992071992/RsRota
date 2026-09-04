@@ -129,6 +129,14 @@ export interface PaleteLinha {
   comprimentoMm: number;
   larguraMm: number;
   nPaletes: number;
+  /**
+   * Sentido desta linha numa paragem "Descarga + Recolha": "ENTREGA" =
+   * descarregada no cliente (vinha a bordo), "RECOLHA" = carregada no cliente
+   * (entra aqui). Ausente = "ENTREGA" (ou "RECOLHA" se a paragem inteira for
+   * `recolha` — ver linhasCargaParagem). Só entra no aviso de espaço; o
+   * coeficiente/rateio soma todas as linhas na mesma ("paga pelo total").
+   */
+  sentido?: "ENTREGA" | "RECOLHA";
 }
 
 /** Dados de uma paragem necessários ao cálculo. */

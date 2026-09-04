@@ -38,8 +38,14 @@ export interface ParagemEditavel {
   // Palete desta paragem (2026-08-28 em diante).
   tipoPaleteId: number | null;
   // Várias linhas de palete na mesma paragem (2026-09+) — tamanhos diferentes.
-  // null = paragem de linha única (usa tipoPaleteId/nPaletes acima).
-  paletes: { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number }[] | null;
+  // null = paragem de linha única (usa tipoPaleteId/nPaletes acima). `sentido`
+  // (Descarga+Recolha, 2026-09+) distingue descarregadas (ENTREGA) de
+  // carregadas (RECOLHA); ausente = segue o `recolha` da paragem.
+  paletes:
+    | { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number; sentido?: "ENTREGA" | "RECOLHA" }[]
+    | null;
+  /** Recolha (ou Descarga+Recolha, se `paletes` tiver os dois sentidos). */
+  recolha: boolean;
   pesoAproximado: number | null;
   zonaPortagem: string;
   portagensExtra: number;
@@ -88,14 +94,35 @@ export default function ParagemEditor({
   onClose,
 }: Props) {
   const router = useRouter();
-  // Linhas de palete (2026-09+): a 1.ª vive em f.tipoPaleteId/f.nPaletes; as
-  // restantes em `linhasExtra`. Para paragens já multi-linha, arranca do array.
-  const linha0 = paragem.paletes?.[0] ?? null;
+  // Sentido de cada linha existente: explícito (`sentido`) ou, na falta dele,
+  // o da paragem inteira (`recolha`). Mista = tem linhas dos 2 sentidos.
+  const sentidoLinha = (l: { sentido?: "ENTREGA" | "RECOLHA" }) => l.sentido ?? (paragem.recolha ? "RECOLHA" : "ENTREGA");
+  const todasLinhas = paragem.paletes ?? [];
+  const eraMista =
+    todasLinhas.some((l) => sentidoLinha(l) === "ENTREGA") && todasLinhas.some((l) => sentidoLinha(l) === "RECOLHA");
+  const [tipoParagem, setTipoParagem] = useState<"DESCARGA" | "RECOLHA" | "MISTA">(
+    eraMista ? "MISTA" : paragem.recolha ? "RECOLHA" : "DESCARGA",
+  );
+  // Linhas descarregadas (DESCARGA/MISTA) ou, em RECOLHA pura, o único bloco
+  // (o que foi apanhado): a 1.ª vive em f.tipoPaleteId/f.nPaletes, as
+  // restantes em `linhasExtra`.
+  const linhasBase = eraMista ? todasLinhas.filter((l) => sentidoLinha(l) === "ENTREGA") : todasLinhas;
+  const linha0 = linhasBase[0] ?? null;
   const [linhasExtra, setLinhasExtra] = useState<{ tipoPaleteId: string; nPaletes: string }[]>(
-    (paragem.paletes ?? []).slice(1).map((l) => ({
+    linhasBase.slice(1).map((l) => ({
       tipoPaleteId: l.tipoPaleteId === null ? "" : String(l.tipoPaleteId),
       nPaletes: String(l.nPaletes),
     })),
+  );
+  // Linhas carregadas — só existiam (e só se mostram) em MISTA.
+  const linhasCarregadasIniciais = eraMista ? todasLinhas.filter((l) => sentidoLinha(l) === "RECOLHA") : [];
+  const [linhasCarregadas, setLinhasCarregadas] = useState<{ tipoPaleteId: string; nPaletes: string }[]>(
+    linhasCarregadasIniciais.length > 0
+      ? linhasCarregadasIniciais.map((l) => ({
+          tipoPaleteId: l.tipoPaleteId === null ? "" : String(l.tipoPaleteId),
+          nPaletes: String(l.nPaletes),
+        }))
+      : [{ tipoPaleteId: "", nPaletes: "" }],
   );
   const tinhaPaletesMulti = (paragem.paletes?.length ?? 0) > 1;
 
@@ -139,7 +166,11 @@ export default function ParagemEditor({
 
   // VAZIO: não há carga nenhuma.
   function setTipoVeiculo(v: string) {
-    if (v === "VAZIO") setLinhasExtra([]);
+    if (v === "VAZIO") {
+      setLinhasExtra([]);
+      setLinhasCarregadas([{ tipoPaleteId: "", nPaletes: "" }]);
+      setTipoParagem("DESCARGA");
+    }
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
@@ -171,12 +202,25 @@ export default function ParagemEditor({
       return;
     }
     if (modo === "paletes" && f.tipoVeiculo !== "VAZIO") {
-      if (!f.tipoPaleteId || (Number(f.nPaletes) <= 0 && Number(f.nMeiasPaletes) <= 0)) {
-        setErro("Escolha o tipo de palete e o nº de paletes (inteiras ou meias).");
-        return;
-      }
       if (linhasExtra.some((l) => !l.tipoPaleteId || Number(l.nPaletes) <= 0)) {
         setErro("Cada linha de palete precisa de tipo e nº de paletes.");
+        return;
+      }
+      if (tipoParagem === "MISTA") {
+        if (linhasCarregadas.some((l) => (l.tipoPaleteId || l.nPaletes) && (!l.tipoPaleteId || Number(l.nPaletes) <= 0))) {
+          setErro("Cada linha de palete carregada precisa de tipo e nº de paletes.");
+          return;
+        }
+        const temAlgo =
+          (f.tipoPaleteId && Number(f.nPaletes) > 0) ||
+          Number(f.nMeiasPaletes) > 0 ||
+          linhasCarregadas.some((l) => l.tipoPaleteId && Number(l.nPaletes) > 0);
+        if (!temAlgo) {
+          setErro("Indique paletes descarregadas ou carregadas.");
+          return;
+        }
+      } else if (!f.tipoPaleteId || (Number(f.nPaletes) <= 0 && Number(f.nMeiasPaletes) <= 0)) {
+        setErro("Escolha o tipo de palete e o nº de paletes (inteiras ou meias).");
         return;
       }
     }
@@ -198,20 +242,39 @@ export default function ParagemEditor({
         nPaletes: modo === "kg" ? 0 : Number(f.nPaletes),
         nMeiasPaletes: modo === "paletes" ? Number(f.nMeiasPaletes) || 0 : 0,
         tipoPaleteId: modo === "paletes" && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
-        // `paletes`: só quando há (ou havia) mais do que uma linha. Array vazio
-        // = voltar a linha única. Ausente = linha única, sem mexer.
+        // `paletes`: em MISTA, sempre (precisa do `sentido` por linha); fora
+        // disso, só quando há (ou havia) mais do que uma linha, ou a paragem
+        // deixou de ser mista agora (para limpar as linhas RECOLHA antigas).
+        // Array vazio = voltar a linha única. Ausente = linha única, sem mexer.
         paletes:
-          modo === "paletes" && f.tipoVeiculo !== "VAZIO" && (linhasExtra.length > 0 || tinhaPaletesMulti)
-            ? linhasExtra.length > 0
+          modo !== "paletes" || f.tipoVeiculo === "VAZIO"
+            ? undefined
+            : tipoParagem === "MISTA"
               ? [
-                  { tipoPaleteId: Number(f.tipoPaleteId), nPaletes: Number(f.nPaletes) },
+                  ...(f.tipoPaleteId && Number(f.nPaletes) > 0
+                    ? [{ tipoPaleteId: Number(f.tipoPaleteId), nPaletes: Number(f.nPaletes), sentido: "ENTREGA" as const }]
+                    : []),
                   ...linhasExtra.map((l) => ({
                     tipoPaleteId: Number(l.tipoPaleteId),
                     nPaletes: Number(l.nPaletes),
+                    sentido: "ENTREGA" as const,
                   })),
+                  ...linhasCarregadas
+                    .filter((l) => l.tipoPaleteId && Number(l.nPaletes) > 0)
+                    .map((l) => ({ tipoPaleteId: Number(l.tipoPaleteId), nPaletes: Number(l.nPaletes), sentido: "RECOLHA" as const })),
                 ]
-              : []
-            : undefined,
+              : linhasExtra.length > 0 || tinhaPaletesMulti || eraMista
+                ? linhasExtra.length > 0
+                  ? [
+                      { tipoPaleteId: Number(f.tipoPaleteId), nPaletes: Number(f.nPaletes) },
+                      ...linhasExtra.map((l) => ({
+                        tipoPaleteId: Number(l.tipoPaleteId),
+                        nPaletes: Number(l.nPaletes),
+                      })),
+                    ]
+                  : []
+                : undefined,
+        ...(modo === "paletes" ? { recolha: tipoParagem !== "DESCARGA" } : {}),
         pesoAproximado: f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
@@ -416,6 +479,39 @@ export default function ParagemEditor({
             </div>
           ) : modo === "paletes" ? (
             <>
+              <div className="col-span-2">
+                <label className="label">Tipo de paragem</label>
+                <div className="flex gap-1 rounded-lg bg-gray-100 p-1 text-sm">
+                  {(
+                    [
+                      ["DESCARGA", "Descarga"],
+                      ["RECOLHA", "Recolha"],
+                      ["MISTA", "Descarga + Recolha"],
+                    ] as const
+                  ).map(([valor, rotulo]) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      onClick={() => setTipoParagem(valor)}
+                      className={`flex-1 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                        tipoParagem === valor ? "bg-white text-brand shadow-sm" : "text-gray-500"
+                      }`}
+                    >
+                      {rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {tipoParagem === "MISTA" && (
+                <div className="col-span-2 -mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Paletes descarregadas
+                </div>
+              )}
+              {tipoParagem === "RECOLHA" && (
+                <div className="col-span-2 -mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Paletes recolhidas
+                </div>
+              )}
               <div>
                 <label className="label">Tipo de palete</label>
                 <select
@@ -497,6 +593,70 @@ export default function ParagemEditor({
                   + Adicionar palete (outro tamanho, mesmo cliente)
                 </button>
               </div>
+
+              {tipoParagem === "MISTA" && (
+                <>
+                  <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Paletes carregadas
+                  </div>
+                  {linhasCarregadas.map((l, i) => (
+                    <div key={i} className="col-span-2 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-2">
+                      <div>
+                        <label className="label">Tipo de palete</label>
+                        <select
+                          className="input"
+                          value={l.tipoPaleteId}
+                          onChange={(e) =>
+                            setLinhasCarregadas((prev) =>
+                              prev.map((x, j) => (j === i ? { ...x, tipoPaleteId: e.target.value } : x)),
+                            )
+                          }
+                        >
+                          <option value="">— escolher —</option>
+                          {tiposPalete.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label">Nº de paletes</label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          className="input"
+                          value={l.nPaletes}
+                          onChange={(e) =>
+                            setLinhasCarregadas((prev) =>
+                              prev.map((x, j) => (j === i ? { ...x, nPaletes: e.target.value } : x)),
+                            )
+                          }
+                        />
+                      </div>
+                      {linhasCarregadas.length > 1 && (
+                        <button
+                          type="button"
+                          className="col-span-2 text-left text-xs font-medium text-red-600"
+                          onClick={() => setLinhasCarregadas((prev) => prev.filter((_, j) => j !== i))}
+                        >
+                          ✕ remover esta palete
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-brand hover:underline"
+                      onClick={() => setLinhasCarregadas((prev) => [...prev, { tipoPaleteId: "", nPaletes: "" }])}
+                    >
+                      + Adicionar palete carregada (outro tamanho)
+                    </button>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="label">Nº de meias-paletes — opcional</label>

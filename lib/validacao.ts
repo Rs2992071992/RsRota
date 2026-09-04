@@ -45,8 +45,15 @@ export const paragemSchema = z
     // par tipoPaleteId/nPaletes acima (que a API preenche com o agregado). As
     // dimensões são resolvidas server-side a partir de cada tipoPaleteId.
     paletes: z
-      .array(z.object({ tipoPaleteId: z.number().int().positive(), nPaletes: numNaoNeg }))
-      .max(20)
+      .array(
+        z.object({
+          tipoPaleteId: z.number().int().positive(),
+          nPaletes: numNaoNeg,
+          // "Descarga + Recolha": ENTREGA = descarregada, RECOLHA = carregada.
+          sentido: z.enum(["ENTREGA", "RECOLHA"]).optional(),
+        }),
+      )
+      .max(40)
       .optional(),
     pesoAproximado: numOpcional,
     litrosAbastecidos: numNaoNeg.default(0),

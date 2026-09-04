@@ -45,8 +45,15 @@ export default async function HistoricoPage() {
     nMeiasPaletes: p.nMeiasPaletes,
     tipoPaleteId: p.tipoPaleteId,
     paletes: Array.isArray(p.paletes)
-      ? (p.paletes as { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number }[])
+      ? (p.paletes as {
+          tipoPaleteId: number | null;
+          comprimentoMm: number;
+          larguraMm: number;
+          nPaletes: number;
+          sentido?: "ENTREGA" | "RECOLHA";
+        }[])
       : null,
+    recolha: p.recolha,
     pesoAproximado: p.pesoAproximado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,

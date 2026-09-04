@@ -47,17 +47,27 @@ export interface PaleteLinhaParagem {
   comprimentoMm: number;
   larguraMm: number;
   nPaletes: number;
+  sentido?: "ENTREGA" | "RECOLHA";
+}
+
+/** Linhas de palete de uma paragem, separadas por sentido. */
+export interface LinhasCargaParagem {
+  /** Descarregadas no cliente — vinham a bordo, saem aqui. */
+  entregues: LinhaCarga[];
+  /** Carregadas no cliente — entram aqui, ficam a bordo. */
+  recolhidas: LinhaCarga[];
 }
 
 /**
- * Uma `LinhaCarga` por linha de palete de uma paragem: o array `paletes`
- * (vários tamanhos na mesma paragem) ou, em fallback, uma linha só a partir
- * dos campos escalares / do mapa legado. `[]` = paragem por peso.
+ * Linhas de palete de uma paragem separadas por sentido (ENTREGA/RECOLHA): o
+ * array `paletes` (vários tamanhos / sentidos na mesma paragem) ou, em fallback,
+ * uma linha só a partir dos campos escalares / do mapa legado. Cada linha sem
+ * `sentido` próprio segue o da paragem (`recolha` -> RECOLHA, senão ENTREGA).
  *
  * Meias-paletes: as que cabem em cima das paletes de base (≤ Σ bases) não
- * ocupam chão; as que sobram vão para o chão a **2 por lugar** (ceil), como
- * uma linha extra da mesma dimensão. Uma paragem só de meias (0 bases) conta
- * na mesma.
+ * ocupam chão; as que sobram vão para o chão a **2 por lugar** (ceil), como uma
+ * linha extra da mesma dimensão, no lado das entregas (ou recolhas, se a
+ * paragem só recolher). Uma paragem só de meias (0 bases) conta na mesma.
  */
 export function linhasCargaParagem(p: {
   paletes?: unknown;
@@ -67,46 +77,48 @@ export function linhasCargaParagem(p: {
   tipoPaleteId?: number | null;
   nPaletes: number;
   nMeiasPaletes?: number;
+  recolha?: boolean;
   cliente?: string;
-}): LinhaCarga[] {
+}): LinhasCargaParagem {
   const arr = Array.isArray(p.paletes) ? (p.paletes as PaleteLinhaParagem[]) : null;
-  const base: LinhaCarga[] = [];
+  const sentidoParagem: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
+  const entregues: LinhaCarga[] = [];
+  const recolhidas: LinhaCarga[] = [];
   let dimRef: { comprimentoMm: number; larguraMm: number; tipoPaleteId: number } | null = null;
 
   if (arr && arr.length > 0) {
     for (const l of arr) {
-      if (l && l.comprimentoMm > 0 && l.larguraMm > 0 && l.nPaletes > 0) {
-        base.push({
-          tipoPaleteId: l.tipoPaleteId ?? 0,
-          comprimentoMm: l.comprimentoMm,
-          larguraMm: l.larguraMm,
-          nPaletes: l.nPaletes,
-          clienteNome: p.cliente,
-        });
-      }
+      if (!l || !(l.comprimentoMm > 0) || !(l.larguraMm > 0) || !(l.nPaletes > 0)) continue;
+      const linha: LinhaCarga = {
+        tipoPaleteId: l.tipoPaleteId ?? 0,
+        comprimentoMm: l.comprimentoMm,
+        larguraMm: l.larguraMm,
+        nPaletes: l.nPaletes,
+        clienteNome: p.cliente,
+      };
+      ((l.sentido ?? sentidoParagem) === "RECOLHA" ? recolhidas : entregues).push(linha);
+      if (!dimRef) dimRef = { comprimentoMm: l.comprimentoMm, larguraMm: l.larguraMm, tipoPaleteId: l.tipoPaleteId ?? 0 };
     }
-    if (base[0]) dimRef = { comprimentoMm: base[0].comprimentoMm, larguraMm: base[0].larguraMm, tipoPaleteId: base[0].tipoPaleteId };
   } else {
     const dims = dimensoesPaleteParagem(p);
     if (dims) {
       dimRef = { comprimentoMm: dims.comprimentoMm, larguraMm: dims.larguraMm, tipoPaleteId: p.tipoPaleteId ?? 0 };
       if (p.nPaletes > 0) {
-        base.push({ ...dimRef, nPaletes: p.nPaletes, clienteNome: p.cliente });
+        (sentidoParagem === "RECOLHA" ? recolhidas : entregues).push({ ...dimRef, nPaletes: p.nPaletes, clienteNome: p.cliente });
       }
     }
   }
 
   const meias = Math.floor(p.nMeiasPaletes ?? 0);
   if (meias > 0 && dimRef) {
-    const totalBases = base.reduce((s, l) => s + l.nPaletes, 0);
+    const alvo = sentidoParagem === "RECOLHA" ? recolhidas : entregues;
+    const totalBases = [...entregues, ...recolhidas].reduce((s, l) => s + l.nPaletes, 0);
     const noChao = Math.max(0, meias - totalBases);
     const slots = Math.ceil(noChao / 2);
-    if (slots > 0) {
-      base.push({ ...dimRef, nPaletes: slots, clienteNome: p.cliente });
-    }
+    if (slots > 0) alvo.push({ ...dimRef, nPaletes: slots, clienteNome: p.cliente });
   }
 
-  return base;
+  return { entregues, recolhidas };
 }
 
 export interface EspacoCarga {
@@ -120,10 +132,10 @@ export interface EspacoCarga {
 
 /** Uma paragem da rota, para a simulação de ocupação de espaço. */
 export interface ParagemCarga {
-  /** Linhas de palete desta paragem — ver `linhasCargaParagem`. */
-  linhas: LinhaCarga[];
-  /** Recolha (carga que ENTRA aqui) vs entrega (carga que já vinha a bordo). */
-  recolha: boolean;
+  /** Descarregadas aqui — vinham a bordo desde o início do segmento. */
+  entregues: LinhaCarga[];
+  /** Carregadas aqui — ficam a bordo até ao fim do segmento. */
+  recolhidas: LinhaCarga[];
   /** "VAZIO" corta a rota em segmentos — o camião esvaziou ali. */
   tipoVeiculo: string;
   /** Ordenação: sequência física real (mesmo critério de `pesosEmTransito`). */
@@ -170,14 +182,14 @@ const pior = (a: EspacoCarga, b: EspacoCarga): EspacoCarga =>
  * (mais paletes sem espaço); `totalPaletes` = paletes a bordo nesse momento.
  */
 export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
+  const valida = (l: LinhaCarga) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0;
   const comLinhas = paragens.map((p) => ({
     ...p,
-    linhas: p.linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0),
+    entregues: p.entregues.filter(valida),
+    recolhidas: p.recolhidas.filter(valida),
   }));
-  const totalGeral = comLinhas.reduce(
-    (s, p) => s + p.linhas.reduce((a, l) => a + Math.floor(l.nPaletes), 0),
-    0,
-  );
+  const conta = (ls: LinhaCarga[]) => ls.reduce((a, l) => a + Math.floor(l.nPaletes), 0);
+  const totalGeral = comLinhas.reduce((s, p) => s + conta(p.entregues) + conta(p.recolhidas), 0);
 
   if (caixas.length === 0) {
     return { totalPaletes: totalGeral, colocadas: totalGeral, semEspaco: 0, cabemTodas: true, verificavel: false };
@@ -203,11 +215,13 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
   let resultado: EspacoCarga | null = null;
   for (const seg of segmentos) {
     // Estado j (j = 0..n): entregas em índice >= j (ainda a bordo) +
-    // recolhas em índice < j (já apanhadas).
+    // recolhas em índice < j (já apanhadas). Uma paragem mista contribui com as
+    // suas entregues enquanto i >= j e com as suas recolhidas quando i < j.
     for (let j = 0; j <= seg.length; j++) {
       const aBordo: LinhaCarga[] = [];
       seg.forEach((p, i) => {
-        if ((!p.recolha && i >= j) || (p.recolha && i < j)) aBordo.push(...p.linhas);
+        if (i >= j) aBordo.push(...p.entregues);
+        if (i < j) aBordo.push(...p.recolhidas);
       });
       const estado = empacotarEstado(caixas, aBordo);
       resultado = resultado ? pior(resultado, estado) : estado;

@@ -81,8 +81,15 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       nMeiasPaletes: p.nMeiasPaletes,
       tipoPaleteId: p.tipoPaleteId,
       paletes: Array.isArray(p.paletes)
-        ? (p.paletes as { tipoPaleteId: number | null; comprimentoMm: number; larguraMm: number; nPaletes: number }[])
+        ? (p.paletes as {
+            tipoPaleteId: number | null;
+            comprimentoMm: number;
+            larguraMm: number;
+            nPaletes: number;
+            sentido?: "ENTREGA" | "RECOLHA";
+          }[])
         : null,
+      recolha: p.recolha,
       pesoAproximado: p.pesoAproximado,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,
@@ -121,8 +128,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   const espacoCarga = verificarEspacoCarga(
     caixasRota,
     paragensRaw.map((p) => ({
-      linhas: linhasCargaParagem(p),
-      recolha: p.recolha,
+      ...linhasCargaParagem(p),
       tipoVeiculo: p.tipoVeiculo,
       kmInicial: p.kmInicial,
     })),

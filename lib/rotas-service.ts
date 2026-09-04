@@ -51,7 +51,7 @@ export async function resolverPaleteDimensoes(
  * Devolve `null` quando não há linhas válidas (a paragem fica de linha única).
  */
 export async function resolverPaleteDimensoesMuitas(
-  linhas: { tipoPaleteId: number; nPaletes: number }[] | undefined,
+  linhas: { tipoPaleteId: number; nPaletes: number; sentido?: "ENTREGA" | "RECOLHA" }[] | undefined,
 ): Promise<PaleteLinha[] | null> {
   if (!linhas || linhas.length === 0) return null;
   const ids = Array.from(new Set(linhas.map((l) => l.tipoPaleteId)));
@@ -66,6 +66,7 @@ export async function resolverPaleteDimensoesMuitas(
       comprimentoMm: t.comprimentoMm,
       larguraMm: t.larguraMm,
       nPaletes: l.nPaletes,
+      ...(l.sentido ? { sentido: l.sentido } : {}),
     });
   }
   return resolvidas.length > 0 ? resolvidas : null;

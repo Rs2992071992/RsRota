@@ -523,4 +523,21 @@ describe("paletes multi-linha — tamanhos diferentes na mesma paragem", () => {
     const r = calcularParagem(p2linhas({ nMeiasPaletes: 4 }), ctx);
     expect(r.coeficienteCarga).toBeCloseTo(10 / 38 + 6 / 30 + (4 * 0.5) / 38, 6);
   });
+
+  // Paragem "Descarga + Recolha" (2026-09): cada linha leva um `sentido`
+  // (ENTREGA/RECOLHA) para o aviso de espaço, mas o coeficiente/rateio
+  // continua a somar TODAS as linhas — o cliente paga pelo total.
+  it("`sentido` não afeta o coeficiente — soma descarregadas + carregadas", () => {
+    const r = calcularParagem(
+      p2linhas({
+        paletes: [
+          { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10, sentido: "ENTREGA" },
+          { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 6, sentido: "RECOLHA" },
+        ],
+      }),
+      ctx,
+    );
+    expect(r.coeficienteCarga).toBeCloseTo(10 / 38 + 6 / 30, 6);
+    expect(r.nPaletes).toBe(16);
+  });
 });

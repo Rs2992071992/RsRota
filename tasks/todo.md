@@ -2,6 +2,38 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Paragem "Descarga / Recolha / Descarga + Recolha" (2026-09-02)
+
+Pedido do Ricardo: além do checkbox "Recolha", poder registar uma paragem em
+que descarrega umas paletes E carrega outras — com visibilidade de quantas
+foram descarregadas vs recolhidas vs mistas, para melhor avaliar o preço.
+
+- [x] `lib/calc/types.ts`: `PaleteLinha.sentido?: "ENTREGA"|"RECOLHA"` (dentro
+  de `Paragem.paletes`, já `Json?` — sem `db push`)
+- [x] `lib/validacao.ts`: `sentido` opcional no item de `paletes`
+- [x] `lib/rotas-service.ts`: `resolverPaleteDimensoesMuitas` propaga `sentido`
+- [x] `lib/calc/cargaRota.ts`: `linhasCargaParagem` devolve
+  `{entregues, recolhidas}` (separadas por sentido, fallback pelo `recolha` da
+  paragem); `ParagemCarga`/`verificarEspacoCarga` simulam entregas a saírem e
+  recolhas a entrarem, mesmo numa paragem mista (estado antes/depois do sítio)
+- [x] `perStop.ts`/`perRoute.ts`: sem alteração — já somavam todas as linhas de
+  `paletes` independentemente do sentido (coeficiente = paga pelo total)
+- [x] UI: seletor "Descarga / Recolha / Descarga + Recolha" (substitui o
+  checkbox único) em `RegistoForm.tsx` (motorista) e `ParagemEditor.tsx`
+  (escritório); em Mista, dois blocos "Paletes descarregadas"/"Paletes
+  carregadas", cada um com "+ Adicionar palete" (tamanhos diferentes)
+- [x] 6 testes novos (`cargaRota.test.ts` reescrito p/ nova assinatura +
+  `perStop.test.ts`), 204 testes verdes, `tsc`/`next build` limpos
+- [x] Verificado: 0 rotas com aviso em `carregarRotas({})` (28 rotas reais,
+  inalteradas — `sentido` é opt-in); pipeline completo (validação → resolução
+  de dimensões → `linhasCargaParagem` → `verificarEspacoCarga`) testado à mão
+  com um payload Mista real (6 descarregadas + 4 carregadas → pico 6, cabe)
+- [x] Commit + push (Vercel builda automaticamente). **Sem `db push`**
+- [ ] **Ação do Ricardo**: porte do `RegistoForm` para a app Android
+  Motorista (bundle próprio) + `.apk` novo — junta-se às alterações
+  anteriores (paletes multi-tamanho, meia palete só, aviso de espaço) ainda
+  por portar
+
 ## ☑️ Meia palete sozinha (sem base por baixo) (2026-09-02)
 
 Plano: `C:\Users\Ricardo\.claude\plans\imperative-weaving-sunbeam.md`. O Ricardo

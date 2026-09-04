@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
-import { verificarEspacoCarga } from "@/lib/calc/cargaRota";
+import { verificarEspacoCarga, type ParagemCarga } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { fmtEuro } from "@/lib/format";
 import Autocomplete from "@/components/Autocomplete";
@@ -34,6 +34,16 @@ export interface TipoPaleteOpcao {
 // 45 dias (mês e meio) antes do prazo, o motorista começa a ver o aviso.
 const DIAS_AVISO_INSPECAO = 45;
 
+/** Uma linha de palete resolvida (dimensões do catálogo), para a simulação
+ * de espaço ao vivo. */
+interface LinhaSimples {
+  tipoPaleteId: number;
+  comprimentoMm: number;
+  larguraMm: number;
+  nPaletes: number;
+  clienteNome?: string;
+}
+
 interface Props {
   zonas: string[];
   veiculos: VeiculoOpcao[];
@@ -55,10 +65,10 @@ interface ParagemRotaResumo {
   portagensExtra: number;
   noitesFora: number;
   alimentacao: number;
-  /** Uma entrada por linha de palete da paragem (tamanhos podem diferir). */
-  linhasPalete: { comprimentoMm: number; larguraMm: number; nPaletes: number }[];
-  /** Para a simulação de ocupação de espaço ao longo da rota. */
-  recolha: boolean;
+  /** Paletes descarregadas nesta paragem (vinham a bordo desde o início). */
+  entregues: { comprimentoMm: number; larguraMm: number; nPaletes: number }[];
+  /** Paletes carregadas nesta paragem (entram aqui, ficam a bordo). */
+  recolhidas: { comprimentoMm: number; larguraMm: number; nPaletes: number }[];
   tipoVeiculo: string;
   kmInicial: number;
 }
@@ -123,13 +133,20 @@ export default function RegistoForm({
   // Secções opcionais começam encolhidas (só um botão) para o motorista
   // chegar mais depressa a "Registar paragem" — expandem só se precisar.
   const [mostrarEspanha, setMostrarEspanha] = useState(false);
-  // Recolha cujo material vai ser entregue a outro cliente mais tarde na
-  // mesma rota — só assinala; quem vai ser faturado fica para o escritório
-  // atribuir depois (ParagemEditor).
-  const [recolha, setRecolha] = useState(false);
-  // Linhas de palete ADICIONAIS (a 1.ª é f.tipoPaleteId/f.nPaletes). Para o
-  // mesmo cliente na mesma descarga com paletes de tamanhos diferentes.
+  // Descarga (defeito) / Recolha / Descarga+Recolha. Substitui o antigo
+  // checkbox único "Recolha". Numa Recolha "pura", o material pode ser
+  // entregue a outro cliente mais tarde na mesma rota — só assinala; quem vai
+  // ser faturado fica para o escritório atribuir depois (ParagemEditor).
+  const [tipoParagem, setTipoParagem] = useState<"DESCARGA" | "RECOLHA" | "MISTA">("DESCARGA");
+  const recolha = tipoParagem !== "DESCARGA";
+  // Linhas de palete ADICIONAIS descarregadas (a 1.ª é f.tipoPaleteId/f.nPaletes;
+  // em RECOLHA pura, este é o bloco único — o que foi apanhado). Para o mesmo
+  // cliente na mesma descarga com paletes de tamanhos diferentes.
   const [linhasExtra, setLinhasExtra] = useState<{ tipoPaleteId: string; nPaletes: string }[]>([]);
+  // Linhas de palete CARREGADAS — só usadas em "Descarga + Recolha".
+  const [linhasCarregadas, setLinhasCarregadas] = useState<{ tipoPaleteId: string; nPaletes: string }[]>([
+    { tipoPaleteId: "", nPaletes: "" },
+  ]);
   // Paragens já submetidas nesta rota (para mostrar o que já foi introduzido
   // e evitar duplicar noites/alimentação ao longo de várias paragens).
   const [paragensRota, setParagensRota] = useState<ParagemRotaResumo[]>(paragensRotaIniciais);
@@ -166,11 +183,53 @@ export default function RegistoForm({
     ...linhasExtra,
   ];
   // Linhas com tipo + nº válidos, já com as dimensões do catálogo resolvidas.
+  // Em DESCARGA/MISTA são as descarregadas; em RECOLHA pura, o único bloco
+  // (o que foi apanhado).
   const linhasPaleteResolvidas = linhasPaleteForm
     .map((l) => ({ tipo: tiposPalete.find((t) => String(t.id) === l.tipoPaleteId), n: num(l.nPaletes) }))
     .filter((l): l is { tipo: TipoPaleteOpcao; n: number } => !!l.tipo && l.n > 0);
   const totalPaletesForm = linhasPaleteResolvidas.reduce((s, l) => s + l.n, 0);
   const temLinhasExtra = linhasExtra.length > 0;
+  // Linhas carregadas — só relevantes em MISTA.
+  const linhasCarregadasResolvidas = linhasCarregadas
+    .map((l) => ({ tipo: tiposPalete.find((t) => String(t.id) === l.tipoPaleteId), n: num(l.nPaletes) }))
+    .filter((l): l is { tipo: TipoPaleteOpcao; n: number } => !!l.tipo && l.n > 0);
+  const totalCarregadasForm = linhasCarregadasResolvidas.reduce((s, l) => s + l.n, 0);
+
+  /** Linhas desta paragem separadas por sentido — usadas na simulação de
+   * espaço (memo abaixo) e no resumo guardado após o registo. */
+  function linhasParagemForm(): { entregues: LinhaSimples[]; recolhidas: LinhaSimples[] } {
+    const nome = f.cliente.trim() || "esta paragem";
+    const paraLinha = (l: { tipo: TipoPaleteOpcao; n: number }): LinhaSimples => ({
+      tipoPaleteId: l.tipo.id,
+      comprimentoMm: l.tipo.comprimentoMm,
+      larguraMm: l.tipo.larguraMm,
+      nPaletes: l.n,
+      clienteNome: nome,
+    });
+    const base = linhasPaleteResolvidas.map(paraLinha);
+    const carregadas = linhasCarregadasResolvidas.map(paraLinha);
+    const entregues = tipoParagem === "RECOLHA" ? [] : base;
+    const recolhidas = tipoParagem === "DESCARGA" ? [] : tipoParagem === "RECOLHA" ? base : carregadas;
+
+    // Meias-paletes sem base por baixo -> chão, 2 por lugar; seguem o mesmo
+    // sentido da paragem (recolha => recolhidas, senão entregues — igual ao
+    // fallback do servidor em linhasCargaParagem).
+    const dimRef =
+      entregues[0] ??
+      recolhidas[0] ??
+      (tipoPaleteSel
+        ? { tipoPaleteId: tipoPaleteSel.id, comprimentoMm: tipoPaleteSel.comprimentoMm, larguraMm: tipoPaleteSel.larguraMm, nPaletes: 0, clienteNome: nome }
+        : null);
+    const totalBase = totalPaletesForm + totalCarregadasForm;
+    const noChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalBase);
+    const slots = Math.ceil(noChao / 2);
+    if (slots > 0 && dimRef) {
+      (recolha ? recolhidas : entregues).push({ ...dimRef, nPaletes: slots });
+    }
+    return { entregues, recolhidas };
+  }
+
   // Sobreocupação de espaço: soma TODAS as paletes já registadas na rota + a
   // paragem que está a ser escrita e arruma-as com o motor de empacotamento 2D
   // real (o mesmo das Cargas do escritório). null = sem veículo escolhido.
@@ -193,62 +252,53 @@ export default function RegistoForm({
         larguraMm: veiculoSel.caixaReboqueLarguraMm,
       });
     }
-    const paragensCarga = paragensRota.map((p) => ({
-      linhas: p.linhasPalete
-        .filter((l) => l.nPaletes > 0 && l.comprimentoMm && l.larguraMm)
-        .map((l) => ({
-          tipoPaleteId: 0,
-          comprimentoMm: l.comprimentoMm,
-          larguraMm: l.larguraMm,
-          nPaletes: l.nPaletes,
-          clienteNome: p.cliente,
-        })),
-      recolha: p.recolha,
+    const linhaCarga = (l: { comprimentoMm: number; larguraMm: number; nPaletes: number }, clienteNome?: string) => ({
+      tipoPaleteId: 0,
+      comprimentoMm: l.comprimentoMm,
+      larguraMm: l.larguraMm,
+      nPaletes: l.nPaletes,
+      clienteNome,
+    });
+    const paragensCarga: ParagemCarga[] = paragensRota.map((p) => ({
+      entregues: p.entregues.filter((l) => l.nPaletes > 0 && l.comprimentoMm && l.larguraMm).map((l) => linhaCarga(l, p.cliente)),
+      recolhidas: p.recolhidas.filter((l) => l.nPaletes > 0 && l.comprimentoMm && l.larguraMm).map((l) => linhaCarga(l, p.cliente)),
       tipoVeiculo: p.tipoVeiculo,
       kmInicial: p.kmInicial,
     }));
     if (mostrarPaletes) {
-      const linhasForm = linhasPaleteResolvidas.map((l) => ({
-        tipoPaleteId: l.tipo.id,
-        comprimentoMm: l.tipo.comprimentoMm,
-        larguraMm: l.tipo.larguraMm,
-        nPaletes: l.n,
-        clienteNome: f.cliente.trim() || "esta paragem",
-      }));
-      // Meias-paletes que não têm base por baixo -> chão, 2 por lugar.
-      const dimRef =
-        linhasForm[0] ??
-        (tipoPaleteSel
-          ? {
-              tipoPaleteId: tipoPaleteSel.id,
-              comprimentoMm: tipoPaleteSel.comprimentoMm,
-              larguraMm: tipoPaleteSel.larguraMm,
-              nPaletes: 0,
-              clienteNome: f.cliente.trim() || "esta paragem",
-            }
-          : null);
-      const meiasNoChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalPaletesForm);
-      const slotsMeias = Math.ceil(meiasNoChao / 2);
-      if (slotsMeias > 0 && dimRef) {
-        linhasForm.push({ ...dimRef, nPaletes: slotsMeias });
-      }
-      paragensCarga.push({
-        linhas: linhasForm,
-        recolha,
-        tipoVeiculo: f.tipoVeiculo,
-        kmInicial: num(f.kmInicial),
-      });
+      const { entregues, recolhidas } = linhasParagemForm();
+      paragensCarga.push({ entregues, recolhidas, tipoVeiculo: f.tipoVeiculo, kmInicial: num(f.kmInicial) });
     }
     return verificarEspacoCarga(caixas, paragensCarga);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veiculoSel, ehReboque, paragensRota, mostrarPaletes, recolha, f.tipoVeiculo, f.kmInicial, f.tipoPaleteId, f.nMeiasPaletes, totalPaletesForm, JSON.stringify(linhasPaleteResolvidas), f.cliente]);
+  }, [
+    veiculoSel,
+    ehReboque,
+    paragensRota,
+    mostrarPaletes,
+    tipoParagem,
+    recolha,
+    f.tipoVeiculo,
+    f.kmInicial,
+    f.tipoPaleteId,
+    f.nMeiasPaletes,
+    totalPaletesForm,
+    totalCarregadasForm,
+    JSON.stringify(linhasPaleteResolvidas),
+    JSON.stringify(linhasCarregadasResolvidas),
+    f.cliente,
+  ]);
   const custoNoites = num(f.noitesFora) * valorNoite;
 
   // VAZIO: não há cliente a faturar (repositionamento) nem carga a bordo,
   // preenche "Vazio" automaticamente para o motorista não ter de escrever
   // nada; ao sair de VAZIO, limpa esse valor para escrever o cliente real.
   function setTipoVeiculo(v: string) {
-    if (v === "VAZIO") setLinhasExtra([]);
+    if (v === "VAZIO") {
+      setLinhasExtra([]);
+      setLinhasCarregadas([{ tipoPaleteId: "", nPaletes: "" }]);
+      setTipoParagem("DESCARGA");
+    }
     setF((prev) => ({
       ...prev,
       tipoVeiculo: v,
@@ -305,15 +355,34 @@ export default function RegistoForm({
       if (f[campo] !== "" && num(f[campo]) < 0) e[campo] = "Não pode ser negativo";
     }
     if (mostrarPaletes) {
-      if (!f.tipoPaleteId) e.tipoPaleteId = "Escolha o tipo de palete";
-      // Basta paletes inteiras OU meias-paletes (uma meia sozinha é válida).
-      if (num(f.nPaletes) <= 0 && num(f.nMeiasPaletes) <= 0) {
-        e.nPaletes = "Indique o nº de paletes ou de meias-paletes";
+      if (tipoParagem === "MISTA") {
+        // Descarregadas e carregadas são cada uma opcional isoladamente — só é
+        // preciso ter algo num dos dois lados (ou meias-paletes).
+        if (f.tipoPaleteId && num(f.nPaletes) <= 0) e.nPaletes = "Indique o nº de paletes";
+        if (!f.tipoPaleteId && num(f.nPaletes) > 0) e.tipoPaleteId = "Escolha o tipo de palete";
+        linhasExtra.forEach((l, i) => {
+          if (!l.tipoPaleteId) e[`linhaExtra${i}Tipo`] = "Escolha o tipo de palete";
+          if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";
+        });
+        linhasCarregadas.forEach((l, i) => {
+          if (!l.tipoPaleteId && !l.nPaletes) return; // linha vazia, por preencher — ignora
+          if (!l.tipoPaleteId) e[`linhaCarregada${i}Tipo`] = "Escolha o tipo de palete";
+          if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaCarregada${i}N`] = "Indique o nº de paletes";
+        });
+        const temAlgo =
+          num(f.nPaletes) > 0 || num(f.nMeiasPaletes) > 0 || linhasCarregadas.some((l) => num(l.nPaletes) > 0);
+        if (!temAlgo) e.nPaletes = "Indique paletes descarregadas ou carregadas";
+      } else {
+        if (!f.tipoPaleteId) e.tipoPaleteId = "Escolha o tipo de palete";
+        // Basta paletes inteiras OU meias-paletes (uma meia sozinha é válida).
+        if (num(f.nPaletes) <= 0 && num(f.nMeiasPaletes) <= 0) {
+          e.nPaletes = "Indique o nº de paletes ou de meias-paletes";
+        }
+        linhasExtra.forEach((l, i) => {
+          if (!l.tipoPaleteId) e[`linhaExtra${i}Tipo`] = "Escolha o tipo de palete";
+          if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";
+        });
       }
-      linhasExtra.forEach((l, i) => {
-        if (!l.tipoPaleteId) e[`linhaExtra${i}Tipo`] = "Escolha o tipo de palete";
-        if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";
-      });
     }
     setErros(e);
     return Object.keys(e).length === 0;
@@ -337,12 +406,19 @@ export default function RegistoForm({
         kmFinal: num(f.kmFinal),
         tipoPaleteId: mostrarPaletes && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
         nPaletes: mostrarPaletes ? num(f.nPaletes) : 0,
-        // Só envia `paletes` quando há mais do que uma linha — 1 linha usa os
-        // campos escalares acima, exatamente como sempre.
-        paletes:
-          mostrarPaletes && temLinhasExtra
-            ? linhasPaleteResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n }))
-            : undefined,
+        // MISTA envia sempre `paletes` (descarregadas + carregadas, com
+        // sentido); fora disso só quando há mais do que uma linha — 1 linha
+        // usa os campos escalares acima, exatamente como sempre.
+        paletes: !mostrarPaletes
+          ? undefined
+          : tipoParagem === "MISTA"
+            ? [
+                ...linhasPaleteResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n, sentido: "ENTREGA" as const })),
+                ...linhasCarregadasResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n, sentido: "RECOLHA" as const })),
+              ]
+            : temLinhasExtra
+              ? linhasPaleteResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n }))
+              : undefined,
         nMeiasPaletes: mostrarPaletes ? num(f.nMeiasPaletes) : 0,
         pesoAproximado: f.pesoAproximado === "" ? null : num(f.pesoAproximado),
         // O combustível usado no cálculo vem dos parâmetros (escritório); o motorista
@@ -381,23 +457,11 @@ export default function RegistoForm({
           portagensExtra: payload.portagensExtra,
           noitesFora: payload.noitesFora,
           alimentacao: payload.alimentacao,
-          linhasPalete: (() => {
-            const ls = linhasPaleteResolvidas.map((l) => ({
-              comprimentoMm: l.tipo.comprimentoMm,
-              larguraMm: l.tipo.larguraMm,
-              nPaletes: l.n,
-            }));
-            const dimRef =
-              ls[0] ??
-              (tipoPaleteSel
-                ? { comprimentoMm: tipoPaleteSel.comprimentoMm, larguraMm: tipoPaleteSel.larguraMm, nPaletes: 0 }
-                : null);
-            const noChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalPaletesForm);
-            const slots = Math.ceil(noChao / 2);
-            if (slots > 0 && dimRef) ls.push({ ...dimRef, nPaletes: slots });
-            return ls;
+          ...(() => {
+            const { entregues, recolhidas } = linhasParagemForm();
+            const semTipo = (ls: LinhaSimples[]) => ls.map(({ comprimentoMm, larguraMm, nPaletes }) => ({ comprimentoMm, larguraMm, nPaletes }));
+            return { entregues: semTipo(entregues), recolhidas: semTipo(recolhidas) };
           })(),
-          recolha: payload.recolha,
           tipoVeiculo: payload.tipoVeiculo,
           kmInicial: payload.kmInicial,
         },
@@ -419,8 +483,9 @@ export default function RegistoForm({
         cliente: f.tipoVeiculo === "VAZIO" ? "Vazio" : estadoBase.cliente,
       });
       setMostrarEspanha(false);
-      setRecolha(false);
+      setTipoParagem("DESCARGA");
       setLinhasExtra([]);
+      setLinhasCarregadas([{ tipoPaleteId: "", nPaletes: "" }]);
     } catch {
       setMsg({ tipo: "erro", texto: "Erro de ligação." });
     } finally {
@@ -591,13 +656,35 @@ export default function RegistoForm({
         {campoNum("kmInicial", "KM Inicial")}
         {campoNum("kmFinal", "KM Final")}
         <div className="col-span-2">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={recolha} onChange={(e) => setRecolha(e.target.checked)} />
-            Recolha
-          </label>
+          <label className="label">Tipo de paragem</label>
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1 text-sm">
+            {(
+              [
+                ["DESCARGA", "Descarga"],
+                ["RECOLHA", "Recolha"],
+                ["MISTA", "Descarga + Recolha"],
+              ] as const
+            ).map(([valor, rotulo]) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setTipoParagem(valor)}
+                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                  tipoParagem === valor ? "bg-white text-brand shadow-sm" : "text-gray-500"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
         </div>
         {mostrarPaletes && (
           <>
+            {(tipoParagem === "MISTA" || tipoParagem === "RECOLHA") && (
+              <div className="col-span-2 -mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {tipoParagem === "MISTA" ? "Paletes descarregadas" : "Paletes recolhidas"}
+              </div>
+            )}
             <div>
               <label className="label">Tipo de palete</label>
               <select
@@ -691,6 +778,77 @@ export default function RegistoForm({
                 + Adicionar palete (outro tamanho, mesmo cliente)
               </button>
             </div>
+
+            {tipoParagem === "MISTA" && (
+              <>
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Paletes carregadas
+                </div>
+                {linhasCarregadas.map((l, i) => (
+                  <div key={i} className="col-span-2 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-2">
+                    <div>
+                      <label className="label">Tipo de palete</label>
+                      <select
+                        className="input"
+                        value={l.tipoPaleteId}
+                        onChange={(e) =>
+                          setLinhasCarregadas((prev) =>
+                            prev.map((x, j) => (j === i ? { ...x, tipoPaleteId: e.target.value } : x)),
+                          )
+                        }
+                      >
+                        <option value="">— escolher —</option>
+                        {tiposPalete.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.nome}
+                          </option>
+                        ))}
+                      </select>
+                      {erros[`linhaCarregada${i}Tipo`] && (
+                        <p className="mt-1 text-xs text-red-600">{erros[`linhaCarregada${i}Tipo`]}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="label">Nº de paletes</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min="0"
+                        className="input"
+                        value={l.nPaletes}
+                        onChange={(e) =>
+                          setLinhasCarregadas((prev) =>
+                            prev.map((x, j) => (j === i ? { ...x, nPaletes: e.target.value } : x)),
+                          )
+                        }
+                      />
+                      {erros[`linhaCarregada${i}N`] && (
+                        <p className="mt-1 text-xs text-red-600">{erros[`linhaCarregada${i}N`]}</p>
+                      )}
+                    </div>
+                    {linhasCarregadas.length > 1 && (
+                      <button
+                        type="button"
+                        className="col-span-2 text-left text-xs font-medium text-red-600"
+                        onClick={() => setLinhasCarregadas((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        ✕ remover esta palete
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <div className="col-span-2">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-blue-700 underline"
+                    onClick={() => setLinhasCarregadas((prev) => [...prev, { tipoPaleteId: "", nPaletes: "" }])}
+                  >
+                    + Adicionar palete carregada (outro tamanho)
+                  </button>
+                </div>
+              </>
+            )}
 
             <div>
               <label className="label">Nº de meias-paletes</label>
