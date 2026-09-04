@@ -2,6 +2,34 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-05] | "A data de inspeção não fica guardada" (Ricardo) não era um
+  bug na data em si — era `lib/validacao.ts::veiculoSchema` a exigir
+  `capacidadeCamiao`/paletes `> 0` para TODOS os veículos. Ao tentar registar
+  um ligeiro (carrinha) e zerar campos de capacidade irrelevantes para ele, o
+  `PATCH`/`POST` inteiro falhava a validação (400) e nada gravava, incluindo a
+  data — mas o sintoma reportado só falava da data porque foi o último campo
+  mexido antes de gravar. | Quando um formulário com vários campos "não grava
+  X", suspeitar primeiro de uma validação a rejeitar o payload INTEIRO por
+  causa de outro campo, antes de investigar a lógica específica de X — o erro
+  de rede (400 silencioso se a UI não mostrar `data.erro` de forma óbvia) mata
+  qualquer campo do mesmo submit, não só o que a pessoa notou.
+- [2026-09-05] | Ao adicionar consumo (L/100km) por veículo (antes só havia
+  uma tabela global `TabelaConsumo`), a tentação óbvia era enfiar `veiculoId`
+  dentro de `ContextoCalculo`/`ParagemInput` e resolver a tabela certa em
+  tempo de cálculo — mas tudo o que já é específico de um veículo
+  (custo/km, capacidades, caixa) segue um padrão diferente no motor: é
+  resolvido UMA VEZ em `calcularSnapshot`/`snapshot-service.ts` e congelado em
+  `Paragem.snapshot`, com `efetivos()` (`perStop.ts`) a fazer merge
+  `{...defaults-do-ctx, ...snapshot}`. Segui esse padrão para o consumo
+  (`ParagemSnapshot.tabelaConsumo?`, opcional — snapshots antigos sem a chave
+  caem no fallback global do ctx) e ganhei de graça o suporte em orçamentos
+  (`devis/estimar` já chama `snapshotParaRegisto`) sem tocar em
+  `lib/calc/orcamento.ts`. | Antes de fazer uma propriedade nova "viajar" por
+  `ContextoCalculo`/`veiculoId`, verificar se já existe o mesmo tipo de dado
+  por-veículo resolvido via `calcularSnapshot`/`snapshot-service.ts` — nesse
+  caso é quase sempre mais barato (e mais consistente com o resto do motor)
+  seguir esse caminho em vez de inventar um novo.
+
 - [2026-09-04] | Depois de corrigir `verificarEspacoCarga` (recolha entregue
   mais tarde contava a dobra na ocupação — lição abaixo), o Ricardo suspeitou
   que `totalPaletes`/`totalPesoAproximado` (cartões "Paletes transportadas"/
