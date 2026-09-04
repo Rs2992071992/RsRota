@@ -25,8 +25,11 @@ inspeção não fica guardada" (payload todo rejeitado ao zerar campos irrelevan
       cargas (não em histórico/avarias/gestão de frota)
 - [x] `tsc --noEmit`, `npm run build` e `npm test` (217 testes) verdes; `prisma db push`
       aplicado na BD real
-- [ ] Teste manual (ligeiro grava data; pesado com/sem tabela própria dá custo certo)
-- [ ] Commit + push (Vercel builda automaticamente)
+- [ ] Teste manual do Ricardo em produção (ligeiro grava data; pesado com/sem
+      tabela própria dá custo certo) — não testado por mim: implica criar/editar
+      veículos na BD real, deixei para o Ricardo confirmar em vez de sujar a frota
+      com dados de teste
+- [x] Commit `db89000` + push — Vercel builda automaticamente
 
 ## ☑️ "Continuar rota recente" (dropdown no próprio registo) não puxava o KM Inicial (2026-09-04)
 
