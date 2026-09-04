@@ -8,6 +8,9 @@ export type ParagemDespesas = {
   alimentacao: number;
   horasExtra: number;
   portagensExtra: number;
+  /** Zona da tabela de portagens (lookup automático) — distinta de `portagensExtra`
+   * (valor manual). Uma paragem pode ter zona sem ter extra, ou vice-versa. */
+  zonaPortagem: string;
 };
 
 /**
@@ -34,8 +37,13 @@ export default function DespesasIcones({ raw }: { raw: ParagemDespesas | undefin
   if (raw.horasExtra > 0) {
     itens.push({ icone: "⏱️", titulo: `Horas extra: ${fmtNum2(raw.horasExtra)}` });
   }
-  if (raw.portagensExtra > 0) {
-    itens.push({ icone: "🛣️", titulo: `Portagens extra: ${fmtEuro(raw.portagensExtra)}` });
+  const temZonaPortagem = raw.zonaPortagem.trim() !== "";
+  const temPortagemExtra = raw.portagensExtra > 0;
+  if (temZonaPortagem || temPortagemExtra) {
+    const partes: string[] = [];
+    if (temZonaPortagem) partes.push(`zona "${raw.zonaPortagem.trim()}"`);
+    if (temPortagemExtra) partes.push(`extra ${fmtEuro(raw.portagensExtra)}`);
+    itens.push({ icone: "🛣️", titulo: `Portagens: ${partes.join(" + ")}` });
   }
   if (itens.length === 0) return null;
   return (
