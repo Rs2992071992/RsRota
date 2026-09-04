@@ -2,6 +2,35 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ "Continuar rota recente" (dropdown no próprio registo) não puxava o KM Inicial (2026-09-04)
+
+Pedido do Ricardo: "quando fazemos continuar rota actual, falta ao sistema
+continuar com os km da ultima vez inseridos". Havia DOIS caminhos para
+"continuar rota": (1) o link "Continuar rota" em `/motorista/historico`, que já
+navegava com `?idRota=&tipoVeiculo=&kmInicial=` e funcionava bem; (2) o select
+"Ou continuar uma rota recente" dentro do próprio `RegistoForm`, que só fazia
+`setIdRotaAtiva(id)` local — nunca preenchia `kmInicial` nem `tipoVeiculo`, nem
+carregava o resumo da rota (noites/alimentação/paletes já registadas).
+
+- [x] `app/motorista/registo/page.tsx`: a query `rotasRecentes` passa a
+  selecionar `tipoVeiculo`/`kmFinal` (já vinha ordenada `distinct` por idRota —
+  bastava pedir mais campos) + tiebreak `id: "desc"` (mesma ordem do histórico)
+- [x] `RegistoForm.tsx`: o select deixa de mexer só no estado local — navega
+  (`router.push`) para os mesmos parâmetros de URL do link do histórico,
+  reaproveitando a lógica server-side já correta (kmInicial, tipoVeiculo,
+  resumo da rota) em vez de duplicá-la a meio
+- [x] `key` novo em `<RegistoForm>` (`page.tsx`), a partir de
+  `idRota-tipoVeiculo-kmInicial` — sem isto o React reaproveitava a instância
+  ao navegar dentro da mesma rota `/motorista/registo` e o `useState` ficava
+  preso aos valores antigos (mesmo padrão da lição de 2026-08-06,
+  `EditarNomeCliente`)
+- [x] 217 testes verdes (inalterados — mudança de UI/navegação, não de motor
+  de cálculo), `tsc`/`next build` limpos
+- [x] Verificado contra a BD real: a query nova devolve, por rota, o
+  `kmFinal`/`tipoVeiculo` da paragem mais recente (ex. RIC-Blo-coop Valpaços →
+  366888 km, CAMIAO+REBOQUE)
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## 🔲 Investigar: `coefReal` do rateio pode ter o mesmo bug de "conta a dobra" (2026-09-04, EM ABERTO)
 
 Ao corrigir `totalPaletes`/`totalPesoAproximado` (secção abaixo) reparei que

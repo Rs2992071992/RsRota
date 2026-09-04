@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
 import { verificarEspacoCarga, type ParagemCarga } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
@@ -53,7 +54,9 @@ interface Props {
   mostraAlimentacao: boolean;
   mostraHorasExtra: boolean;
   valorNoite: number;
-  rotasRecentes: string[];
+  /** Última paragem conhecida de cada rota recente — para "continuar rota"
+   * pré-preencher KM Inicial/Tipo Veículo sem depender de outra query. */
+  rotasRecentes: { idRota: string; tipoVeiculo: string; kmFinal: number }[];
   clientes: string[];
   inicial?: { idRota?: string; tipoVeiculo?: string; kmInicial?: string };
   paragensRotaIniciais: ParagemRotaResumo[];
@@ -126,6 +129,7 @@ export default function RegistoForm({
     kmInicial: inicial?.kmInicial || "",
   };
 
+  const router = useRouter();
   const [f, setF] = useState<Campos>(estadoInicial);
   // "" = rota nova (ID gerado pelo servidor); preenchido = continuar essa rota.
   const [idRotaAtiva, setIdRotaAtiva] = useState(inicial?.idRota || "");
@@ -561,12 +565,26 @@ export default function RegistoForm({
                 <select
                   className="input"
                   value=""
-                  onChange={(e) => e.target.value && setIdRotaAtiva(e.target.value)}
+                  onChange={(e) => {
+                    const r = rotasRecentes.find((x) => x.idRota === e.target.value);
+                    if (!r) return;
+                    // Navega com os mesmos parâmetros do "Continuar rota" do
+                    // histórico — a página server-side é que sabe carregar o
+                    // KM Inicial (kmFinal da última paragem), o Tipo Veículo e
+                    // o resumo da rota (noites/alimentação/paletes já
+                    // registadas); só ajustar o estado local aqui deixava o
+                    // formulário "esquecer-se" dos km da última vez.
+                    router.push(
+                      `/motorista/registo?idRota=${encodeURIComponent(r.idRota)}` +
+                        `&tipoVeiculo=${encodeURIComponent(r.tipoVeiculo)}` +
+                        `&kmInicial=${r.kmFinal}`,
+                    );
+                  }}
                 >
                   <option value="">— escolher rota —</option>
                   {rotasRecentes.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                    <option key={r.idRota} value={r.idRota}>
+                      {r.idRota}
                     </option>
                   ))}
                 </select>

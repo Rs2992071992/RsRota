@@ -30,11 +30,14 @@ export default async function RegistoPage(
           })
         : Promise.resolve(null),
       prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
+      // distinct + orderBy devolve, por idRota, a paragem mais recente — dá
+      // para pré-preencher "continuar rota" sem outra query (kmFinal/
+      // tipoVeiculo de onde esta rota ficou).
       prisma.paragem.findMany({
         where: filtroRotas,
-        select: { idRota: true },
+        select: { idRota: true, tipoVeiculo: true, kmFinal: true },
         distinct: ["idRota"],
-        orderBy: { data: "desc" },
+        orderBy: [{ data: "desc" }, { id: "desc" }],
         take: 15,
       }),
       prisma.veiculo.findMany({
@@ -97,6 +100,11 @@ export default async function RegistoPage(
 
   return (
     <RegistoForm
+      // Força remount ao navegar para outra rota (ou para "rota nova") a
+      // partir do próprio formulário — sem isto o React reaproveitava a
+      // instância e o useState ficava preso aos valores da rota anterior
+      // (mesmo padrão da lição de 2026-08-06 sobre EditarNomeCliente).
+      key={`${inicial.idRota}-${inicial.tipoVeiculo}-${inicial.kmInicial}`}
       zonas={portagens.map((p) => p.zona)}
       veiculos={veiculos.map((v) => ({
         id: v.id,
@@ -115,7 +123,11 @@ export default async function RegistoPage(
       mostraAlimentacao={campoVisivel?.mostraAlimentacao ?? true}
       mostraHorasExtra={campoVisivel?.mostraHorasExtra ?? true}
       valorNoite={params?.valorNoite ?? 70}
-      rotasRecentes={rotasRecentes.map((r) => r.idRota)}
+      rotasRecentes={rotasRecentes.map((r) => ({
+        idRota: r.idRota,
+        tipoVeiculo: r.tipoVeiculo,
+        kmFinal: r.kmFinal,
+      }))}
       clientes={clientes}
       inicial={inicial}
       paragensRotaIniciais={paragensRotaAtiva.map((p) => ({
