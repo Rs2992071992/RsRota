@@ -2,6 +2,17 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-05] | `components/DespesasIcones.tsx` (ícones 🌙🍽️⏱️🛣️ junto ao
+  cliente, em `HistoricoMotorista.tsx`/`rotas/[idRota]/page.tsx`) só acendia
+  o 🛣️ com `portagensExtra > 0` (valor manual) — uma paragem com
+  `zonaPortagem` preenchida (lookup automático na tabela de Parâmetros, via
+  `valorPortagem()`) mas sem extra manual não mostrava símbolo nenhum,
+  apesar de ter dados de portagem reais. O Ricardo reparou porque tinha
+  paragens só com zona. | Duas fontes de custo do mesmo tipo (aqui:
+  portagem por zona vs. portagem manual) — um indicador visual que só olha
+  para uma delas vai parecer "não gravou" quando na verdade só usaram a
+  outra fonte. Ao adicionar um ícone/aviso para "há dados de X", verificar
+  TODOS os campos que alimentam X, não só o mais recente/óbvio.
 - [2026-09-05] | `components/ParagemEditor.tsx` (escritório corrige uma
   paragem já registada) não preenchia `cliente: "Vazio"` automaticamente ao
   mudar `tipoVeiculo` para VAZIO — só `RegistoForm.tsx` (registo do
