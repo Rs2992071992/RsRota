@@ -175,12 +175,12 @@ export function calcularRota(
   // Atribuição manual de troços VAZIO (opcional, escritório): os km indicados
   // por cliente convertem-se em fração do troço (km/kmFeitos) aplicada ao
   // custoParagem desse troço, entregue diretamente a esse cliente — fora do
-  // rateio proporcional abaixo. O que não for coberto pelos km indicados
-  // continua a diluir-se automaticamente, como sempre (ver custoProporcional).
-  // Nunca deixa uma paragem atribuir mais km do que os que efetivamente fez
-  // (escala tudo para baixo se a soma ultrapassar `kmFeitos`).
+  // rateio automático abaixo. O que não for coberto pelos km indicados
+  // continua a diluir-se automaticamente, como sempre. Nunca deixa uma
+  // paragem atribuir mais km do que os que efetivamente fez (escala tudo
+  // para baixo se a soma ultrapassar `kmFeitos`).
   const manualPorCliente = new Map<string, number>();
-  let custoManualTotal = 0;
+  const custoManualPorVazio = new Map<number, number>(); // índice do VAZIO -> já coberto manualmente
   for (let i = 0; i < paragens.length; i++) {
     const p = paragens[i];
     if (p.tipoVeiculo !== "VAZIO" || !p.rateioManual?.length) continue;
@@ -189,30 +189,35 @@ export function calcularRota(
     const somaKm = p.rateioManual.reduce((a, r) => a + (r.km || 0), 0);
     if (somaKm <= 0) continue;
     const fator = somaKm > kmFeitosTroco ? kmFeitosTroco / somaKm : 1;
+    let cobertoNesteVazio = 0;
     for (const { cliente, km } of p.rateioManual) {
       if (!cliente || km <= 0) continue;
       const valor = calc[i].custoParagem * ((km * fator) / kmFeitosTroco);
       manualPorCliente.set(cliente, (manualPorCliente.get(cliente) ?? 0) + valor);
-      custoManualTotal += valor;
+      cobertoNesteVazio += valor;
     }
+    custoManualPorVazio.set(i, cobertoNesteVazio);
   }
-  const custoProporcional = custoTotalRota - custoManualTotal;
 
-  // Rateio por cliente (auditável). O custo (menos o que já foi atribuído
-  // manualmente acima) é repartido de forma proporcional ao coeficiente de
-  // carga (peso/capacidade) de cada cliente, NORMALIZADO para somar 100 %.
-  // Assim Σ custoAtribuido = custoTotalRota e Σ margem = lucro. Trajetos a
-  // vazio (VAZIO ou camião sem carga) não recebem linha própria no loop
-  // abaixo: o que não foi atribuído manualmente dilui-se nos clientes reais.
-  const porCliente = new Map<string, RateioCliente>();
-  let somaCoef = 0;
-  for (let i = 0; i < paragens.length; i++) {
-    const p = paragens[i];
-    // Só os trajetos a vazio (VAZIO) ficam de fora: são repositionamento, sem
-    // cliente a faturar. Qualquer outro tipo participa (mesmo com peso 0 mal
-    // registado), para nunca perder um cliente realmente faturado.
-    if (p.tipoVeiculo === "VAZIO") continue;
-    const coef = coeficienteReal(
+  // Rateio por cliente (auditável), SEGMENTADO por troço (tipoViagem + dia —
+  // mesma chave de `pesosEmTransito`, para não juntar Ida e Volta, nem dias
+  // diferentes de uma rota multi-dia com `idRota` reutilizado, num único
+  // "bolo"). Dentro de CADA segmento, o custo reparte-se proporcionalmente
+  // ao coeficiente de carga de cada cliente, exatamente como sempre — só que
+  // agora o cliente da Ida deixa de subsidiar o troço da Volta (e vice-versa).
+  // Uma rota de 1 segmento só (o caso comum, sem Ida/Volta) dá exatamente o
+  // mesmo resultado de sempre.
+  const chaveSegmento = (p: ParagemInput): string => {
+    const dia = p.data ? new Date(p.data).toISOString().slice(0, 10) : "";
+    return `${p.tipoViagem}|${dia}`;
+  };
+  // "chave" de faturação (recolha para outro cliente via `faturarCliente`
+  // soma-se à quota desse cliente, não à do próprio `cliente` — igual a
+  // sempre).
+  const chaveCliente = (p: ParagemInput): string => p.faturarCliente?.trim() || p.cliente || "(sem cliente)";
+  const coefPorIndice: number[] = paragens.map((p, i) => {
+    if (p.tipoVeiculo === "VAZIO") return 0;
+    return coeficienteReal(
       p.tipoVeiculo,
       pesoTransportado(p),
       effs[i],
@@ -224,52 +229,131 @@ export function calcularRota(
       p.nMeiasPaletes || 0,
       p.paletes ?? null,
     );
-    // Recolha para entregar a outro cliente (`faturarCliente` preenchido):
-    // atribui o coeficiente a esse cliente em vez do próprio `cliente` — ex.
-    // recolha em "Tec-masterferro" faturada a "Tecfil" soma-se à quota da
-    // Tecfil, não gera linha própria nem dilui pelos outros clientes da rota.
-    const chave = p.faturarCliente?.trim() || p.cliente || "(sem cliente)";
-    const atual = porCliente.get(chave) ?? {
-      cliente: chave,
-      coefReal: 0,
-      quota: 0,
-      custoAtribuido: 0,
-      receitaPaga: 0,
-    };
-    atual.coefReal += coef;
-    atual.receitaPaga += p.receitaPaga || 0;
-    porCliente.set(chave, atual);
-    somaCoef += coef;
-  }
-  // Normalização: quota = coefReal / Σcoef. Garde-fou contra divisão por zero
-  // (nenhum arrêt participante) — reparte igualmente entre os clientes presentes.
-  const clientesProporcional = Array.from(porCliente.values());
-  const denom = somaCoef > 0 ? somaCoef : clientesProporcional.length || 1;
-  for (const c of clientesProporcional) {
-    c.quota = somaCoef > 0 ? c.coefReal / denom : 1 / denom;
-    c.custoAtribuido = c.quota * custoProporcional;
+  });
+
+  const indicesPorSegmento = new Map<string, number[]>();
+  paragens.forEach((p, i) => {
+    if (p.tipoVeiculo === "VAZIO") return;
+    const seg = chaveSegmento(p);
+    (indicesPorSegmento.get(seg) ?? indicesPorSegmento.set(seg, []).get(seg)!).push(i);
+  });
+  const custoSegmento = new Map<string, number>();
+  const coefSegmento = new Map<string, number>();
+  for (const [seg, idxs] of indicesPorSegmento) {
+    custoSegmento.set(seg, idxs.reduce((s, i) => s + calc[i].custoParagem, 0));
+    coefSegmento.set(seg, idxs.reduce((s, i) => s + coefPorIndice[i], 0));
   }
 
-  // Soma a atribuição manual (se houver) — cria a linha do cliente se ainda
-  // não existir (ex.: um cliente que só aparece via a atribuição manual do
-  // vazio, sem nenhuma outra paragem faturada nesta rota).
-  for (const [chave, valor] of manualPorCliente) {
-    const atual = porCliente.get(chave) ?? {
-      cliente: chave,
-      coefReal: 0,
-      quota: 0,
-      custoAtribuido: 0,
-      receitaPaga: 0,
-    };
+  const custoAutoPorCliente = new Map<string, number>();
+  const somaAuto = (cliente: string, valor: number) =>
+    custoAutoPorCliente.set(cliente, (custoAutoPorCliente.get(cliente) ?? 0) + valor);
+  const distribuiParaSegmento = (seg: string, valor: number) => {
+    const idxs = indicesPorSegmento.get(seg);
+    if (!idxs || idxs.length === 0) return;
+    const coefTotal = coefSegmento.get(seg) ?? 0;
+    if (coefTotal > 0) {
+      for (const i of idxs) somaAuto(chaveCliente(paragens[i]), (coefPorIndice[i] / coefTotal) * valor);
+    } else {
+      // Sem nenhum coeficiente no segmento (raro, ex. peso 0 mal registado) ->
+      // reparte igualmente pelos clientes presentes.
+      for (const i of idxs) somaAuto(chaveCliente(paragens[i]), valor / idxs.length);
+    }
+  };
+
+  // 1) Custo próprio de cada segmento -> proporcional ao coeficiente DENTRO
+  // desse segmento (nunca dilui para outro segmento).
+  for (const seg of indicesPorSegmento.keys()) {
+    distribuiParaSegmento(seg, custoSegmento.get(seg) ?? 0);
+  }
+
+  // 2) Cada VAZIO: a parte não coberta manualmente reparte-se 50/50 entre o
+  // segmento anterior e o seguinte, na sequência física por km (a mesma
+  // segmentação já usada no aviso de sobreocupação) — cada metade
+  // proporcional aos clientes DESSE segmento. Um VAZIO interno ao mesmo
+  // segmento (sem mudança de tipoViagem/dia) dilui-se só nesse segmento,
+  // tal como sempre. Sem nenhum segmento adjacente (ex. o segmento é o
+  // próprio troço vazio), o custo não tem para onde ir automaticamente.
+  const ordemKm = paragens.map((_, i) => i).sort((a, b) => (paragens[a].kmInicial || 0) - (paragens[b].kmInicial || 0));
+  for (let i = 0; i < paragens.length; i++) {
+    if (paragens[i].tipoVeiculo !== "VAZIO") continue;
+    const custoRestante = calc[i].custoParagem - (custoManualPorVazio.get(i) ?? 0);
+    if (custoRestante <= 0) continue;
+    const pos = ordemKm.indexOf(i);
+    let segAntes: string | null = null;
+    for (let k = pos - 1; k >= 0; k--) {
+      const idx = ordemKm[k];
+      if (paragens[idx].tipoVeiculo !== "VAZIO") {
+        segAntes = chaveSegmento(paragens[idx]);
+        break;
+      }
+    }
+    let segDepois: string | null = null;
+    for (let k = pos + 1; k < ordemKm.length; k++) {
+      const idx = ordemKm[k];
+      if (paragens[idx].tipoVeiculo !== "VAZIO") {
+        segDepois = chaveSegmento(paragens[idx]);
+        break;
+      }
+    }
+    if (segAntes && segDepois && segAntes !== segDepois) {
+      distribuiParaSegmento(segAntes, custoRestante * 0.5);
+      distribuiParaSegmento(segDepois, custoRestante * 0.5);
+    } else if (segAntes) {
+      distribuiParaSegmento(segAntes, custoRestante); // mesmo segmento (interno) ou só há "antes"
+    } else if (segDepois) {
+      distribuiParaSegmento(segDepois, custoRestante);
+    }
+  }
+
+  // 3) Custos comuns da rota (noites, alimentação, horas extra, portagem de
+  // tabela) — não pertencem a nenhum troço específico, continuam a repartir-se
+  // proporcionalmente ao coeficiente de TODA a rota, exatamente como sempre
+  // (não fazem parte da segmentação Ida/Volta acima).
+  const custosComuns = somaNoites + somaAlimentacao + somaHorasExtraValor + somaPortagensTabela;
+  if (custosComuns > 0) {
+    const coefTotalRota = coefPorIndice.reduce((s, c) => s + c, 0);
+    const clientesRota = new Set(
+      paragens.filter((p) => p.tipoVeiculo !== "VAZIO").map((p) => chaveCliente(p)),
+    );
+    if (coefTotalRota > 0) {
+      paragens.forEach((p, i) => {
+        if (p.tipoVeiculo === "VAZIO") return;
+        somaAuto(chaveCliente(p), (coefPorIndice[i] / coefTotalRota) * custosComuns);
+      });
+    } else if (clientesRota.size > 0) {
+      for (const cliente of clientesRota) somaAuto(cliente, custosComuns / clientesRota.size);
+    }
+  }
+
+  // Junta a atribuição manual (VAZIO) por cima do automático.
+  const porCliente = new Map<string, RateioCliente>();
+  const linha = (cliente: string): RateioCliente =>
+    porCliente.get(cliente) ?? { cliente, coefReal: 0, quota: 0, custoAtribuido: 0, receitaPaga: 0 };
+  for (const [cliente, valor] of custoAutoPorCliente) {
+    const atual = linha(cliente);
     atual.custoAtribuido += valor;
+    porCliente.set(cliente, atual);
+  }
+  for (const [cliente, valor] of manualPorCliente) {
+    const atual = linha(cliente);
+    atual.custoAtribuido += valor;
+    porCliente.set(cliente, atual);
+  }
+
+  // coefReal (indicador, não entra no cálculo de custo acima) e receitaPaga:
+  // somados globalmente por cliente, como sempre — "acima de 1 indica
+  // sobrecarga" continua a olhar para a rota toda, não só para um troço.
+  for (let i = 0; i < paragens.length; i++) {
+    if (paragens[i].tipoVeiculo === "VAZIO") continue;
+    const chave = chaveCliente(paragens[i]);
+    const atual = linha(chave);
+    atual.coefReal += coefPorIndice[i];
+    atual.receitaPaga += paragens[i].receitaPaga || 0;
     porCliente.set(chave, atual);
   }
 
-  // Recalcula a quota final de TODOS os clientes a partir do custoAtribuido
-  // real (proporcional + manual) — sem override dá exatamente o mesmo valor
-  // que o cálculo direto acima (custoManualTotal=0 -> custoProporcional=
-  // custoTotalRota), mas mantém "quota = fração real do custo total que este
-  // cliente paga" sempre verdadeiro, incl. quando há atribuição manual.
+  // Quota final = fração real do custo total que este cliente paga (sempre
+  // verdadeiro, com ou sem segmentação/atribuição manual) — Σquota = 1.
   const clientes = Array.from(porCliente.values());
   for (const c of clientes) {
     if (custoTotalRota > 0) c.quota = c.custoAtribuido / custoTotalRota;

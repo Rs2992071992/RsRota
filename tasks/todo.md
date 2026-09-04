@@ -2,6 +2,41 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Rateio segmentado por troço Ida/Volta — retoma a variante revertida em agosto (2026-09-04)
+
+Pedido do Ricardo ("fazemos os dois", depois do porte Android ter sido adiado):
+voltar à repartição do preço por troço, agora que a base de ocupação estava
+corrigida. Reimplementa a variante que já tinha sido construída e deployada
+em agosto (`64be64d`) e revertida por causa do bloqueio das paletes de
+tamanhos diferentes (`82be237`) — ver `tasks/lessons.md` 2026-08-30. **Não**
+é o modelo "por troço" completo (esse ficou arquivado, decisão do cliente) —
+é a variante mais leve: em vez de UM bolo só (custo × coeficiente/Σcoef de
+TODA a rota), cada `tipoViagem`+dia é o seu próprio bolo.
+
+- [x] `lib/calc/perRoute.ts::calcularRota`: nova segmentação por
+  `tipoViagem`+dia (mesma chave de `pesosEmTransito`) — dentro de cada
+  segmento, custo repartido proporcionalmente ao coeficiente, como sempre.
+  VAZIO entre 2 segmentos diferentes: 50/50 por defeito (proporcional dentro
+  de cada lado), `rateioManual` (já existia, só para VAZIO) continua a
+  funcionar por cima — o que sobrar do manual é que vai 50/50, não dilui na
+  rota toda. VAZIO interno ao mesmo segmento: dilui só nesse segmento (como
+  sempre). Custos comuns (noites/alimentação/horas extra/portagem tabela):
+  continuam proporcionais à rota TODA (não fazem parte da segmentação)
+- [x] Rota de 1 segmento só (sem Ida/Volta a sério — a esmagadora maioria das
+  rotas) dá **exatamente o mesmo resultado de sempre** — testado
+- [x] +5 testes novos em `tests/calc/perRoute.test.ts` (Σcusto conservado,
+  troço da Volta não subsidia o da Ida, vazio 50/50, regressão 1-segmento,
+  interação com `rateioManual`). 213 testes verdes, `tsc`/`next build` limpos
+- [x] Diff contra as 28 rotas reais (`git stash` + comparar): **13 rotas
+  mudam de rateio, 15 ficam byte-a-byte iguais** (as de 1 segmento só);
+  **`custoTotalRota` de CADA rota confirmado idêntico** antes/depois (só a
+  repartição muda, nunca o total faturável). RIC-Percam: 794,73→958,05 €
+  Tec-Percam (mesma ordem de grandeza da lição de agosto, 162→692 €)
+- [x] **Confirmação do Ricardo** (2026-09-04: "vamos avançar, logo se vê se
+  isto está bem") — commit + push feitos
+- [ ] Acompanhar as próximas rotas reais com Ida/Volta para confirmar que os
+  valores fazem sentido na prática; reverter (`git revert`) se não
+
 ## ☑️ Aviso de espaço: recolha na Ida entregue só na Volta (2026-09-04)
 
 Pedido do Ricardo: rota de 2 dias — Ida entrega a 8 clientes e recolhe mais 2

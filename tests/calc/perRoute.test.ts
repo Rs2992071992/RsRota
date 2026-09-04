@@ -610,3 +610,78 @@ describe("calcularRota — peso em trânsito muda o consumo por troço (entrega 
     expect(soma).toBeCloseTo(r.custoTotalRota, 6);
   });
 });
+
+describe("calcularRota — rateio segmentado por troço (tipoViagem + dia, 2026-09-04)", () => {
+  // Rota de 2 dias: Ida entrega a A e B (dia 1), vazio entre os dois dias,
+  // Volta recolhe para C (dia 2, faturarCliente aponta para o próprio nome
+  // "C" — o mesmo padrão já usado em toda a app).
+  const palete = (n: number) => ({ volume: true, tipoPalete: "PALETE_120X80", nPaletes: n });
+  const rota: ParagemInput[] = [
+    paragemBase({ cliente: "A", data: "2026-01-01", tipoViagem: "Ida", kmInicial: 0, kmFinal: 100, ...palete(10) }),
+    paragemBase({ cliente: "B", data: "2026-01-01", tipoViagem: "Ida", kmInicial: 100, kmFinal: 300, ...palete(10) }),
+    paragemBase({ cliente: "Vazio", data: "2026-01-01", tipoViagem: "Ida", tipoVeiculo: "VAZIO", kmInicial: 300, kmFinal: 500 }),
+    paragemBase({ cliente: "C", data: "2026-01-02", tipoViagem: "Volta", kmInicial: 500, kmFinal: 520, ...palete(10) }),
+  ];
+  const r = calcularRota("T", rota, ctx);
+  const a = () => r.rateio.find((c) => c.cliente === "A")!;
+  const b = () => r.rateio.find((c) => c.cliente === "B")!;
+  const c = () => r.rateio.find((c) => c.cliente === "C")!;
+
+  it("Σ custo atribuído = custo total (invariante mantido com segmentação)", () => {
+    const soma = r.rateio.reduce((s, x) => s + x.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+
+  it("C (Volta, sozinho no seu troço) não paga nada do troço de A/B (Ida)", () => {
+    // Custo do troço de C = só o custoParagem da sua própria paragem + a
+    // metade do vazio que lhe calha (50/50 com o segmento da Ida).
+    const custoVazio = r.paragens.find((p) => p.tipoVeiculo === "VAZIO")!.custoParagem;
+    const custoPropriaC = r.paragens.find((p) => p.cliente === "C")!.custoParagem;
+    expect(c().custoAtribuido).toBeCloseTo(custoPropriaC + custoVazio * 0.5, 2);
+  });
+
+  it("A e B (mesmo troço, mesmas paletes) continuam a repartir o SEU custo a meias entre si", () => {
+    const custoA = r.paragens.find((p) => p.cliente === "A")!.custoParagem;
+    const custoB = r.paragens.find((p) => p.cliente === "B")!.custoParagem;
+    const custoVazio = r.paragens.find((p) => p.tipoVeiculo === "VAZIO")!.custoParagem;
+    // Coeficientes iguais (mesmas paletes) -> cada um metade do troço da Ida
+    // (custoA + custoB) + metade cada da sua fatia do vazio (25% cada do vazio total).
+    const totalIda = custoA + custoB + custoVazio * 0.5;
+    expect(a().custoAtribuido).toBeCloseTo(totalIda / 2, 2);
+    expect(b().custoAtribuido).toBeCloseTo(totalIda / 2, 2);
+  });
+
+  it("rota de 1 segmento só (sem Ida/Volta a sério) dá o mesmo resultado de sempre — regressão", () => {
+    const umSoSegmento: ParagemInput[] = [
+      paragemBase({ cliente: "X", data: "2026-01-01", kmInicial: 0, kmFinal: 100, ...palete(10) }),
+      paragemBase({ cliente: "Y", data: "2026-01-01", kmInicial: 100, kmFinal: 300, ...palete(30) }),
+    ];
+    const rr = calcularRota("T2", umSoSegmento, ctx);
+    const x = rr.rateio.find((c) => c.cliente === "X")!;
+    const y = rr.rateio.find((c) => c.cliente === "Y")!;
+    // Modelo antigo: quota proporcional ao coeficiente de toda a rota — X tem
+    // 1/4 das paletes de Y (10 vs 30 do mesmo tipo) -> quota 1/4 do total.
+    expect(x.quota).toBeCloseTo(0.25, 6);
+    expect(y.quota).toBeCloseTo(0.75, 6);
+    expect(x.custoAtribuido + y.custoAtribuido).toBeCloseTo(rr.custoTotalRota, 6);
+  });
+
+  it("rateioManual no vazio continua a funcionar; o que sobra vai 50/50 (não dilui na rota toda)", () => {
+    const comManual: ParagemInput[] = rota.map((p) =>
+      p.tipoVeiculo === "VAZIO" ? { ...p, rateioManual: [{ cliente: "B", km: (p.kmFinal - p.kmInicial) / 2 }] } : p,
+    );
+    const rm = calcularRota("T3", comManual, ctx);
+    const custoVazio = rm.paragens.find((p) => p.tipoVeiculo === "VAZIO")!.custoParagem;
+    const bManual = rm.rateio.find((x) => x.cliente === "B")!;
+    const cManual = rm.rateio.find((x) => x.cliente === "C")!;
+    // Metade do vazio foi atribuída a B manualmente; a outra metade continua
+    // a repartir-se 50/50 pelos troços adjacentes (não pela rota toda).
+    expect(bManual.custoAtribuido).toBeGreaterThan(b().custoAtribuido);
+    expect(cManual.custoAtribuido).toBeCloseTo(
+      rm.paragens.find((p) => p.cliente === "C")!.custoParagem + custoVazio * 0.5 * 0.5,
+      2,
+    );
+    const soma = rm.rateio.reduce((s, x) => s + x.custoAtribuido, 0);
+    expect(soma).toBeCloseTo(rm.custoTotalRota, 6);
+  });
+});
