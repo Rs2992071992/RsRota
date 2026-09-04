@@ -2,6 +2,24 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-04] | Depois de corrigir `verificarEspacoCarga` (recolha entregue
+  mais tarde contava a dobra na ocupação — lição abaixo), o Ricardo suspeitou
+  que `totalPaletes`/`totalPesoAproximado` (cartões "Paletes transportadas"/
+  "Peso aproximado") tinham o MESMO tipo de bug — e tinha razão: eram somados
+  ingenuamente por todas as paragens, sem excluir a recolha quando o
+  `faturarCliente` também tinha entrega na mesma rota (ex. RIC-A22: 77→52
+  depois de corrigido). | Um bug de "conta a dobra por causa de
+  recolha+entrega do mesmo lote" raramente vive só num sítio — `cargaRota.ts`
+  (ocupação), `perRoute.ts::totalPaletes` (totais) e, ia a caminho, o próprio
+  rateio (`coefReal`, que soma a recolha E a entrega ao mesmo cliente) são
+  todos candidatos ao mesmo problema, porque todos iteram "todas as paragens"
+  sem saber que duas delas são o mesmo lote físico. Regra: sempre que se conserta
+  um destes, verificar os outros dois com o mesmo padrão de dados reais
+  (`faturarCliente` a apontar para um cliente que também tem `cliente` igual
+  nessa rota) antes de assumir que só havia um sítio para corrigir. Ver
+  `Paragem.faturarCliente`/[[backhaul-registo-motorista]] (memória) para o
+  fluxo de registo que gera este padrão.
+
 - [2026-09-04] | `verificarEspacoCarga` (aviso de sobreocupação) assumia que
   cada "entregues"/"recolhidas" de uma paragem era independente das outras —
   correto quando a carga vem sempre pré-carregada no início do segmento

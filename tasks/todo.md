@@ -2,6 +2,19 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Investigar: `coefReal` do rateio pode ter o mesmo bug de "conta a dobra" (2026-09-04, EM ABERTO)
+
+Ao corrigir `totalPaletes`/`totalPesoAproximado` (secção abaixo) reparei que
+`RateioCliente.coefReal` (`lib/calc/perRoute.ts::calcularRota`, o loop que
+soma `coefPorIndice[i]` por `chaveCliente`) **não** tem a mesma exclusão —
+soma o coeficiente da paragem de recolha E o da paragem de entrega ao mesmo
+cliente, quando são o mesmo lote físico (`faturarCliente` liga as duas). Isto
+**não afeta o dinheiro** (o `custoAtribuido` já está correto, via a
+segmentação por troço de hoje) — só o indicador `coefReal`/"% sobre a
+capacidade" mostrado na UI, que pode aparecer inflacionado nalguns clientes
+com backhaul. Não investiguei nem confirmei com dados reais ainda — verificar
+antes de mexer (mesmo processo: diff contra as 28 rotas reais).
+
 ## ☑️ totalPaletes/totalPesoAproximado contavam a dobra nos backhauls (2026-09-04)
 
 Pedido do Ricardo: "corrige as voltas todas do separador rotas, tenho quase a
