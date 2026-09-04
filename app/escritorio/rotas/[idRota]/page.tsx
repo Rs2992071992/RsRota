@@ -48,7 +48,10 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   // (ficam a 0 nestas paragens) — passa a somar-se o peso aproximado que o
   // motorista introduziu por paragem (informativo). Rotas antigas por peso
   // (totalPaletes=0) continuam a mostrar os cartões de kg como sempre.
-  const totalPesoAproximado = paragensRaw.reduce((a, p) => a + (p.pesoAproximado || 0), 0);
+  // totalPaletes/totalPesoAproximado vêm de calcularRota (não somados aqui à
+  // parte) — uma recolha faturada a outro cliente que também tem entrega
+  // nesta rota já não conta a dobra (2026-09-04).
+  const totalPesoAproximado = rota.totalPesoAproximado;
   const datasParagens = paragensRaw.map((p) => p.data);
   const dataRotaLabel =
     datasParagens.length === 0
@@ -218,13 +221,14 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         <h2 className="mb-3 font-semibold">Decomposição do custo da rota</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
           <Item label="Custos das paragens" valor={rota.somaCustoParagens} />
-          <Item
-            label="— dos quais, portagens extra"
-            valor={rota.paragens.reduce((a, p) => a + p.portagensExtra, 0)}
-          />
+          <Item label="Portagens extra" valor={rota.paragens.reduce((a, p) => a + p.portagensExtra, 0)} />
           <Item label="Noites" valor={rota.somaNoites} />
           <Item label="Alimentação" valor={rota.somaAlimentacao} />
-          <Item label="Horas extra (valorizadas)" valor={rota.somaHorasExtraValor} />
+          <Item
+            label="Horas extra"
+            valor={rota.somaHorasExtraValor}
+            prefixo={`${fmtNum(paragensRaw.reduce((a, p) => a + p.horasExtra, 0))}H - `}
+          />
           <Item label="Portagens (tabela)" valor={rota.somaPortagensTabela} />
           <div className="flex justify-between border-t border-gray-200 pt-2 font-bold md:col-span-3">
             <span>Custo total</span>
@@ -404,11 +408,14 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   );
 }
 
-function Item({ label, valor }: { label: string; valor: number }) {
+function Item({ label, valor, prefixo }: { label: string; valor: number; prefixo?: string }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-gray-600">{label}</span>
-      <span className="whitespace-nowrap font-medium">{fmtEuro(valor)}</span>
+      <span className="whitespace-nowrap font-medium">
+        {prefixo}
+        {fmtEuro(valor)}
+      </span>
     </div>
   );
 }

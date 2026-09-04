@@ -2,6 +2,34 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ totalPaletes/totalPesoAproximado contavam a dobra nos backhauls (2026-09-04)
+
+Pedido do Ricardo: "corrige as voltas todas do separador rotas, tenho quase a
+certeza que os valores dos kg totais e das paletes não estão corretos".
+Investigação com dados reais confirmou: uma recolha faturada a outro cliente
+(`faturarCliente`) que TAMBÉM tem uma entrega nessa mesma rota tinha as suas
+paletes/peso aproximado somados **duas vezes** no total da rota — uma vez na
+paragem de recolha, outra na paragem de entrega do mesmo lote (ex.
+RIC-maravedis2: "Tec-Procartão recolhe 10 paletes faturadas a Tecfil" +
+"Tecfil entrega 10 paletes" — o mesmo lote, contado como 20).
+
+- [x] `lib/calc/perRoute.ts::calcularRota`: mesma regra de linha de
+  `pesosEmTransito` (faturarCliente aponta para um cliente que tem entrega
+  nesta rota) — a paragem de recolha deixa de contar no `totalPaletes`/
+  `totalPesoAproximado` (já conta na entrega). Sem entrega correspondente
+  nesta rota (o único registo do lote) continua a contar, como sempre
+- [x] `RotaCalc.totalPesoAproximado` novo (`lib/calc/types.ts`); página da
+  rota deixa de somar `pesoAproximado` à parte, usa `rota.totalPesoAproximado`
+- [x] +3 testes, 217 verdes, `tsc`/`next build` limpos
+- [x] Diff contra as 28 rotas reais: **6 rotas corrigidas** — RIC-A2 (32→28),
+  RIC-A22 (77→52), RIC-Francisco Lince Blowtec (69,5→54,5), RIC-maravedis2
+  (30→20), RIC-Tec-A22 (30→28), RIC-Tec-eurored (56,5→40); as outras 22 ficam
+  iguais (não tinham o padrão recolha+entrega do mesmo lote)
+- [x] **Extra (mesmo pedido)**: label "— dos quais, portagens extra" →
+  "Portagens extra" (mais simples); "Horas extra (valorizadas)" mostra agora
+  a quantidade de horas antes do valor (ex. "9H - 45,00 €")
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ☑️ Ajustes à página da rota — peso/paletes, L/100km, vazio na coluna do rateio (2026-09-04)
 
 Pedido do Ricardo em `/escritorio/rotas/[idRota]`: (1) coluna "Peso" mostrava 0

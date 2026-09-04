@@ -385,12 +385,34 @@ export function calcularRota(
   const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
   const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
   const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
+
+  // Recolha para entregar a outro cliente (`faturarCliente`, mesma regra de
+  // `pesosEmTransito`): as SUAS paletes/peso aproximado não entram nos totais
+  // da rota — já são contadas na paragem de entrega desse cliente (senão o
+  // mesmo lote soma-se a dobra: uma vez na recolha, outra na entrega). Só se
+  // aplica quando o alvo tem mesmo uma entrega nesta rota — sem isso (ex.
+  // entregue numa rota diferente, não registada aqui) o valor conta-se aqui,
+  // como sempre (é o único registo que existe desse lote).
+  const clientesComEntregaTotal = new Set(
+    paragens
+      .filter((p) => p.tipoVeiculo !== "VAZIO")
+      .map((p) => p.cliente?.trim())
+      .filter((x): x is string => !!x),
+  );
+  const jaContadaNaEntrega = new Set<number>();
+  paragens.forEach((p, i) => {
+    if (p.tipoVeiculo === "VAZIO") return;
+    const alvo = p.faturarCliente?.trim();
+    if (alvo && clientesComEntregaTotal.has(alvo)) jaContadaNaEntrega.add(i);
+  });
+
   // Cobre os 2 estilos de palete: legado (volume=true ou tipoVeiculo literal
   // pré-migração) e novo (dimensão própria, 2026-08-28+ — p.volume fica
   // false/vestigial nesse caso, por isso não basta olhar para p.volume).
   // Meias-paletes contam a 0,5 (nunca ocuparam base própria, mas contam para
   // o total transportado).
-  const totalPaletes = paragens.reduce((a, p) => {
+  const totalPaletes = paragens.reduce((a, p, i) => {
+    if (jaContadaNaEntrega.has(i)) return a;
     const linhas = linhasPaleteEfetivas(p);
     const ehPaleteLegado =
       p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
@@ -398,6 +420,11 @@ export function calcularRota(
     const nBase =
       linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
     return a + nBase + (p.nMeiasPaletes || 0) * 0.5;
+  }, 0);
+  // Peso aproximado (informativo — nunca entra no rateio): mesma regra.
+  const totalPesoAproximado = paragens.reduce((a, p, i) => {
+    if (jaContadaNaEntrega.has(i)) return a;
+    return a + (p.pesoAproximado || 0);
   }, 0);
 
   // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
@@ -427,6 +454,7 @@ export function calcularRota(
     totalKgCarregados,
     totalKgDescarregados,
     totalPaletes,
+    totalPesoAproximado,
   };
 }
 

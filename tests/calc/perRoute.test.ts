@@ -702,3 +702,52 @@ describe("calcularRota — rateio segmentado por troço (tipoViagem + dia, 2026-
     expect(somaVazioManual).toBeCloseTo(custoVazio, 2);
   });
 });
+
+describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra em backhauls (2026-09-04)", () => {
+  const palete = (n: number) => ({ volume: true, tipoPalete: "PALETE_120X80", nPaletes: n });
+
+  it("recolha faturada a um cliente que TAMBÉM tem entrega nesta rota -> só conta uma vez", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 50, ...palete(5) }),
+      // Recolha em "Fornecedor" faturada a "Tecfil" — 3 paletes.
+      paragemBase({
+        cliente: "Fornecedor",
+        faturarCliente: "Tecfil",
+        kmInicial: 50,
+        kmFinal: 100,
+        ...palete(3),
+        pesoAproximado: 900,
+      }),
+      // Entrega a Tecfil — as MESMAS 3 paletes (recolhidas acima) chegam aqui.
+      paragemBase({ cliente: "Tecfil", kmInicial: 100, kmFinal: 150, ...palete(3), pesoAproximado: 900 }),
+    ];
+    const r = calcularRota("T4", paragens, ctx);
+    // 5 (A) + 3 (Tecfil, na entrega) — a recolha em "Fornecedor" NÃO soma outra vez.
+    expect(r.totalPaletes).toBe(8);
+    expect(r.totalPesoAproximado).toBe(900);
+  });
+
+  it("recolha faturada a um cliente SEM entrega nesta rota -> conta normalmente (é o único registo)", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 50, ...palete(5) }),
+      paragemBase({
+        cliente: "Fornecedor",
+        faturarCliente: "Tecfil", // Tecfil não aparece mais nesta rota
+        kmInicial: 50,
+        kmFinal: 100,
+        ...palete(3),
+      }),
+    ];
+    const r = calcularRota("T5", paragens, ctx);
+    expect(r.totalPaletes).toBe(8); // 5 + 3, nada para excluir
+  });
+
+  it("sem faturarCliente em lado nenhum -> comportamento de sempre (regressão)", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 50, ...palete(5) }),
+      paragemBase({ cliente: "B", kmInicial: 50, kmFinal: 100, ...palete(3) }),
+    ];
+    const r = calcularRota("T6", paragens, ctx);
+    expect(r.totalPaletes).toBe(8);
+  });
+});

@@ -323,6 +323,12 @@ export interface RotaCalc {
   kmTotais: number;
   totalKgCarregados: number;
   totalKgDescarregados: number;
-  /** Soma de nPaletes só das paragens de volume (Paragem.volume=true). */
+  /**
+   * Soma de nPaletes da rota. Uma recolha faturada a outro cliente
+   * (`faturarCliente`) que também tenha entrega nesta rota não conta aqui —
+   * já é contada na paragem de entrega (senão o mesmo lote soma-se a dobra).
+   */
   totalPaletes: number;
+  /** Soma de `pesoAproximado` (informativo) — mesma regra de `totalPaletes`. */
+  totalPesoAproximado: number;
 }
