@@ -164,7 +164,11 @@ export default function ParagemEditor({
     paragem.tipoPaleteId != null ? "paletes" : paragem.volume ? "paletes-legado" : "kg",
   );
 
-  // VAZIO: não há carga nenhuma.
+  // VAZIO: não há carga nenhuma nem cliente a faturar (reposicionamento) —
+  // preenche "Vazio" automaticamente (mesmo padrão do registo do motorista,
+  // RegistoForm.tsx::setTipoVeiculo) para o escritório não ser obrigado a
+  // escrever um cliente ao corrigir uma paragem para VAZIO; ao sair de VAZIO,
+  // limpa esse valor para se escrever o cliente real.
   function setTipoVeiculo(v: string) {
     if (v === "VAZIO") {
       setLinhasExtra([]);
@@ -177,6 +181,8 @@ export default function ParagemEditor({
       volume: v === "VAZIO" ? false : prev.volume,
       tipoPalete: v === "VAZIO" ? null : prev.tipoPalete,
       tipoPaleteId: v === "VAZIO" ? "" : prev.tipoPaleteId,
+      cliente:
+        v === "VAZIO" ? "Vazio" : prev.tipoVeiculo === "VAZIO" && prev.cliente === "Vazio" ? "" : prev.cliente,
     }));
   }
 
@@ -363,7 +369,11 @@ export default function ParagemEditor({
           {campo("data", "Data", "date")}
           <div>
             <label className="label">Cliente / Local</label>
-            <input className="input" value={f.cliente} onChange={(e) => set("cliente", e.target.value)} />
+            {f.tipoVeiculo === "VAZIO" ? (
+              <p className="input flex items-center bg-gray-50 text-gray-500">Vazio — sem cliente a faturar</p>
+            ) : (
+              <input className="input" value={f.cliente} onChange={(e) => set("cliente", e.target.value)} />
+            )}
           </div>
           {mostrarFaturarCliente && (
             <div className="col-span-2">
