@@ -2,6 +2,16 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-05] | `components/ParagemEditor.tsx` (escritório corrige uma
+  paragem já registada) não preenchia `cliente: "Vazio"` automaticamente ao
+  mudar `tipoVeiculo` para VAZIO — só `RegistoForm.tsx` (registo do
+  motorista) tinha essa lógica. Resultado: `cliente` (obrigatório no schema)
+  ficava vazio e a gravação falhava, obrigando a escritório a escrever
+  "Vazio" à mão. | `RegistoForm.tsx` e `ParagemEditor.tsx` duplicam várias
+  regras de UI sobre o mesmo `ParagemInput`/`Paragem` (aqui: o que VAZIO
+  limpa/preenche) sem partilhar código — ao mudar uma regra num, verificar
+  se o outro precisa do mesmo ajuste. Candidato a extrair um helper puro
+  partilhado (`aplicarTipoVeiculo(prev, v)`) se voltar a divergir.
 - [2026-09-05] | Mesmo depois de corrigir o bug da data de inspeção (ver
   lição abaixo), o Ricardo bateu no MESMO padrão com outro campo: pôs
   "Vida útil (anos) = 0" ao criar um Ligeiro e só viu "Dados inválidos.",
