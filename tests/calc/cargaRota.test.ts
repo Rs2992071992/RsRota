@@ -134,6 +134,99 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
     expect(r.totalPaletes).toBe(8);
     expect(r.cabemTodas).toBe(true);
   });
+
+  describe("recolha entregue mais tarde (faturarCliente) — não conta a dobra", () => {
+    /** Recolha para outro cliente: fica a bordo até à entrega desse cliente. */
+    function recolhaPara(nPaletes: number, kmInicial: number, faturarCliente: string): ParagemCarga {
+      return {
+        entregues: [],
+        recolhidas: nPaletes > 0 ? [{ ...P1300, nPaletes, clienteNome: "Fornecedor" }] : [],
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        kmInicial,
+        cliente: "Fornecedor",
+        faturarCliente,
+      };
+    }
+    function entregaCliente(nPaletes: number, kmInicial: number, cliente: string): ParagemCarga {
+      return {
+        entregues: nPaletes > 0 ? [{ ...P1300, nPaletes, clienteNome: cliente }] : [],
+        recolhidas: [],
+        tipoVeiculo: "CAMIAO+REBOQUE",
+        kmInicial,
+        cliente,
+      };
+    }
+    const CAMIAO_REBOQUE = { id: "veiculo", label: "V", comprimentoMm: 7300, larguraMm: 2480 };
+    const REBOQUE2 = { id: "reboque", label: "R", comprimentoMm: 7500, larguraMm: 2480 };
+
+    it("cenário real (Ida entrega 16, recolhe 4 p/ Cliente A; Volta recolhe 10 p/ Cliente B, entrega tudo) → pico 16, não 30", () => {
+      const ida = [1, 2, 3, 4, 5, 6, 7, 8].map((n, i) => entregaCliente(2, i * 50, `Cliente ${n}`));
+      const paragens: ParagemCarga[] = [
+        ...ida,
+        recolhaPara(2, 400, "Cliente A"),
+        recolhaPara(2, 430, "Cliente A"),
+        recolhaPara(4, 650, "Cliente B"),
+        recolhaPara(3, 700, "Cliente B"),
+        recolhaPara(3, 750, "Cliente B"),
+        entregaCliente(4, 800, "Cliente A"),
+        entregaCliente(10, 800, "Cliente B"),
+      ];
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      expect(r.totalPaletes).toBe(16); // pico real: as 8 entregas da ida, todas a bordo
+    });
+
+    it("sem faturarCliente (recolha comum): fica presa ao seu próprio segmento — comportamento de sempre", () => {
+      // Mesmo cenário, mas a recolha da ida NÃO tem faturarCliente -> não é
+      // uma "linha", fica a bordo até ao fim do SEU segmento (sem VAZIO,
+      // é o mesmo segmento da entrega final -> ainda conta a dobra, como
+      // sempre contou; a correção só se aplica quando há faturarCliente).
+      const semLinha: ParagemCarga = {
+        entregues: [],
+        recolhidas: [{ ...P1300, nPaletes: 2, clienteNome: "Fornecedor" }],
+        tipoVeiculo: "CAMIAO",
+        kmInicial: 400,
+      };
+      const r = verificarEspacoCarga(
+        [CAMIAO_REBOQUE, REBOQUE2],
+        [entrega(10, 0), semLinha, entregaCliente(2, 800, "Cliente X")],
+      );
+      // entrega10 (índice0) + entregaCliente2 (índice2) contam-se ambas desde
+      // o início do segmento (comportamento herdado, não é o que este teste
+      // corrige) -> pico >= 12, mesmo sem nada de novo ter sido apanhado.
+      expect(r.totalPaletes).toBeGreaterThanOrEqual(12);
+    });
+
+    it("VAZIO entre a recolha e a entrega: a carga da linha atravessa, o resto continua a cortar", () => {
+      const paragens: ParagemCarga[] = [
+        entrega(6, 0),
+        recolhaPara(4, 50, "Cliente A"),
+        { entregues: [], recolhidas: [], tipoVeiculo: "VAZIO", kmInicial: 100 },
+        entrega(5, 150, "CAMIAO+REBOQUE"), // novo segmento, sem relação com a linha
+        entregaCliente(4, 200, "Cliente A"),
+      ];
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      // 1º segmento: pico 6 (entrega) — a recolha (4, linha) não se soma aqui.
+      // 2º segmento isolado: pico 5 (entrega) + 4 (linha ainda a bordo) = 9,
+      // depois cai para 4 (só a linha) até à entrega final.
+      expect(r.totalPaletes).toBe(9);
+    });
+
+    it("2 entregas para o mesmo alvo: só a 1ª fecha a linha (limitação assumida)", () => {
+      const paragens: ParagemCarga[] = [
+        recolhaPara(5, 0, "Cliente A"),
+        entregaCliente(3, 50, "Cliente A"),
+        entregaCliente(2, 100, "Cliente A"),
+      ];
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      // Fecha na 1ª entrega (índice1): a 2ª entrega (índice2) já não tem
+      // nenhuma carga de linha "aberta" para si -> conta como entrega normal,
+      // fora de qualquer linha (segmento próprio, a bordo desde o início dele).
+      // Pico: os 5 da linha (recolhidos em 0, entregues em 1) coexistem com
+      // os 2 da 2ª entrega (a bordo desde antes dela) = 7.
+      expect(r.totalPaletes).toBe(7);
+      expect(r.cabemTodas).toBe(true);
+    });
+  });
 });
 
 describe("linhasCargaParagem", () => {

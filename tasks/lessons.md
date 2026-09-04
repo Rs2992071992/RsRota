@@ -2,6 +2,34 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-04] | `verificarEspacoCarga` (aviso de sobreocupação) assumia que
+  cada "entregues"/"recolhidas" de uma paragem era independente das outras —
+  correto quando a carga vem sempre pré-carregada no início do segmento
+  (ida normal) ou fica a bordo até ao fim dele (recolha de reposicionamento).
+  O Ricardo descreveu um caso onde isso é falso: paletes recolhidas na Ida
+  (ex. em 2 clientes) só são entregues mais tarde, na Volta, na MESMA rota,
+  sem trajeto VAZIO a separar. Testado empiricamente (script descartável) com
+  o cenário exato: o motor dava 30 paletes no pico (devia ser 16) — contava a
+  recolha (fica a bordo até ao fim) E a entrega final (assumida a bordo desde
+  o início do segmento, mesmo antes de ter sido recolhida) ao mesmo tempo. Um
+  "separador Volta" novo NÃO chegava para resolver isto (testado: mesmo
+  cortando à força um segmento ali, o erro persistia dentro da própria
+  volta) — a causa é mais funda do que a fronteira Ida/Volta. | A app já tinha
+  o mecanismo certo para este problema, só que só para o peso:
+  `pesosEmTransito` (`lib/calc/perRoute.ts`) liga uma recolha à sua entrega
+  via `faturarCliente`/`cliente`, ao longo de toda a rota, sem olhar a
+  segmentos. Apliquei a mesma ideia a `verificarEspacoCarga`
+  (`lib/calc/cargaRota.ts`): uma recolha com `faturarCliente` para um cliente
+  que também tem entrega nesta rota fica a bordo desde a recolha até essa
+  entrega, atravessando VAZIOs/Ida-Volta — sem tocar no "resto" (comportamento
+  de sempre quando não há `faturarCliente`). Diff contra as 28 rotas reais:
+  **zero diferenças** (as rotas reais com backhaul são todas por peso, não por
+  paletes — o código antigo nunca passava por ali). Regra: antes de inventar
+  um marcador/separador novo para um problema de "carga que atravessa a
+  rota", verificar se já existe um mecanismo de ligação recolha→entrega
+  (`faturarCliente`) a reaproveitar — evita duplicar lógica e um separador que
+  não resolveria a causa raiz.
+
 - [2026-09-02] | O Ricardo converteu **todas** as rotas de kg → paletes (botão
   "Converter para paletes" no `ParagemEditor`). Resultado: 21 das 25 rotas com o
   rateio partido — cada cliente a receber uma fatia igual (1/n) em vez de

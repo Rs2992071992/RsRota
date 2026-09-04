@@ -140,6 +140,13 @@ export interface ParagemCarga {
   tipoVeiculo: string;
   /** Ordenação: sequência física real (mesmo critério de `pesosEmTransito`). */
   kmInicial: number;
+  /**
+   * Cliente desta paragem e, se for uma recolha para entregar a outro
+   * cliente, o nome desse cliente — ver `faturarCliente`. Opcionais: sem
+   * eles, esta paragem nunca entra numa "linha" (comportamento inalterado).
+   */
+  cliente?: string;
+  faturarCliente?: string | null;
 }
 
 /** Arruma um conjunto de linhas (um "momento" da rota) e devolve o resultado. */
@@ -178,8 +185,23 @@ const pior = (a: EspacoCarga, b: EspacoCarga): EspacoCarga =>
  * longo da rota — não a soma de tudo. Cada entrega vem a bordo desde o início do
  * segmento e sai na sua paragem; cada recolha entra na sua paragem e fica até ao
  * fim do segmento. Um trajeto `VAZIO` corta a rota em segmentos que nunca
- * coexistem (mesma lógica de `pesosEmTransito`). Devolve o **pior momento**
- * (mais paletes sem espaço); `totalPaletes` = paletes a bordo nesse momento.
+ * coexistem (mesma lógica de `pesosEmTransito`).
+ *
+ * EXCEÇÃO (2026-09-04): uma recolha para entregar a outro cliente
+ * (`faturarCliente` preenchido, ex. recolhida na Ida e só entregue na Volta)
+ * não fica presa ao segmento onde foi apanhada — fica a bordo desde essa
+ * recolha até à paragem cujo `cliente` é o alvo, **atravessando VAZIOs e a
+ * fronteira Ida/Volta sem nunca ser considerada "perdida"**. Sem isto, o
+ * motor contava-a a dobra: uma vez como "recolha, fica até ao fim do
+ * segmento" e outra vez, incorretamente, como "entrega, estava a bordo desde
+ * o início do segmento" (mesmo antes de ter sido recolhida). Mesma regra de
+ * ligação recolha->entrega já usada para o peso em
+ * `lib/calc/perRoute.ts::pesosEmTransito` — mas aqui `cliente`/
+ * `faturarCliente` são opcionais: sem eles esta paragem nunca entra numa
+ * "linha" e o cálculo é idêntico ao de sempre.
+ *
+ * Devolve o **pior momento** (mais paletes sem espaço); `totalPaletes` =
+ * paletes a bordo nesse momento.
  */
 export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
   const valida = (l: LinhaCarga) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0;
@@ -198,34 +220,77 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
     return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
   }
 
-  // Ordena pela sequência física e corta em segmentos nos trajetos VAZIO.
+  // Ordena pela sequência física.
   const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
-  const segmentos: (typeof ordenadas)[] = [];
-  let atual: typeof ordenadas = [];
-  for (const p of ordenadas) {
-    if (p.tipoVeiculo === "VAZIO") {
-      if (atual.length) segmentos.push(atual);
-      atual = [];
-      continue;
+  const n = ordenadas.length;
+
+  // Linhas recolha->entrega ligadas por faturarCliente (ver comentário acima).
+  // Passo 1: recolhas cujo faturarCliente aponta para um cliente que também
+  // tem entrega nesta rota. Passo 2: a(s) entrega(s) desse cliente.
+  const clientesComEntrega = new Set(
+    ordenadas
+      .filter((p) => p.entregues.length > 0)
+      .map((p) => p.cliente?.trim())
+      .filter((x): x is string => !!x),
+  );
+  const numaLinha = new Set<number>();
+  const alvos = new Set<string>();
+  ordenadas.forEach((p, i) => {
+    const alvo = p.faturarCliente?.trim();
+    if (alvo && p.recolhidas.length > 0 && clientesComEntrega.has(alvo)) {
+      numaLinha.add(i);
+      alvos.add(alvo);
     }
-    atual.push(p);
-  }
-  if (atual.length) segmentos.push(atual);
+  });
+  // Índice da 1ª entrega de cada alvo — fecha a linha (todas as recolhas
+  // desse alvo, mesmo várias, ficam a bordo até essa entrega). Uma 2ª entrega
+  // para o mesmo alvo, se existir, NÃO entra na linha — fica no "resto" como
+  // uma entrega normal (limitação assumida: só a 1ª entrega fecha a linha).
+  const entregaIndicePorAlvo = new Map<string, number>();
+  ordenadas.forEach((p, i) => {
+    if (numaLinha.has(i)) return;
+    const nome = p.cliente?.trim();
+    if (nome && p.entregues.length > 0 && alvos.has(nome) && !entregaIndicePorAlvo.has(nome)) {
+      numaLinha.add(i);
+      entregaIndicePorAlvo.set(nome, i);
+    }
+  });
+
+  // Segmentos do "resto" (paragens fora de qualquer linha), cortados em
+  // VAZIO — exatamente o modelo de sempre.
+  let segId = 0;
+  const segmentoDe = ordenadas.map((p) => {
+    if (p.tipoVeiculo === "VAZIO") segId++;
+    return segId;
+  });
 
   let resultado: EspacoCarga | null = null;
-  for (const seg of segmentos) {
-    // Estado j (j = 0..n): entregas em índice >= j (ainda a bordo) +
-    // recolhas em índice < j (já apanhadas). Uma paragem mista contribui com as
-    // suas entregues enquanto i >= j e com as suas recolhidas quando i < j.
-    for (let j = 0; j <= seg.length; j++) {
-      const aBordo: LinhaCarga[] = [];
-      seg.forEach((p, i) => {
-        if (i >= j) aBordo.push(...p.entregues);
-        if (i < j) aBordo.push(...p.recolhidas);
-      });
-      const estado = empacotarEstado(caixas, aBordo);
-      resultado = resultado ? pior(resultado, estado) : estado;
-    }
+  // Corte j (j = 0..n): estado "mesmo antes de processar a paragem de
+  // índice j" — mesma semântica de sempre (entregues em i>=j ainda a bordo,
+  // recolhidas em i<j já apanhadas), agora com 2 fontes combinadas:
+  for (let j = 0; j <= n; j++) {
+    const segCorte = segmentoDe[Math.min(j, n - 1)];
+    const aBordo: LinhaCarga[] = [];
+
+    // 1) Resto: só paragens fora de qualquer linha, só dentro do MESMO
+    // segmento (VAZIO) do corte — comportamento inalterado.
+    ordenadas.forEach((p, i) => {
+      if (numaLinha.has(i) || segmentoDe[i] !== segCorte) return;
+      if (i >= j) aBordo.push(...p.entregues);
+      if (i < j) aBordo.push(...p.recolhidas);
+    });
+
+    // 2) Linhas: recolhas já apanhadas (i<j) cujo alvo ainda não foi entregue
+    // (a entrega, se existir, tem índice >= j) — atravessa segmentos/VAZIO.
+    ordenadas.forEach((p, i) => {
+      if (!numaLinha.has(i) || p.recolhidas.length === 0 || i >= j) return;
+      const alvo = p.faturarCliente!.trim();
+      const idxEntrega = entregaIndicePorAlvo.get(alvo);
+      if (idxEntrega == null || j <= idxEntrega) aBordo.push(...p.recolhidas);
+    });
+
+    const estado = empacotarEstado(caixas, aBordo);
+    resultado = resultado ? pior(resultado, estado) : estado;
   }
 
   return resultado ?? { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };

@@ -2,6 +2,40 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Aviso de espaço: recolha na Ida entregue só na Volta (2026-09-04)
+
+Pedido do Ricardo: rota de 2 dias — Ida entrega a 8 clientes e recolhe mais 2
+(paletes que ficam a bordo), Volta recolhe mais paletes pelo caminho e entrega
+tudo no fim. Perguntou se um "separador Volta" podia marcar início de nova
+rota para depois dividir o preço pelos clientes. Investigação (2 testes
+empíricos, scripts descartáveis, sem alterar nada): (1) o rateio por troço
+Ida/Volta já tinha sido feito e revertido em agosto (ver
+`tasks/lessons.md` 2026-08-30) — o bloqueio (paletes de tamanhos diferentes)
+já está resolvido; testado com dados reais (RIC-Percam, RIC-Plas-Sonae, etc.)
+e confere com a lição antiga; (2) o pedido real era sobre o **aviso de
+sobreocupação**, não o preço — encontrado bug real: uma recolha entregue mais
+tarde na mesma rota (sem VAZIO a separar) contava a dobra (30 em vez de 16
+paletes no cenário testado). Um separador Volta sozinho não resolvia (testado).
+
+- [x] `lib/calc/cargaRota.ts::ParagemCarga` ganha `cliente?`/`faturarCliente?`
+  opcionais (retrocompatível — sem eles, zero mudança de comportamento)
+- [x] `verificarEspacoCarga`: recolha com `faturarCliente` para um cliente que
+  também tem entrega nesta rota fica a bordo desde a recolha até essa entrega,
+  atravessando VAZIOs/Ida-Volta — mesma ideia de `pesosEmTransito`
+  (`lib/calc/perRoute.ts`), agora aplicada à ocupação de paletes
+- [x] Call sites a passar `cliente`/`faturarCliente`: `rotas/[idRota]/page.tsx`,
+  `motorista/registo/page.tsx` (+ `select` da query) → `RegistoForm.tsx`
+  (`ParagemRotaResumo.faturarCliente` novo)
+- [x] +4 testes em `tests/calc/cargaRota.test.ts` (cenário real: pico 16, não
+  30; sem faturarCliente = comportamento antigo; VAZIO no meio; 2 entregas
+  para o mesmo alvo). 208 testes verdes, `tsc`/`next build` limpos
+- [x] Diff contra as 28 rotas reais (`git stash` do fix + correr + comparar):
+  **zero diferenças** — as rotas reais com backhaul são todas por peso, nunca
+  passavam pelo código alterado; confirma que é seguro publicar
+- [ ] Commit + push (Vercel builda automaticamente)
+- [ ] Próximo passo, só depois disto assentar: voltar à repartição do preço
+  por troço Ida/Volta (o coeficiente de cada cliente passa a estar correto)
+
 ## ☑️ Paragem "Descarga / Recolha / Descarga + Recolha" (2026-09-02)
 
 Pedido do Ricardo: além do checkbox "Recolha", poder registar uma paragem em

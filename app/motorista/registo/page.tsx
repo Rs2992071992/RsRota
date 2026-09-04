@@ -62,6 +62,7 @@ export default async function RegistoPage(
             where: { ...filtroRotas, idRota: searchParams.idRota },
             select: {
               cliente: true,
+              faturarCliente: true,
               zonaPortagem: true,
               portagensExtra: true,
               noitesFora: true,
@@ -119,6 +120,7 @@ export default async function RegistoPage(
       inicial={inicial}
       paragensRotaIniciais={paragensRotaAtiva.map((p) => ({
         cliente: p.cliente,
+        faturarCliente: p.faturarCliente,
         zonaPortagem: p.zonaPortagem,
         portagensExtra: p.portagensExtra,
         noitesFora: p.noitesFora,

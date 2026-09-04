@@ -131,6 +131,8 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       ...linhasCargaParagem(p),
       tipoVeiculo: p.tipoVeiculo,
       kmInicial: p.kmInicial,
+      cliente: p.cliente,
+      faturarCliente: p.faturarCliente,
     })),
   );
 

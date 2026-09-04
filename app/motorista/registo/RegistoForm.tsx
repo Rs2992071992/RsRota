@@ -61,6 +61,8 @@ interface Props {
 
 interface ParagemRotaResumo {
   cliente: string;
+  /** Recolha para entregar a outro cliente — ver ParagemCarga.faturarCliente. */
+  faturarCliente?: string | null;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -264,6 +266,8 @@ export default function RegistoForm({
       recolhidas: p.recolhidas.filter((l) => l.nPaletes > 0 && l.comprimentoMm && l.larguraMm).map((l) => linhaCarga(l, p.cliente)),
       tipoVeiculo: p.tipoVeiculo,
       kmInicial: p.kmInicial,
+      cliente: p.cliente,
+      faturarCliente: p.faturarCliente,
     }));
     if (mostrarPaletes) {
       const { entregues, recolhidas } = linhasParagemForm();
