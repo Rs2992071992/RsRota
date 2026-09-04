@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Ajustes à página da rota — peso/paletes, L/100km, vazio na coluna do rateio (2026-09-04)
+
+Pedido do Ricardo em `/escritorio/rotas/[idRota]`: (1) coluna "Peso" mostrava 0
+nas rotas por paletes (não se regista kg) — mostrar o peso aproximado do
+motorista + nº de paletes ("PL"); (2) coluna "€/kg" trocada pelo consumo
+L/100km da paragem (já calculado, só não aparecia); (3) tabela de rateio
+ganha coluna "dos quais, vazio" — isola a fatia do custo atribuído que veio
+de troços VAZIO (a atribuição manual + a fatia automática 50/50 da
+segmentação de hoje).
+
+- [x] `lib/calc/types.ts`: `RateioCliente.custoVazioAtribuido` novo
+- [x] `lib/calc/perRoute.ts::calcularRota`: `distribuiParaSegmento` ganha
+  flag `comoVazio` — soma em paralelo a `custoVazioPorCliente`; atribuição
+  manual do vazio conta 100% como vazio
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: coluna "Peso / Paletes"
+  (`pesoTransportado` > 0 ? esse : `pesoAproximado`, + "N PL" se houver
+  paletes); coluna "L/100km" (`p.consumoL100`, era "€/kg" `precoPorKg`);
+  coluna "dos quais, vazio" na tabela de rateio + texto atualizado
+- [x] +2 testes (`custoVazioAtribuido` isolado; interação com
+  `rateioManual`). 214 testes verdes, `tsc`/`next build` limpos
+- [x] Verificado contra 2 rotas reais (RIC-Plas-Sonae, RIC-Percam): peso
+  aproximado/nPaletes/consumoL100 todos plausíveis; vazio de RIC-Plas-Sonae
+  (248,57 €) reparte 76,78 €/171,79 € — soma certa
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ☑️ Rateio segmentado por troço Ida/Volta — retoma a variante revertida em agosto (2026-09-04)
 
 Pedido do Ricardo ("fazemos os dois", depois do porte Android ter sido adiado):

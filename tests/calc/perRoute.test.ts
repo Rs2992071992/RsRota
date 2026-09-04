@@ -651,6 +651,18 @@ describe("calcularRota — rateio segmentado por troço (tipoViagem + dia, 2026-
     expect(b().custoAtribuido).toBeCloseTo(totalIda / 2, 2);
   });
 
+  it("custoVazioAtribuido isola só a fatia do vazio (não o troço todo)", () => {
+    const custoVazio = r.paragens.find((p) => p.tipoVeiculo === "VAZIO")!.custoParagem;
+    // C leva a sua metade inteira do vazio (é o único no seu segmento).
+    expect(c().custoVazioAtribuido).toBeCloseTo(custoVazio * 0.5, 2);
+    // A e B dividem a OUTRA metade entre si (coeficientes iguais -> 25% cada).
+    expect(a().custoVazioAtribuido).toBeCloseTo(custoVazio * 0.25, 2);
+    expect(b().custoVazioAtribuido).toBeCloseTo(custoVazio * 0.25, 2);
+    // Soma das fatias de vazio = custo do vazio inteiro.
+    const somaVazio = r.rateio.reduce((s, x) => s + x.custoVazioAtribuido, 0);
+    expect(somaVazio).toBeCloseTo(custoVazio, 2);
+  });
+
   it("rota de 1 segmento só (sem Ida/Volta a sério) dá o mesmo resultado de sempre — regressão", () => {
     const umSoSegmento: ParagemInput[] = [
       paragemBase({ cliente: "X", data: "2026-01-01", kmInicial: 0, kmFinal: 100, ...palete(10) }),
@@ -683,5 +695,10 @@ describe("calcularRota — rateio segmentado por troço (tipoViagem + dia, 2026-
     );
     const soma = rm.rateio.reduce((s, x) => s + x.custoAtribuido, 0);
     expect(soma).toBeCloseTo(rm.custoTotalRota, 6);
+    // custoVazioAtribuido reflete a manual (metade do vazio) + a fatia
+    // automática do que sobrou (metade da outra metade).
+    expect(bManual.custoVazioAtribuido).toBeCloseTo(custoVazio * 0.5 + custoVazio * 0.5 * 0.25, 2);
+    const somaVazioManual = rm.rateio.reduce((s, x) => s + x.custoVazioAtribuido, 0);
+    expect(somaVazioManual).toBeCloseTo(custoVazio, 2);
   });
 });

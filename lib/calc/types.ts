@@ -289,6 +289,12 @@ export interface RateioCliente {
   /** Quota normalizada (0–1): fração do custo da rota atribuída ao cliente. As quotas somam 1. */
   quota: number;
   custoAtribuido: number;
+  /**
+   * Parte de `custoAtribuido` que vem de troços VAZIO (manual via
+   * `rateioManual` + a fatia automática 50/50 dos vazios entre segmentos —
+   * ver `calcularRota`). 0 em rotas sem VAZIO ou sem nada por atribuir.
+   */
+  custoVazioAtribuido: number;
   receitaPaga: number;
 }
 

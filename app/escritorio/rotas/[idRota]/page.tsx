@@ -262,7 +262,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
               <th className="th">Cliente</th>
               <th className="th">Veículo</th>
               <th className="th text-right">KM</th>
-              <th className="th text-right">Peso</th>
+              <th className="th text-right">Peso / Paletes</th>
               <th className="th text-right">Coef. carga</th>
               <th className="th text-right">Comb.</th>
               <th className="th text-right">Motorista</th>
@@ -270,7 +270,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
               <th className="th text-right">AdBlue</th>
               <th className="th text-right">Port. extra</th>
               <th className="th text-right">Custo paragem</th>
-              <th className="th text-right">€/kg</th>
+              <th className="th text-right">L/100km</th>
               <th className="th text-right">A cobrar</th>
               <th className="th text-right">Ações</th>
             </tr>
@@ -295,7 +295,17 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                 </td>
                 <td className="td">{p.tipoVeiculo}</td>
                 <td className="td text-right">{fmtNum(p.kmFeitos)}</td>
-                <td className="td text-right">{fmtNum(p.pesoTransportado)}</td>
+                <td className="td text-right">
+                  {(() => {
+                    // Rotas por paletes: kgCarregados/Descarregados ficam a 0
+                    // (não se regista peso) — mostra o peso aproximado que o
+                    // motorista introduziu + o nº de paletes ("PL"). Rotas por
+                    // kg (legado): mantém o peso transportado como sempre.
+                    const peso = p.pesoTransportado > 0 ? p.pesoTransportado : p.pesoAproximado || 0;
+                    const pesoTxt = peso > 0 ? `${fmtNum(peso)} kg` : "—";
+                    return p.nPaletes > 0 ? `${pesoTxt} · ${fmtNum(p.nPaletes)} PL` : pesoTxt;
+                  })()}
+                </td>
                 <td className="td text-right">{(p.coeficienteCarga * 100).toFixed(2)}%</td>
                 <td className="td text-right">{fmtEuro(p.custoCombustivel)}</td>
                 <td className="td text-right">{fmtEuro(p.custoMotorista)}</td>
@@ -303,7 +313,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                 <td className="td text-right">{fmtEuro(p.custoAdblue)}</td>
                 <td className="td text-right">{fmtEuro(p.portagensExtra)}</td>
                 <td className="td text-right font-semibold">{fmtEuro(p.custoParagem)}</td>
-                <td className="td text-right">{p.precoPorKg > 0 ? fmtNum2(p.precoPorKg) : "—"}</td>
+                <td className="td text-right">{p.consumoL100 > 0 ? fmtNum2(p.consumoL100) : "—"}</td>
                 <td className="td text-right">{fmtEuro(p.id ? raw(paragensRaw, p.id) : 0)}</td>
                 <td className="td text-right">
                   {p.id && editavel(p.id) ? (
@@ -337,13 +347,15 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       <div className="card">
         <h2 className="mb-1 font-semibold">Rateio do custo por cliente</h2>
         <p className="mb-3 text-xs text-gray-500">
-          Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}). A
-          quota é a fração da tournée ocupada por cada cliente (peso/capacidade), normalizada para
-          somar 100 %. Os trajetos a vazio são repartidos automaticamente pelos clientes — a menos
-          que o escritório atribua manualmente km desse troço a clientes específicos, ao editar a
-          paragem (o que não for atribuído continua a diluir-se como sempre). As paragens marcadas
-          "recolha → Cliente" somam o seu custo à quota desse cliente em vez de gerarem linha própria.
-          O coef. real (peso/capacidade) é só indicador: acima de 1 indica sobrecarga.
+          Custo atribuído = quota do cliente × custo total da rota ({fmtEuro(rota.custoTotalRota)}).
+          Cada troço (Ida/Volta/dia) reparte-se à parte, proporcional ao peso/capacidade de cada
+          cliente NESSE troço — um cliente já não paga por um troço que não fez. Os trajetos a vazio
+          repartem-se 50/50 entre os clientes do troço antes e do troço depois — a menos que o
+          escritório atribua manualmente km desse vazio a clientes específicos, ao editar a paragem (o
+          que não for atribuído continua a repartir-se 50/50 como sempre). A coluna "dos quais, vazio"
+          isola só essa fatia. As paragens marcadas "recolha → Cliente" somam o seu custo à quota desse
+          cliente em vez de gerarem linha própria. O coef. real (peso/capacidade) é só indicador: acima
+          de 1 indica sobrecarga.
         </p>
         <div className="scroll-fade-x overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -353,6 +365,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                 <th className="th text-right">Coef. real</th>
                 <th className="th text-right">Quota</th>
                 <th className="th text-right">Custo atribuído</th>
+                <th className="th text-right">dos quais, vazio</th>
                 <th className="th text-right">Receita</th>
                 <th className="th text-right">Margem</th>
               </tr>
@@ -366,6 +379,9 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                     <td className="td text-right">{fmtNum2(c.coefReal)}</td>
                     <td className="td text-right">{(c.quota * 100).toFixed(0)}%</td>
                     <td className="td text-right">{fmtEuro(c.custoAtribuido)}</td>
+                    <td className="td text-right text-gray-500">
+                      {c.custoVazioAtribuido > 0 ? fmtEuro(c.custoVazioAtribuido) : "—"}
+                    </td>
                     <td className="td text-right">{fmtEuro(c.receitaPaga)}</td>
                     <td className={`td text-right font-semibold ${margem < 0 ? "text-red-600" : "text-green-600"}`}>
                       {fmtEuro(margem)}

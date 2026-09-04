@@ -245,18 +245,27 @@ export function calcularRota(
   }
 
   const custoAutoPorCliente = new Map<string, number>();
+  // Parte de custoAutoPorCliente/manualPorCliente que veio de troços VAZIO —
+  // ver `RateioCliente.custoVazioAtribuido`.
+  const custoVazioPorCliente = new Map<string, number>();
   const somaAuto = (cliente: string, valor: number) =>
     custoAutoPorCliente.set(cliente, (custoAutoPorCliente.get(cliente) ?? 0) + valor);
-  const distribuiParaSegmento = (seg: string, valor: number) => {
+  const somaVazio = (cliente: string, valor: number) =>
+    custoVazioPorCliente.set(cliente, (custoVazioPorCliente.get(cliente) ?? 0) + valor);
+  const distribuiParaSegmento = (seg: string, valor: number, comoVazio = false) => {
     const idxs = indicesPorSegmento.get(seg);
     if (!idxs || idxs.length === 0) return;
     const coefTotal = coefSegmento.get(seg) ?? 0;
+    const aplicar = (cliente: string, v: number) => {
+      somaAuto(cliente, v);
+      if (comoVazio) somaVazio(cliente, v);
+    };
     if (coefTotal > 0) {
-      for (const i of idxs) somaAuto(chaveCliente(paragens[i]), (coefPorIndice[i] / coefTotal) * valor);
+      for (const i of idxs) aplicar(chaveCliente(paragens[i]), (coefPorIndice[i] / coefTotal) * valor);
     } else {
       // Sem nenhum coeficiente no segmento (raro, ex. peso 0 mal registado) ->
       // reparte igualmente pelos clientes presentes.
-      for (const i of idxs) somaAuto(chaveCliente(paragens[i]), valor / idxs.length);
+      for (const i of idxs) aplicar(chaveCliente(paragens[i]), valor / idxs.length);
     }
   };
 
@@ -296,12 +305,12 @@ export function calcularRota(
       }
     }
     if (segAntes && segDepois && segAntes !== segDepois) {
-      distribuiParaSegmento(segAntes, custoRestante * 0.5);
-      distribuiParaSegmento(segDepois, custoRestante * 0.5);
+      distribuiParaSegmento(segAntes, custoRestante * 0.5, true);
+      distribuiParaSegmento(segDepois, custoRestante * 0.5, true);
     } else if (segAntes) {
-      distribuiParaSegmento(segAntes, custoRestante); // mesmo segmento (interno) ou só há "antes"
+      distribuiParaSegmento(segAntes, custoRestante, true); // mesmo segmento (interno) ou só há "antes"
     } else if (segDepois) {
-      distribuiParaSegmento(segDepois, custoRestante);
+      distribuiParaSegmento(segDepois, custoRestante, true);
     }
   }
 
@@ -328,15 +337,29 @@ export function calcularRota(
   // Junta a atribuição manual (VAZIO) por cima do automático.
   const porCliente = new Map<string, RateioCliente>();
   const linha = (cliente: string): RateioCliente =>
-    porCliente.get(cliente) ?? { cliente, coefReal: 0, quota: 0, custoAtribuido: 0, receitaPaga: 0 };
+    porCliente.get(cliente) ?? {
+      cliente,
+      coefReal: 0,
+      quota: 0,
+      custoAtribuido: 0,
+      custoVazioAtribuido: 0,
+      receitaPaga: 0,
+    };
   for (const [cliente, valor] of custoAutoPorCliente) {
     const atual = linha(cliente);
     atual.custoAtribuido += valor;
     porCliente.set(cliente, atual);
   }
+  for (const [cliente, valor] of custoVazioPorCliente) {
+    const atual = linha(cliente);
+    atual.custoVazioAtribuido += valor;
+    porCliente.set(cliente, atual);
+  }
+  // Atribuição manual do vazio (rateioManual) — 100 % do valor é "vazio".
   for (const [cliente, valor] of manualPorCliente) {
     const atual = linha(cliente);
     atual.custoAtribuido += valor;
+    atual.custoVazioAtribuido += valor;
     porCliente.set(cliente, atual);
   }
 
