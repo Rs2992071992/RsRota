@@ -2,6 +2,16 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-05] | Mesmo depois de corrigir o bug da data de inspeção (ver
+  lição abaixo), o Ricardo bateu no MESMO padrão com outro campo: pôs
+  "Vida útil (anos) = 0" ao criar um Ligeiro e só viu "Dados inválidos.",
+  sem saber qual campo. A API já devolvia `detalhes: parsed.error.flatten()`
+  desde sempre — só nunca era mostrado na UI, só `data.erro` (a mensagem
+  genérica). | Sempre que uma API zod devolve `detalhes`/`fieldErrors` num
+  400, mostrar essa informação na UI (mapeada para o label do campo, ver
+  `lib/veiculo-form.ts::formatarErrosVeiculo`) em vez de só `data.erro` —
+  qualquer formulário com vários campos obrigatórios vai eventualmente ter
+  este problema, não é específico de veículos.
 - [2026-09-05] | "A data de inspeção não fica guardada" (Ricardo) não era um
   bug na data em si — era `lib/validacao.ts::veiculoSchema` a exigir
   `capacidadeCamiao`/paletes `> 0` para TODOS os veículos. Ao tentar registar

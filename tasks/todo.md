@@ -31,6 +31,24 @@ inspeção não fica guardada" (payload todo rejeitado ao zerar campos irrelevan
       com dados de teste
 - [x] Commit `db89000` + push — Vercel builda automaticamente
 
+### Acompanhamento (2026-09-05, ao testar em produção)
+
+Ricardo tentou criar um Ligeiro real e apanhou dois problemas que o plano
+original não previu:
+- [x] `Vida útil (anos) = 0` (campo comum a Ligeiro/Pesado) rejeitava o
+      payload inteiro com só "Dados inválidos." — sem dizer qual campo. Fix
+      duplo: `formatarErrosVeiculo()` (`lib/veiculo-form.ts`) traduz
+      `parsed.error.flatten().fieldErrors` numa frase legível, usado nos dois
+      sítios que mostram `erro` (`VeiculosManager.tsx`, `VeiculoDetalheEditor.tsx`)
+- [x] "a tabela de depreciação nos ligeiros não faz sentido" — `CAMPOS_CUSTO_COMUM`
+      dividido em `CAMPOS_CUSTO_COMUM` (IUC/seguro/reparações/revisão/inspeção,
+      sempre visível) + `CAMPOS_DEPRECIACAO` (aquisição/residual/vida útil/juros,
+      só Pesado); preview "Custo veículo/km" também escondido para Ligeiro
+- [x] Pedido extra: botão "+ Pedido de manutenção" na página do veículo (novo
+      `PedidoManutencaoModal.tsx`, reutiliza `POST /api/avarias` já genérico
+      motorista/escritório) — lembrete rápido sem passar pelo form do motorista
+- [x] `tsc`/`npm test` (217)/`npm run build` verdes; commit `73ea349` + push
+
 ## ☑️ "Continuar rota recente" (dropdown no próprio registo) não puxava o KM Inicial (2026-09-04)
 
 Pedido do Ricardo: "quando fazemos continuar rota actual, falta ao sistema
