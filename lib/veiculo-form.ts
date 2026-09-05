@@ -101,10 +101,20 @@ export const CAMPOS_DEPRECIACAO: [keyof VeiculoForm, string][] = [
   ["taxaJuros", "Taxa de juros (fração)"],
 ];
 
-/** Capacidade de carga — só faz sentido para Pesado. */
+/** Capacidade de carga (kg) — só faz sentido para Pesado. */
 export const CAMPOS_CAPACIDADE: [keyof VeiculoForm, string][] = [
   ["capacidadeCamiao", "Capacidade camião (kg)"],
   ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
+];
+
+/**
+ * Capacidade de paletes por CONTAGEM fixa — legado (Paragem.tipoPalete string,
+ * anterior a 2026-08-28). As paragens novas usam a capacidade por DIMENSÃO
+ * (caixa mm + reboque habitual), por isso estes campos já não se mostram no
+ * formulário; continuam em `VeiculoForm`/schema com os valores por defeito só
+ * para as paragens antigas recalcularem exatamente como sempre.
+ */
+const CAMPOS_PALETE_LEGADO: [keyof VeiculoForm, string][] = [
   ["capacidadePaleteA", "Capacidade paletes 120x80, camião+reboque (nº)"],
   ["capacidadePaleteB", "Capacidade paletes 120x100, camião+reboque (nº)"],
   ["capacidadePaleteACamiao", "Capacidade paletes 120x80, só camião (nº)"],
@@ -195,6 +205,7 @@ const LABELS_CAMPO: Record<string, string> = Object.fromEntries([
   ...CAMPOS_CUSTO_COMUM,
   ...CAMPOS_DEPRECIACAO,
   ...CAMPOS_CAPACIDADE,
+  ...CAMPOS_PALETE_LEGADO,
 ]);
 
 /**
