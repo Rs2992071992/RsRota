@@ -2,6 +2,18 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-07] | Ao adicionar `TabelaConsumo.veiculoId` (consumo por veículo,
+  commit db89000) só se atualizou `carregarBaseSnapshot` e o seed para
+  filtrar `where: { veiculoId: null }` — ficaram 3 sítios a ler/escrever a
+  tabela SEM filtro: `lib/contexto.ts` (`ctx.tabelaConsumo` juntava global +
+  todos os veículos → colunas L/100km/Comb./Custo erradas nas rotas),
+  `app/api/parametros/route.ts` (`deleteMany({})` apagava as tabelas de
+  todos os veículos ao Guardar Parâmetros) e `app/escritorio/parametros/
+  page.tsx`. | Ao dar a uma tabela "global" uma coluna opcional de FK
+  (`veiculoId?`), fazer `grep -rn "<model>\.(findMany|deleteMany|createMany)"`
+  e rever TODAS as ocorrências — o padrão dos pneus (`veiculoId: null` para o
+  template global) já existia no projeto e era o modelo a seguir em todas
+  elas, não só nas óbvias.
 - [2026-09-05] | `components/DespesasIcones.tsx` (ícones 🌙🍽️⏱️🛣️ junto ao
   cliente, em `HistoricoMotorista.tsx`/`rotas/[idRota]/page.tsx`) só acendia
   o 🛣️ com `portagensExtra > 0` (valor manual) — uma paragem com
