@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { CaixaResultado } from "@/lib/calc/paletePacking";
+import { reordenarArrastando } from "@/lib/carregamento-ordem";
 
 // Paleta categórica fixa (8 cores) — atribuída por ordem de 1ª aparição do
 // cliente no carregamento (nunca reordenada por tamanho/frequência). Nunca
@@ -23,15 +25,83 @@ function raioCanto(comprimento: number, largura: number): number {
   return Math.min(Math.min(comprimento, largura) * 0.12, 60);
 }
 
+interface Arrasto {
+  pedidoId: number;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+}
+
 export default function CarregamentoFloorPlan({
   caixas,
-  onRodarPedido,
+  ordemPedidoIds,
+  onReordenar,
+  onRodarPalete,
+  bloqueado = false,
 }: {
   caixas: CaixaResultado[];
-  /** Clicar numa palete roda a linha de pedido inteira. Recebe o id do pedido e
-   * a orientação atual (rotacionado) da palete clicada. */
-  onRodarPedido?: (pedidoId: number, rotacionadoAtual: boolean) => void;
+  /** Sequência de carga atual (pedidoId por ordem) — base do arrasto. */
+  ordemPedidoIds?: number[];
+  /** Nova sequência depois de arrastar uma palete para outra posição. */
+  onReordenar?: (novaOrdem: number[]) => void;
+  /** Clicar em ↻ numa palete: separa essa palete numa linha própria e roda-a.
+   * `rotacionadoAtual` = orientação com que está desenhada agora. */
+  onRodarPalete?: (pedidoId: number, rotacionadoAtual: boolean) => void;
+  bloqueado?: boolean;
 }) {
+  const arrastavel = !!onReordenar && !!ordemPedidoIds && !bloqueado;
+  const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  const [alvoRealce, setAlvoRealce] = useState<number | null>(null);
+  const arrastoRef = useRef<Arrasto | null>(null);
+  arrastoRef.current = arrasto;
+
+  // Enquanto se arrasta, ouve o ponteiro na janela (robusto a sair do bloco).
+  useEffect(() => {
+    if (!arrasto || !ordemPedidoIds || !onReordenar) return;
+
+    function alvoSob(x: number, y: number): number | null {
+      const el = document.elementFromPoint(x, y)?.closest("[data-pedido-id]");
+      if (!el) return null;
+      const pid = Number(el.getAttribute("data-pedido-id"));
+      return Number.isInteger(pid) && pid !== arrastoRef.current?.pedidoId ? pid : null;
+    }
+
+    function mover(e: PointerEvent) {
+      const a = arrastoRef.current;
+      if (!a || e.pointerId !== a.pointerId) return;
+      setArrasto({ ...a, dx: e.clientX - a.startX, dy: e.clientY - a.startY });
+      setAlvoRealce(alvoSob(e.clientX, e.clientY));
+    }
+
+    function largar(e: PointerEvent) {
+      const a = arrastoRef.current;
+      if (!a || e.pointerId !== a.pointerId) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-pedido-id]");
+      const alvo = alvoSob(e.clientX, e.clientY);
+      if (alvo !== null && el) {
+        const r = el.getBoundingClientRect();
+        // Metade esquerda do alvo = antes; direita = depois (eixo do comprimento
+        // é X no desenho). Largar na direita da última palete = mover para o fim.
+        const posicao = e.clientX < r.left + r.width / 2 ? "antes" : "depois";
+        const nova = reordenarArrastando(ordemPedidoIds!, a.pedidoId, alvo, posicao);
+        if (nova !== ordemPedidoIds) onReordenar!(nova);
+      }
+      setArrasto(null);
+      setAlvoRealce(null);
+    }
+
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", largar);
+    window.addEventListener("pointercancel", largar);
+    return () => {
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", largar);
+      window.removeEventListener("pointercancel", largar);
+    };
+  }, [arrasto, ordemPedidoIds, onReordenar]);
+
   const clientes: { id: number; nome: string }[] = [];
   const vistos = new Set<number>();
   for (const cx of caixas) {
@@ -99,75 +169,134 @@ export default function CarregamentoFloorPlan({
                 strokeWidth={8}
               />
               {cx.itens.map((item) => {
-                  const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
-                  return (
-                    <g
-                      key={`${item.pedidoId}-${item.x}-${item.y}`}
-                      onClick={
-                        onRodarPedido
-                          ? () => onRodarPedido(item.pedidoId, item.rotacionado)
+                const rx = raioCanto(item.comprimentoOcupado, item.larguraOcupada);
+                const aArrastar = arrasto?.pedidoId === item.pedidoId;
+                const realce = alvoRealce === item.pedidoId;
+                const btn = Math.min(item.larguraOcupada, item.comprimentoOcupado) * 0.42;
+                return (
+                  <g
+                    key={`${item.pedidoId}-${item.x}-${item.y}`}
+                    data-pedido-id={item.pedidoId}
+                    style={{
+                      transform: aArrastar ? `translate(${arrasto!.dx}px, ${arrasto!.dy}px)` : undefined,
+                      opacity: aArrastar ? 0.5 : 1,
+                      pointerEvents: aArrastar ? "none" : undefined,
+                    }}
+                  >
+                    <rect
+                      x={item.y}
+                      y={item.x}
+                      width={item.comprimentoOcupado}
+                      height={item.larguraOcupada}
+                      rx={rx}
+                      fill={corDoCliente(item.clienteId)}
+                      stroke={realce ? "#111" : "#fff"}
+                      strokeWidth={realce ? 14 : 6}
+                      style={{
+                        touchAction: arrastavel ? "none" : undefined,
+                        cursor: arrastavel ? "grab" : undefined,
+                      }}
+                      onPointerDown={
+                        arrastavel
+                          ? (e) => {
+                              setArrasto({
+                                pedidoId: item.pedidoId,
+                                pointerId: e.pointerId,
+                                startX: e.clientX,
+                                startY: e.clientY,
+                                dx: 0,
+                                dy: 0,
+                              });
+                            }
                           : undefined
                       }
-                      style={onRodarPedido ? { cursor: "pointer" } : undefined}
                     >
-                      <rect
-                        x={item.y}
-                        y={item.x}
-                        width={item.comprimentoOcupado}
-                        height={item.larguraOcupada}
-                        rx={rx}
-                        fill={corDoCliente(item.clienteId)}
-                        stroke="#fff"
-                        strokeWidth={6}
+                      <title>
+                        {`${item.clienteNome} — ${item.tipoPaleteNome}`}
+                        {arrastavel ? " (arrasta para reposicionar)" : ""}
+                      </title>
+                    </rect>
+                    <foreignObject
+                      x={item.y}
+                      y={item.x}
+                      width={item.comprimentoOcupado}
+                      height={item.larguraOcupada}
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <div
+                        // @ts-expect-error -- xmlns só é necessário para serialização estática
+                        xmlns="http://www.w3.org/1999/xhtml"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "0 8px",
+                          boxSizing: "border-box",
+                        }}
                       >
-                        <title>
-                          {`${item.clienteNome} — ${item.tipoPaleteNome}`}
-                          {onRodarPedido ? " (clique para rodar)" : ""}
-                        </title>
-                      </rect>
+                        <span
+                          style={{
+                            color: "#fff",
+                            fontWeight: 600,
+                            fontFamily: "inherit",
+                            fontSize: Math.max(
+                              Math.min(item.larguraOcupada, item.comprimentoOcupado) / 7,
+                              20,
+                            ),
+                            lineHeight: 1.15,
+                            textAlign: "center",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            textShadow: "0 1px 3px rgba(0,0,0,.35)",
+                          }}
+                        >
+                          {item.clienteNome}
+                        </span>
+                      </div>
+                    </foreignObject>
+                    {onRodarPalete && !aArrastar && (
                       <foreignObject
-                        x={item.y}
-                        y={item.x}
-                        width={item.comprimentoOcupado}
-                        height={item.larguraOcupada}
+                        x={item.y + item.comprimentoOcupado - btn - 24}
+                        y={item.x + 24}
+                        width={btn}
+                        height={btn}
                       >
-                        <div
+                        <button
                           // @ts-expect-error -- xmlns só é necessário para serialização estática
                           xmlns="http://www.w3.org/1999/xhtml"
+                          type="button"
+                          title="Rodar esta palete"
+                          disabled={bloqueado}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={() => onRodarPalete(item.pedidoId, item.rotacionado)}
                           style={{
                             width: "100%",
                             height: "100%",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            padding: "0 8px",
-                            boxSizing: "border-box",
+                            border: "none",
+                            borderRadius: "50%",
+                            background: "rgba(255,255,255,.9)",
+                            color: "#1a202c",
+                            fontSize: btn * 0.6,
+                            fontFamily: "inherit",
+                            lineHeight: 1,
+                            cursor: "pointer",
+                            padding: 0,
+                            boxShadow: "0 1px 3px rgba(0,0,0,.3)",
                           }}
                         >
-                          <span
-                            style={{
-                              color: "#fff",
-                              fontWeight: 600,
-                              fontFamily: "inherit",
-                              fontSize: Math.max(
-                                Math.min(item.larguraOcupada, item.comprimentoOcupado) / 7,
-                                20,
-                              ),
-                              lineHeight: 1.15,
-                              textAlign: "center",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              textShadow: "0 1px 3px rgba(0,0,0,.35)",
-                            }}
-                          >
-                            {item.clienteNome}
-                          </span>
-                        </div>
+                          ↻
+                        </button>
                       </foreignObject>
-                    </g>
-                  );
-                })}
+                    )}
+                  </g>
+                );
+              })}
             </svg>
           </div>
         );

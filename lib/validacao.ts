@@ -439,9 +439,12 @@ export const reordenarPedidosSchema = z.object({
 });
 
 /** Quantas paletes separar de uma linha de pedido para uma linha nova (mesmo
- * cliente/tipo) — para lhes poder dar orientações diferentes. */
+ * cliente/tipo) — para lhes poder dar orientações diferentes. `orientacao`
+ * opcional: fixa a orientação da linha nova (usado pelo ↻ "rodar 1 palete" na
+ * planta); ausente = herda a orientação da linha original. */
 export const dividirPedidoSchema = z.object({
   quantidade: z.number().int().positive("Tem de ser > 0"),
+  orientacao: z.enum(ORIENTACOES_PALETE).optional(),
 });
 
 export type ReordenarPedidosForm = z.infer<typeof reordenarPedidosSchema>;

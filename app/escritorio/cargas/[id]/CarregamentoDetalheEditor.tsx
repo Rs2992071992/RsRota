@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CarregamentoDetalhe, SimulacaoOrdem } from "@/lib/carregamento-service";
-import { moverBlocoCliente } from "@/lib/carregamento-ordem";
 import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
 import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
 
@@ -49,23 +48,6 @@ function agruparNaoColocados(naoColocados: Detalhe["packing"]["naoColocados"]) {
     }
   }
   return [...grupos.values()];
-}
-
-/** Blocos de cliente (contíguos) por ordem de 1ª aparição — para a tabela de
- * pedidos agrupada e as setas de reordenação. */
-function agruparPorCliente(pedidos: Detalhe["pedidos"]) {
-  const ordem: number[] = [];
-  const m = new Map<number, { clienteId: number; clienteNome: string; linhas: Detalhe["pedidos"] }>();
-  for (const p of pedidos) {
-    let bloco = m.get(p.clienteId);
-    if (!bloco) {
-      bloco = { clienteId: p.clienteId, clienteNome: p.clienteNome, linhas: [] };
-      m.set(p.clienteId, bloco);
-      ordem.push(p.clienteId);
-    }
-    bloco.linhas.push(p);
-  }
-  return ordem.map((id) => m.get(id)!);
 }
 
 const metros = (mm: number) => (mm / 1000).toFixed(1);
@@ -125,9 +107,8 @@ export default function CarregamentoDetalheEditor({
   const [novoNomeCliente, setNovoNomeCliente] = useState("");
   const [aGuardarNome, setAGuardarNome] = useState(false);
   const [aOtimizar, setAOtimizar] = useState(false);
+  const [aReordenar, setAReordenar] = useState(false);
   const [simulacao, setSimulacao] = useState<SimulacaoOrdem | null>(null);
-
-  const blocosClientes = agruparPorCliente(detalhe.pedidos);
 
   // Sugestões no combobox: fichas já criadas + todos os nomes conhecidos
   // (rotas/orçamentos), para não obrigar a "criar ficha" antes de poder usar
@@ -251,25 +232,61 @@ export default function CarregamentoDetalheEditor({
     router.refresh();
   }
 
-  async function moverCliente(clienteId: number, direcao: "cima" | "baixo") {
+  async function reordenarPedidos(ordemPedidoIds: number[]) {
     setErro("");
     setSimulacao(null);
-    const ordemPedidoIds = moverBlocoCliente(
-      detalhe.pedidos.map((p) => ({ pedidoId: p.id, clienteId: p.clienteId })),
-      clienteId,
-      direcao,
-    );
-    const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/ordem`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ordemPedidoIds }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setErro(data.erro || "Erro ao reordenar.");
-      return;
+    setAReordenar(true);
+    try {
+      const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/ordem`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ordemPedidoIds }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao reordenar.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAReordenar(false);
     }
-    router.refresh();
+  }
+
+  /** ↻ na planta: separa a palete clicada numa linha própria e roda só essa.
+   * Se a linha já só tem 1 palete, alterna a orientação sem criar linha nova. */
+  async function rodarPalete(pedidoId: number, rotacionadoAtual: boolean) {
+    setErro("");
+    setSimulacao(null);
+    setAReordenar(true);
+    const alvo = rotacionadoAtual ? "COMPRIDO" : "TRAVES";
+    const linha = detalhe.pedidos.find((p) => p.id === pedidoId);
+    try {
+      const res =
+        linha && linha.quantidade === 1
+          ? await fetch(`/api/carregamentos/${detalhe.id}/pedidos/${pedidoId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orientacao: alvo }),
+            })
+          : await fetch(`/api/carregamentos/${detalhe.id}/pedidos/${pedidoId}/dividir`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ quantidade: 1, orientacao: alvo }),
+            });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Erro ao rodar a palete.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setErro("Erro de ligação.");
+    } finally {
+      setAReordenar(false);
+    }
   }
 
   async function rodarPedido(pedidoId: number, orientacao: "AUTO" | "COMPRIDO" | "TRAVES") {
@@ -602,89 +619,63 @@ export default function CarregamentoDetalheEditor({
         ) : (
           <>
             <p className="mb-3 text-xs text-gray-400">
-              As setas mudam a ordem de carga — as paletes de cada cliente entram sempre juntas no
-              camião, na sequência de cima para baixo.
+              A ordem de carga (nº) define-se arrastando as paletes na planta abaixo. Cada linha é um
+              cliente + tipo de palete.
             </p>
             <div className="scroll-fade-x overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr>
-                    <th className="th">Cliente / tipo de palete</th>
+                    <th className="th">Nº</th>
+                    <th className="th">Cliente</th>
+                    <th className="th">Tipo de palete</th>
                     <th className="th">Qtd.</th>
                     <th className="th">Orientação</th>
                     <th className="th" />
                   </tr>
                 </thead>
-                {blocosClientes.map((bloco, bi) => (
-                  <tbody key={bloco.clienteId} className="border-t border-gray-200">
-                    <tr className="bg-gray-50">
-                      <td className="td font-semibold" colSpan={3}>
-                        {bi + 1}. {bloco.clienteNome}
+                <tbody className="divide-y divide-gray-100">
+                  {detalhe.pedidos.map((p, i) => (
+                    <tr key={p.id}>
+                      <td className="td text-gray-400">{i + 1}</td>
+                      <td className="td font-medium">{p.clienteNome}</td>
+                      <td className="td">{p.tipoPaleteNome}</td>
+                      <td className="td">{p.quantidade}</td>
+                      <td className="td">
+                        <select
+                          className="input py-1 text-xs"
+                          value={p.orientacao}
+                          onChange={(e) =>
+                            rodarPedido(p.id, e.target.value as "AUTO" | "COMPRIDO" | "TRAVES")
+                          }
+                        >
+                          <option value="AUTO">Automática</option>
+                          <option value="COMPRIDO">Ao comprido ↕</option>
+                          <option value="TRAVES">Ao través ↔</option>
+                        </select>
                       </td>
                       <td className="td">
-                        <div className="flex gap-1">
+                        <div className="flex items-center gap-2">
+                          {p.quantidade >= 2 && (
+                            <button
+                              onClick={() => dividirPedido(p.id, p.quantidade)}
+                              title="Dividir esta linha (para dar orientações diferentes)"
+                              className="text-xs text-gray-500 hover:text-gray-800"
+                            >
+                              ✂ dividir
+                            </button>
+                          )}
                           <button
-                            onClick={() => moverCliente(bloco.clienteId, "cima")}
-                            disabled={bi === 0}
-                            title="Carregar antes"
-                            className="rounded border border-gray-300 px-1.5 leading-none disabled:opacity-30"
+                            onClick={() => removerPedido(p.id)}
+                            className="text-red-500 hover:text-red-700"
                           >
-                            ↑
-                          </button>
-                          <button
-                            onClick={() => moverCliente(bloco.clienteId, "baixo")}
-                            disabled={bi === blocosClientes.length - 1}
-                            title="Carregar depois"
-                            className="rounded border border-gray-300 px-1.5 leading-none disabled:opacity-30"
-                          >
-                            ↓
+                            ✕
                           </button>
                         </div>
                       </td>
                     </tr>
-                    {bloco.linhas.map((p) => (
-                      <tr key={p.id}>
-                        <td className="td pl-6">{p.tipoPaleteNome}</td>
-                        <td className="td">{p.quantidade}</td>
-                        <td className="td">
-                          <select
-                            className="input py-1 text-xs"
-                            value={p.orientacao}
-                            onChange={(e) =>
-                              rodarPedido(
-                                p.id,
-                                e.target.value as "AUTO" | "COMPRIDO" | "TRAVES",
-                              )
-                            }
-                          >
-                            <option value="AUTO">Automática</option>
-                            <option value="COMPRIDO">Ao comprido ↕</option>
-                            <option value="TRAVES">Ao través ↔</option>
-                          </select>
-                        </td>
-                        <td className="td">
-                          <div className="flex items-center gap-2">
-                            {p.quantidade >= 2 && (
-                              <button
-                                onClick={() => dividirPedido(p.id, p.quantidade)}
-                                title="Dividir esta linha (para dar orientações diferentes)"
-                                className="text-xs text-gray-500 hover:text-gray-800"
-                              >
-                                ✂ dividir
-                              </button>
-                            )}
-                            <button
-                              onClick={() => removerPedido(p.id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                ))}
+                  ))}
+                </tbody>
               </table>
             </div>
           </>
@@ -698,7 +689,7 @@ export default function CarregamentoDetalheEditor({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={otimizar}
-              disabled={aOtimizar || blocosClientes.length < 2}
+              disabled={aOtimizar || detalhe.pedidos.length < 2}
               className="btn-secondary text-sm"
             >
               {aOtimizar ? "A calcular…" : "⚡ Otimizar disposição"}
@@ -758,15 +749,15 @@ export default function CarregamentoDetalheEditor({
 
         <CarregamentoFloorPlan
           caixas={detalhe.packing.caixas}
-          onRodarPedido={(pedidoId, rotacionadoAtual) =>
-            rodarPedido(pedidoId, rotacionadoAtual ? "COMPRIDO" : "TRAVES")
-          }
+          ordemPedidoIds={detalhe.pedidos.map((p) => p.id)}
+          onReordenar={reordenarPedidos}
+          onRodarPalete={rodarPalete}
+          bloqueado={aReordenar}
         />
         <p className="mt-2 text-xs text-gray-400">
-          Clica numa palete no desenho para a rodar, ou usa a coluna
-          &quot;Orientação&quot; na tabela de pedidos. &quot;Ao comprido&quot; /
-          &quot;Ao través&quot; definem a orientação principal da linha — o motor
-          pode rodar algumas paletes para as encostar e aproveitar a largura.
+          Arrasta uma palete para a colocar noutro ponto da carga — as restantes reajustam-se
+          sozinhas. O ↻ em cada palete roda só essa palete. A coluna &quot;Orientação&quot; na
+          tabela define a orientação principal de uma linha inteira.
         </p>
       </div>
 

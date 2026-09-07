@@ -2,6 +2,25 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Planta de carga: arrastar paletes + rodar palete individual (2026-09-07)
+
+Plano: `C:\Users\Ricardo\.claude\plans\quizzical-squishing-ocean.md`. Preparar
+carga era lento (setas ↑↓ por cliente + dropdown de orientação + ✂ dividir).
+Agora arrasta-se o quadrado da palete na planta para o reposicionar na
+sequência de carga (o motor de empacotamento reflui as restantes) e há um ↻
+por palete que a separa numa linha própria e roda só essa.
+
+- [x] `lib/carregamento-ordem.ts`: `reordenarArrastando` (novo), remover `moverBlocoCliente`
+- [x] `tests/calc/carregamentoOrdem.test.ts`: testes do helper novo (218 verdes)
+- [x] `lib/validacao.ts` + rota `dividir`: `orientacao?` opcional na linha nova
+- [x] `components/CarregamentoFloorPlan.tsx`: arrasto (pointer events, rato+touch) + botão ↻
+- [x] `CarregamentoDetalheEditor.tsx`: `reordenarPedidos`/`rodarPalete`, tabela de
+      pedidos plana (sequência real 1,2,3…), removidas as setas ↑↓ e o agrupamento por cliente
+- [x] `tsc` + `npm test` (218) + `npm run build` verdes
+- [ ] Teste manual do Ricardo no browser (arrasto, ↻, tablet, PDF, ⚡ otimizar) — não
+      testável por mim sem browser
+- [ ] Commit + push
+
 ## 🔲 Categorias de veículo (Ligeiro/Pesado) + consumo por veículo + fix data de inspeção (2026-09-04)
 
 Plano completo: `C:\Users\Ricardo\.claude\plans\quizzical-squishing-ocean.md`. Pedido

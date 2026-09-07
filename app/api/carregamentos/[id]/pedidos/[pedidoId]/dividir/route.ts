@@ -33,7 +33,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string; 
     return NextResponse.json({ erro: "Pedido não encontrado." }, { status: 404 });
   }
 
-  const { quantidade } = parsed.data;
+  const { quantidade, orientacao } = parsed.data;
   if (quantidade >= pedido.quantidade) {
     return NextResponse.json(
       { erro: `Só pode separar até ${pedido.quantidade - 1} palete(s).` },
@@ -51,7 +51,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string; 
         carregamentoId,
         clienteId: pedido.clienteId,
         tipoPaleteId: pedido.tipoPaleteId,
-        orientacao: pedido.orientacao,
+        orientacao: orientacao ?? pedido.orientacao,
         quantidade,
         ordem: pedido.ordem, // fica logo a seguir à original (id maior desempata)
       },
