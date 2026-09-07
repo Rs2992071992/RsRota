@@ -19,7 +19,7 @@ por palete que a separa numa linha própria e roda só essa.
 - [x] `tsc` + `npm test` (218) + `npm run build` verdes
 - [ ] Teste manual do Ricardo no browser (arrasto, ↻, tablet, PDF, ⚡ otimizar) — não
       testável por mim sem browser
-- [ ] Commit + push
+- [x] Commit `1fcc656` + push
 
 ## 🔲 Categorias de veículo (Ligeiro/Pesado) + consumo por veículo + fix data de inspeção (2026-09-04)
 
