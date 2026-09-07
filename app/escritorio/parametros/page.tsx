@@ -8,7 +8,8 @@ export default async function ParametrosPage() {
     prisma.parametros.findUnique({ where: { id: 1 } }),
     prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
-    prisma.tabelaConsumo.findMany({ orderBy: { cargaKg: "asc" } }),
+    // Só a tabela "global" — as tabelas de consumo por-veículo editam-se em Veículos.
+    prisma.tabelaConsumo.findMany({ where: { veiculoId: null }, orderBy: { cargaKg: "asc" } }),
     prisma.tipoPalete.findMany({ orderBy: [{ ordem: "asc" }, { nome: "asc" }] }),
   ]);
 

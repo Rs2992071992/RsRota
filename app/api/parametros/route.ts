@@ -69,8 +69,10 @@ export async function PUT(req: Request) {
     }),
     prisma.tabelaPortagem.deleteMany({}),
     prisma.tabelaPortagem.createMany({ data: portagens }),
-    prisma.tabelaConsumo.deleteMany({}),
-    prisma.tabelaConsumo.createMany({ data: consumo }),
+    // Só a tabela de consumo "global" (veiculoId null). As tabelas por-veículo
+    // são geridas na página de Veículos e não devem ser apagadas aqui.
+    prisma.tabelaConsumo.deleteMany({ where: { veiculoId: null } }),
+    prisma.tabelaConsumo.createMany({ data: consumo.map((c) => ({ ...c, veiculoId: null })) }),
   ]);
 
   return NextResponse.json({ ok: true });

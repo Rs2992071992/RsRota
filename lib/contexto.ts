@@ -12,7 +12,9 @@ export async function carregarContexto(): Promise<ContextoCalculo> {
     prisma.parametros.findUnique({ where: { id: 1 } }),
     // Pneus "globais" (template/fallback). Os pneus por-veículo entram via snapshot.
     prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
-    prisma.tabelaConsumo.findMany({ orderBy: { cargaKg: "asc" } }),
+    // Só a tabela "global" (veiculoId null) — as tabelas de consumo por-veículo
+    // entram no cálculo via snapshot (ver lib/snapshot-service.ts), não por aqui.
+    prisma.tabelaConsumo.findMany({ where: { veiculoId: null }, orderBy: { cargaKg: "asc" } }),
     prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
   ]);
 
