@@ -2,6 +2,33 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Planta de carga automática nas Rotas (2026-09-08)
+
+Pedido do Ricardo (com um desenho à mão — sequência de clientes na rota +
+paletes a descarregar/recolher): "será possível gerar planta de carga das
+rotas? tipo isto". Confirmado por pergunta direta: quer 1 planta só (o
+momento de maior ocupação), gerada automaticamente a partir das paragens já
+registadas — sem ter de recriar pedidos à mão em Cargas (esse módulo continua
+separado, manual, para preparar a carga antes de partir).
+
+- [x] `lib/calc/cargaRota.ts`: `gerarPlantaCargaRota(caixas, paragens)` novo —
+  reaproveita a mesma simulação de `verificarEspacoCarga` (extraída para
+  `estadosDaRota`, independente das caixas) mas devolve a geometria
+  (`ResultadoPacking`) do pior momento, não só as contagens. `null` sem caixa
+  configurada ou sem nada a bordo nunca
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: novo card "Planta de carga"
+  (usa `CarregamentoFloorPlan`, o mesmo componente de Cargas, só de leitura —
+  sem `onReordenar`/`onRodarPalete`, não há pedidos aqui para editar)
+- [x] +5 testes (`tests/calc/cargaRota.test.ts`: null sem caixa/sem paletes,
+  geometria consistente com `verificarEspacoCarga` em vários cenários). 223
+  testes verdes, `tsc`/`next build` limpos
+- [x] Verificado com script descartável (só leitura) contra as 31 rotas reais:
+  29 com paletes a bordo nalgum momento → 29 plantas geradas, **zero
+  inconsistências** entre a geometria e as contagens de `verificarEspacoCarga`
+- [x] Commit `46b4425` + push (Vercel builda automaticamente)
+- [ ] Teste manual do Ricardo no browser (abrir uma rota real com paletes e
+  confirmar que a planta aparece e faz sentido)
+
 ## ☑️ Planta de carga — arrastar move só 1 palete, não o lote da linha (2026-09-08)
 
 Pedido do Ricardo: "nas cargas, será que não conseguimos mudar uma palete de
