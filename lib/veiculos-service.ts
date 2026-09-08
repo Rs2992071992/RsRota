@@ -3,6 +3,8 @@
 // de cálculo, só de uma agregação simples sobre as paragens do veículo.
 
 import { prisma } from "@/lib/db";
+import { linhasPaleteEfetivas } from "@/lib/calc/perStop";
+import type { PaleteLinha } from "@/lib/calc/types";
 
 const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -11,26 +13,130 @@ export interface EstatisticasVeiculo {
   clientesAtendidos: number;
   /** Kg carregados + descarregados no ano corrente (soma das duas colunas). */
   kgAnoAtual: number;
+  /** Paletes transportadas no ano corrente (recolha faturada a outro cliente com entrega na mesma rota não conta a dobra). */
+  paletesAnoAtual: number;
   /** Kg carregados + descarregados por mês do ano corrente, Jan–Dez (0 nos meses sem movimento). */
   serieMensalAnoAtual: { mes: string; kg: number }[];
+  /** Paletes por mês do ano corrente, Jan–Dez (0 nos meses sem movimento). */
+  serieMensalPaletesAnoAtual: { mes: string; paletes: number }[];
+}
+
+type ParagemVeiculo = {
+  idRota: string;
+  cliente: string;
+  tipoVeiculo: string;
+  faturarCliente: string | null;
+  kgCarregados: number;
+  kgDescarregados: number;
+  nPaletes: number;
+  nMeiasPaletes: number;
+  volume: boolean;
+  tipoPaleteId: number | null;
+  paleteComprimentoMm: number | null;
+  paleteLarguraMm: number | null;
+  paletes: PaleteLinha[] | null;
+  data: Date;
+};
+
+/** Nº de paletes de uma paragem (0,5 por meia-palete), cobrindo os 2 estilos: legado (volume/tipoPalete) e novo (dimensão própria). */
+function nPaletesParagem(p: ParagemVeiculo): number {
+  const linhas = linhasPaleteEfetivas(p);
+  const ehPaleteLegado = p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
+  if (linhas.length === 0 && !ehPaleteLegado) return 0;
+  const nBase = linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
+  return nBase + (p.nMeiasPaletes || 0) * 0.5;
+}
+
+/**
+ * Índices de paragens cujo peso/paletes já foram contados na entrega desse
+ * mesmo lote, dentro da mesma rota (mesma regra de `lib/calc/perRoute.ts`
+ * `totalPaletes`/`totalPesoAproximado`): uma recolha faturada a outro
+ * cliente (`faturarCliente`) que também tem entrega nessa rota não deve
+ * somar-se de novo — senão o lote conta-se duas vezes (recolha + entrega).
+ * Aplicado por rota porque a ligação recolha→entrega só faz sentido dentro
+ * da mesma viagem.
+ */
+function indicesJaContadosNaEntrega(paragens: ParagemVeiculo[]): Set<number> {
+  const porRota = new Map<string, number[]>();
+  paragens.forEach((p, i) => {
+    if (!porRota.has(p.idRota)) porRota.set(p.idRota, []);
+    porRota.get(p.idRota)!.push(i);
+  });
+
+  const jaContada = new Set<number>();
+  for (const indices of porRota.values()) {
+    const clientesComEntrega = new Set(
+      indices
+        .filter((i) => paragens[i].tipoVeiculo !== "VAZIO")
+        .map((i) => paragens[i].cliente?.trim())
+        .filter((x): x is string => !!x),
+    );
+    for (const i of indices) {
+      const p = paragens[i];
+      if (p.tipoVeiculo === "VAZIO") continue;
+      const alvo = p.faturarCliente?.trim();
+      if (alvo && clientesComEntrega.has(alvo)) jaContada.add(i);
+    }
+  }
+  return jaContada;
 }
 
 export async function carregarEstatisticasVeiculo(veiculoId: number): Promise<EstatisticasVeiculo> {
-  const paragens = await prisma.paragem.findMany({
-    where: { veiculoId },
-    select: { cliente: true, kgCarregados: true, kgDescarregados: true, data: true },
-  });
+  const paragens: ParagemVeiculo[] = (
+    await prisma.paragem.findMany({
+      where: { veiculoId },
+      select: {
+        idRota: true,
+        cliente: true,
+        tipoVeiculo: true,
+        faturarCliente: true,
+        kgCarregados: true,
+        kgDescarregados: true,
+        nPaletes: true,
+        nMeiasPaletes: true,
+        volume: true,
+        tipoPaleteId: true,
+        paleteComprimentoMm: true,
+        paleteLarguraMm: true,
+        paletes: true,
+        data: true,
+      },
+    })
+  ).map((p) => ({ ...p, paletes: Array.isArray(p.paletes) ? (p.paletes as unknown as PaleteLinha[]) : null }));
+
+  const jaContadaNaEntrega = indicesJaContadosNaEntrega(paragens);
 
   const anoAtual = new Date().getFullYear();
-  const cargasEfetuadas = paragens.filter((p) => p.kgCarregados > 0).length;
-  const clientesAtendidos = new Set(paragens.map((p) => p.cliente)).size;
+  const cargasEfetuadas = paragens.filter((p) => p.kgCarregados > 0 || nPaletesParagem(p) > 0).length;
+  const clientesAtendidos = new Set(
+    paragens.filter((p) => p.tipoVeiculo !== "VAZIO").map((p) => p.cliente),
+  ).size;
 
-  const doAno = paragens.filter((p) => p.data.getFullYear() === anoAtual);
-  const kgAnoAtual = doAno.reduce((a, p) => a + p.kgCarregados + p.kgDescarregados, 0);
+  let kgAnoAtual = 0;
+  let paletesAnoAtual = 0;
+  const porMesKg = new Array(12).fill(0);
+  const porMesPaletes = new Array(12).fill(0);
+  paragens.forEach((p, i) => {
+    if (p.data.getFullYear() !== anoAtual) return;
+    const mes = p.data.getMonth();
+    const kg = p.kgCarregados + p.kgDescarregados;
+    kgAnoAtual += kg;
+    porMesKg[mes] += kg;
+    if (!jaContadaNaEntrega.has(i)) {
+      const nPal = nPaletesParagem(p);
+      paletesAnoAtual += nPal;
+      porMesPaletes[mes] += nPal;
+    }
+  });
+  const serieMensalAnoAtual = NOMES_MES.map((mes, i) => ({ mes, kg: porMesKg[i] }));
+  const serieMensalPaletesAnoAtual = NOMES_MES.map((mes, i) => ({ mes, paletes: porMesPaletes[i] }));
 
-  const porMes = new Array(12).fill(0);
-  for (const p of doAno) porMes[p.data.getMonth()] += p.kgCarregados + p.kgDescarregados;
-  const serieMensalAnoAtual = NOMES_MES.map((mes, i) => ({ mes, kg: porMes[i] }));
-
-  return { cargasEfetuadas, clientesAtendidos, kgAnoAtual, serieMensalAnoAtual };
+  return {
+    cargasEfetuadas,
+    clientesAtendidos,
+    kgAnoAtual,
+    paletesAnoAtual,
+    serieMensalAnoAtual,
+    serieMensalPaletesAnoAtual,
+  };
 }

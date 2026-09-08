@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { carregarEstatisticasVeiculo } from "@/lib/veiculos-service";
 import { veiculoParaForm, custoVeiculoKm, REF_KM_ANUAIS } from "@/lib/veiculo-form";
 import { fmtNum, fmtNum2 } from "@/lib/format";
-import VeiculoGrafico from "@/components/VeiculoGrafico";
+import { VeiculoGraficoKg, VeiculoGraficoPaletes } from "@/components/VeiculoGrafico";
 import VeiculoDetalheEditor from "./VeiculoDetalheEditor";
 
 export const dynamic = "force-dynamic";
@@ -47,10 +47,11 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
         {!veiculo.ativo && <span className="text-sm text-gray-400">inativo</span>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi rotulo="Cargas efetuadas" valor={fmtNum(stats.cargasEfetuadas)} />
         <Kpi rotulo="Clientes atendidos" valor={fmtNum(stats.clientesAtendidos)} />
         <Kpi rotulo="Kg transportados (este ano)" valor={`${fmtNum(stats.kgAnoAtual)} kg`} />
+        <Kpi rotulo="Paletes transportadas (este ano)" valor={fmtNum(stats.paletesAnoAtual)} />
         <Kpi
           rotulo="Custo veículo / km"
           valor={`${fmtNum2(custoKm)} €`}
@@ -58,9 +59,15 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
         />
       </div>
 
-      <div className="card">
-        <h3 className="mb-2 text-sm font-semibold text-gray-700">Kg transportados por mês (ano corrente)</h3>
-        <VeiculoGrafico serie={stats.serieMensalAnoAtual} />
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="card">
+          <h3 className="mb-2 text-sm font-semibold text-gray-700">Kg transportados por mês (ano corrente)</h3>
+          <VeiculoGraficoKg serie={stats.serieMensalAnoAtual} />
+        </div>
+        <div className="card">
+          <h3 className="mb-2 text-sm font-semibold text-gray-700">Paletes transportadas por mês (ano corrente)</h3>
+          <VeiculoGraficoPaletes serie={stats.serieMensalPaletesAnoAtual} />
+        </div>
       </div>
 
       <VeiculoDetalheEditor

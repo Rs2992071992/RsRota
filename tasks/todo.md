@@ -2,6 +2,40 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Estatísticas do veículo — kg a dobra em backhaul + paletes em falta (2026-09-08)
+
+Pedido do Ricardo: "os dados sobre as estatísticas em vários campos não me
+parece estar certa" na página `/escritorio/veiculos/[id]`. Investigação
+(subagente Explore) confirmou 4 bugs em `lib/veiculos-service.ts`, nunca
+revisto quando os bugs irmãos foram corrigidos em `lib/calc/perRoute.ts`
+(2026-09-04): (1) kg somava a dobra recolhas faturadas a outro cliente com
+entrega na mesma rota (mesmo lote contado 2×); (2) não existia métrica de
+paletes, só kg — veículos que só fazem rotas por paletes apareciam com
+Kg≈0; (3) "Cargas efetuadas" só contava `kgCarregados>0`, ignorando paragens
+só de paletes; (4) "Clientes atendidos" contava "Vazio" (cliente automático
+das viagens `tipoVeiculo=VAZIO`) como cliente real.
+
+- [x] `lib/veiculos-service.ts`: `indicesJaContadosNaEntrega()` — mesma
+  regra de dedução do `faturarCliente` de `perRoute.ts::totalPaletes`, mas
+  aplicada por `idRota` (a ligação recolha→entrega só faz sentido dentro da
+  mesma rota, ao contrário de `perRoute.ts` que já só vê uma rota de cada vez)
+- [x] `nPaletesParagem()` — cobre os 2 estilos (legado `volume`/`tipoPalete`
+  e novo `paletes` Json/dimensão própria), reutiliza `linhasPaleteEfetivas`
+- [x] `cargasEfetuadas`: `kgCarregados>0 OU nPaletes>0`
+- [x] `clientesAtendidos`: exclui `tipoVeiculo==="VAZIO"`
+- [x] Novo `paletesAnoAtual` + `serieMensalPaletesAnoAtual`; `VeiculoGrafico.tsx`
+  dividido em `VeiculoGraficoKg`/`VeiculoGraficoPaletes`; página do veículo
+  ganha KPI "Paletes transportadas (este ano)" + gráfico mensal a par do de kg
+- [x] `tsc --noEmit`, `npm test` (218, inalterados — sem cobertura própria,
+  como os outros `*-service.ts`) e `npm run build` limpos
+- [x] Verificado com script descartável contra a BD real: RIC-maravedis2
+  (Tec-Procartão recolhe 10 pal. faturadas a Tecfil, que entrega essas
+  mesmas 10 na mesma rota) somava 30 sem dedução → 20 com dedução, igual à
+  correção já validada em `perRoute.ts`; veículo 08-SC-33 (1 paragem só por
+  paletes, kg=0) passa de 0 para 1 carga efetuada
+- [ ] Commit + push (Vercel builda automaticamente)
+- [ ] Teste manual do Ricardo na página do veículo em produção
+
 ## 🔲 Planta de carga: arrastar paletes + rodar palete individual (2026-09-07)
 
 Plano: `C:\Users\Ricardo\.claude\plans\quizzical-squishing-ocean.md`. Preparar
