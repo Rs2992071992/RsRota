@@ -14,15 +14,18 @@ export async function GET() {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 
-  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha] =
+  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha, tiposPalete] =
     await Promise.all([
       prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
       prisma.parametros.findUnique({ where: { id: 1 } }),
+      // distinct + orderBy devolve, por idRota, a paragem mais recente — dá
+      // para pré-preencher "continuar rota" (kmFinal/tipoVeiculo de onde
+      // essa rota ficou), mesmo padrão de app/motorista/registo/page.tsx.
       prisma.paragem.findMany({
         where: { motoristaId: sessao.id },
-        select: { idRota: true },
+        select: { idRota: true, tipoVeiculo: true, kmFinal: true },
         distinct: ["idRota"],
-        orderBy: { data: "desc" },
+        orderBy: [{ data: "desc" }, { id: "desc" }],
         take: 15,
       }),
       prisma.veiculo.findMany({
@@ -38,12 +41,17 @@ export async function GET() {
           capacidadePaleteB: true,
           capacidadePaleteACamiao: true,
           capacidadePaleteBCamiao: true,
+          caixaComprimentoMm: true,
+          caixaLarguraMm: true,
+          fatorOcupacaoPalete: true,
+          reboqueHabitual: { select: { comprimentoMm: true, larguraMm: true } },
           dataLimiteInspecao: true,
           inspecaoVerificada: true,
         },
       }),
       prisma.paragem.findMany({ select: { cliente: true }, distinct: ["cliente"] }),
       prisma.cliente.findMany({ select: { nome: true } }),
+      prisma.tipoPalete.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
     ]);
 
   const clientes = Array.from(
@@ -54,12 +62,19 @@ export async function GET() {
 
   return NextResponse.json({
     zonas: portagens.map((p) => p.zona),
-    veiculos: veiculos.map((v) => ({
+    veiculos: veiculos.map(({ reboqueHabitual, ...v }) => ({
       ...v,
+      caixaReboqueComprimentoMm: reboqueHabitual?.comprimentoMm ?? null,
+      caixaReboqueLarguraMm: reboqueHabitual?.larguraMm ?? null,
       dataLimiteInspecao: v.dataLimiteInspecao ? v.dataLimiteInspecao.toISOString() : null,
     })),
     clientes,
-    rotasRecentes: rotasRecentes.map((r) => r.idRota),
+    tiposPalete,
+    rotasRecentes: rotasRecentes.map((r) => ({
+      idRota: r.idRota,
+      tipoVeiculo: r.tipoVeiculo,
+      kmFinal: r.kmFinal,
+    })),
     parametros: {
       capacidadeCamiao: params?.capacidadeCamiao ?? 14000,
       capacidadeReboque: params?.capacidadeReboque ?? 24000,

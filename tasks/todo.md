@@ -2,6 +2,47 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Porte Android Motorista — as 5 funcionalidades em falta + modelo de dados (2026-09-08)
+
+Plano: `C:\Users\Ricardo\.claude\plans\elegant-discovering-tiger.md`. Retomado depois de
+ter sido adiado em 04/09. Investigação de código (não só o `todo.md`) mostrou que o gap
+era maior: o modelo de paletes do Android ainda era o pré-catálogo
+(`tipoVeiculo="PALETE_120X80/100"` + `kgCarregados`/`kgDescarregados`) — ver
+`tasks/lessons.md` 2026-09-08.
+
+- [x] Site: `GET /api/motorista/dados-registo` ganha `tiposPalete` (catálogo),
+  dimensões de caixa do veículo/reboque (`caixaComprimentoMm/LarguraMm`,
+  `caixaReboqueComprimentoMm/LarguraMm`, `fatorOcupacaoPalete`) e `rotasRecentes`
+  passa de `string[]` a `{idRota,tipoVeiculo,kmFinal}[]` (aditivo, sem migração)
+- [x] Android: `lib/calc/paletePacking.ts` + `lib/calc/cargaRota.ts` copiados
+  quase verbatim do site (só o import interno mudou) para `src/lib/calc/` —
+  motor de empacotamento 2D real, antes inexistente na app
+- [x] Android: `src/lib/types.ts` + `src/lib/validacao.ts` alinhados com o
+  modelo do site (`tipoPaleteId`/`nPaletes`/`nMeiasPaletes`/`paletes[]`/
+  `faturarCliente`/`pesoAproximado`; `TIPOS_VEICULO` corrigido para
+  `CAMIAO`/`CAMIAO+REBOQUE`/`VAZIO`)
+- [x] Android: `Registar.tsx` reescrito — seletor Descarga/Recolha/Mista,
+  "+ Adicionar palete" (multi-tamanho), meias-paletes sozinhas, simulação de
+  espaço real ao longo da rota (era comparação escalar contra capacidade),
+  e o dropdown interno "continuar rota recente" corrigido (já pré-enche
+  KM Inicial/Tipo Veículo/resumo da rota, sem `router.push` — via
+  `carregarResumoRota` reutilizável)
+- [x] Android: `ParagemEditorModal.tsx` (corrigir paragem) atualizado ao novo
+  modelo — âmbito reduzido de propósito (1 linha de palete + meias, sem
+  multi-tamanho/Mista, decisão explícita no plano)
+- [x] Android: `Historico.tsx` — linha "· X kg" (nunca preenchida em paragens
+  novas pós-porte) trocada por nº de paletes, com fallback a kg nas paragens
+  antigas
+- [x] `tsc --noEmit`, `npm test` (218, inalterados), `npm run build` (site) e
+  `tsc -b && vite build` (Android) limpos; `oxlint` só com 3 avisos
+  pré-existentes (mesmo padrão do `RegistoForm.tsx` do site)
+- [ ] Teste manual do Ricardo (registo real, correção no histórico)
+- [ ] Commit + push do site (Vercel builda automaticamente) — **atenção**:
+  a APK atualmente instalada espera `rotasRecentes: string[]`, o dropdown
+  "continuar rota recente" antigo parte até o `.apk` novo ser instalado
+- [ ] Gerar `.apk` novo (`npm run build && npx cap sync android && cd android
+  && ./gradlew assembleRelease`) e instalar no telemóvel do motorista
+
 ## 🔲 Estatísticas do veículo — kg a dobra em backhaul + paletes em falta (2026-09-08)
 
 Pedido do Ricardo: "os dados sobre as estatísticas em vários campos não me

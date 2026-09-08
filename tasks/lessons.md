@@ -2,6 +2,21 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | O `tasks/todo.md` listava só 5 funcionalidades "por portar"
+  para a app Android Motorista (28/08–02/09). Ao ler o código real
+  (`app-motorista-android/src/screens/Registar.tsx`), o gap era maior: o
+  modelo de dados de paletes ainda era o pré-catálogo
+  (`tipoVeiculo="PALETE_120X80/100"` + `kgCarregados`/`kgDescarregados`),
+  mais antigo do que qualquer um dos 5 itens — as 4 features de paletes
+  dependiam todas dessa base primeiro. O endpoint dedicado
+  `GET /api/motorista/dados-registo` (só a app Android usa, o site resolve
+  tudo server-side) também estava parado, sem `tiposPalete`/dimensões de
+  caixa. | Quando um checklist em `todo.md` diz "porte pendente" para um
+  projeto irmão sem git (app Android/Capacitor com bundle próprio), ler o
+  código do projeto irmão antes de planear — o checklist regista o que foi
+  pedido, não necessariamente todo o drift acumulado desde a última
+  sincronização.
+
 - [2026-09-08] | Depois do fix da escala (ver entrada abaixo), o arrasto de
   paletes ainda "só selecionava os nomes" — o `onPointerDown` no `<rect>`
   nunca chamava `e.preventDefault()`, pelo que o browser entrava em modo de
