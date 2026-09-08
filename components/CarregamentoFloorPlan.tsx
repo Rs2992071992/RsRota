@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CaixaResultado } from "@/lib/calc/paletePacking";
-import { reordenarArrastando } from "@/lib/carregamento-ordem";
 
 // Paleta categórica fixa (8 cores) — atribuída por ordem de 1ª aparição do
 // cliente no carregamento (nunca reordenada por tamanho/frequência). Nunca
@@ -47,10 +46,14 @@ export default function CarregamentoFloorPlan({
   bloqueado = false,
 }: {
   caixas: CaixaResultado[];
-  /** Sequência de carga atual (pedidoId por ordem) — base do arrasto. */
+  /** Sequência de carga atual (pedidoId por ordem) — só para saber se o arrasto
+   * está disponível; a nova ordem é calculada pelo pai (pode implicar separar
+   * a palete arrastada da sua linha, se a linha tiver mais do que 1). */
   ordemPedidoIds?: number[];
-  /** Nova sequência depois de arrastar uma palete para outra posição. */
-  onReordenar?: (novaOrdem: number[]) => void;
+  /** Uma palete (`pedidoId`) foi largada em cima de outra (`alvoPedidoId`),
+   * antes/depois dela. Se a linha de `pedidoId` tiver mais do que 1 palete, só
+   * a unidade arrastada se deve mover — cabe ao pai decidir como. */
+  onReordenar?: (pedidoId: number, alvoPedidoId: number, posicao: "antes" | "depois") => void;
   /** Clicar em ↻ numa palete: separa essa palete numa linha própria e roda-a.
    * `rotacionadoAtual` = orientação com que está desenhada agora. */
   onRodarPalete?: (pedidoId: number, rotacionadoAtual: boolean) => void;
@@ -94,8 +97,7 @@ export default function CarregamentoFloorPlan({
         // Metade esquerda do alvo = antes; direita = depois (eixo do comprimento
         // é X no desenho). Largar na direita da última palete = mover para o fim.
         const posicao = e.clientX < r.left + r.width / 2 ? "antes" : "depois";
-        const nova = reordenarArrastando(ordemPedidoIds!, a.pedidoId, alvo, posicao);
-        if (nova !== ordemPedidoIds) onReordenar!(nova);
+        onReordenar!(a.pedidoId, alvo, posicao);
       }
       setArrasto(null);
       setAlvoRealce(null);

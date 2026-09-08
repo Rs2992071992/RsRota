@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { CarregamentoDetalhe, SimulacaoOrdem } from "@/lib/carregamento-service";
 import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
 import DescarregarPdfBotao from "@/components/DescarregarPdfBotao";
+import { reordenarArrastando } from "@/lib/carregamento-ordem";
 
 type Detalhe = Omit<CarregamentoDetalhe, "data"> & { data: string };
 
@@ -232,21 +233,62 @@ export default function CarregamentoDetalheEditor({
     router.refresh();
   }
 
-  async function reordenarPedidos(ordemPedidoIds: number[]) {
+  /** Grava uma nova sequência de carga (lista completa de pedidoId). */
+  async function gravarOrdem(ordemPedidoIds: number[]) {
+    const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/ordem`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ordemPedidoIds }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErro(data.erro || "Erro ao reordenar.");
+      return false;
+    }
+    return true;
+  }
+
+  /** Arrasto na planta: `pedidoId` foi largado antes/depois de `alvoPedidoId`.
+   * Se a linha de `pedidoId` tiver mais do que 1 palete, só a palete arrastada
+   * se deve mudar de posição — separa-a primeiro numa linha de 1 (mesmo padrão
+   * do ↻, `dividir` com `quantidade:1`) e reordena essa linha nova. Com 1 só
+   * palete na linha, reordena a linha diretamente, como antes. */
+  async function moverPalete(pedidoId: number, alvoPedidoId: number, posicao: "antes" | "depois") {
     setErro("");
     setSimulacao(null);
     setAReordenar(true);
     try {
-      const res = await fetch(`/api/carregamentos/${detalhe.id}/pedidos/ordem`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ordemPedidoIds }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setErro(data.erro || "Erro ao reordenar.");
-        return;
+      const linha = detalhe.pedidos.find((p) => p.id === pedidoId);
+      let pedidosAtuais: Detalhe["pedidos"] = detalhe.pedidos;
+      let idParaMover = pedidoId;
+
+      if (linha && linha.quantidade > 1) {
+        const resDividir = await fetch(
+          `/api/carregamentos/${detalhe.id}/pedidos/${pedidoId}/dividir`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quantidade: 1 }),
+          },
+        );
+        const dataDividir = await resDividir.json().catch(() => ({}));
+        if (!resDividir.ok) {
+          setErro(dataDividir.erro || "Erro ao separar a palete.");
+          return;
+        }
+        pedidosAtuais = dataDividir.carregamento.pedidos;
+        const idsAntigos = new Set(detalhe.pedidos.map((p) => p.id));
+        const novaLinha = pedidosAtuais.find((p) => !idsAntigos.has(p.id));
+        if (!novaLinha) {
+          setErro("Erro ao separar a palete.");
+          return;
+        }
+        idParaMover = novaLinha.id;
       }
+
+      const ordemAtual = pedidosAtuais.map((p) => p.id);
+      const novaOrdem = reordenarArrastando(ordemAtual, idParaMover, alvoPedidoId, posicao);
+      if (novaOrdem !== ordemAtual && !(await gravarOrdem(novaOrdem))) return;
       router.refresh();
     } catch {
       setErro("Erro de ligação.");
@@ -750,7 +792,7 @@ export default function CarregamentoDetalheEditor({
         <CarregamentoFloorPlan
           caixas={detalhe.packing.caixas}
           ordemPedidoIds={detalhe.pedidos.map((p) => p.id)}
-          onReordenar={reordenarPedidos}
+          onReordenar={moverPalete}
           onRodarPalete={rodarPalete}
           bloqueado={aReordenar}
         />
