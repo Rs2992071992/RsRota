@@ -68,8 +68,16 @@ export default async function RotasPage(props: { searchParams: Promise<SearchPar
   const totalCusto = rotas.reduce((a, r) => a + r.custoTotalRota, 0);
   const totalReceita = rotas.reduce((a, r) => a + r.receitaTotal, 0);
   const totalLucro = totalReceita - totalCusto;
-  const totalKgCarregados = rotas.reduce((a, r) => a + r.totalKgCarregados, 0);
-  const totalKgDescarregados = rotas.reduce((a, r) => a + r.totalKgDescarregados, 0);
+  // Soma os 2 estilos de rota (nunca se sobrepõem numa mesma rota): kg legado
+  // (modo "kg" manual, pré-2026-08-28) + peso aproximado (rotas por paletes,
+  // onde kgCarregados/Descarregados ficam a 0 — mesma regra da página de
+  // detalhe da rota, ver app/escritorio/rotas/[idRota]/page.tsx).
+  const totalKgCarregados =
+    rotas.reduce((a, r) => a + r.totalKgCarregados, 0) +
+    rotas.reduce((a, r) => a + r.totalPesoAproximadoCarregado, 0);
+  const totalKgDescarregados =
+    rotas.reduce((a, r) => a + r.totalKgDescarregados, 0) +
+    rotas.reduce((a, r) => a + r.totalPesoAproximado, 0);
   const totalPaletes = rotas.reduce((a, r) => a + r.totalPaletes, 0);
 
   return (
