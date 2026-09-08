@@ -148,6 +148,10 @@ export interface ParagemCarga {
    */
   cliente?: string;
   faturarCliente?: string | null;
+  /** Ida/Volta — opcional, só usado por `gerarPlantaCargaPorTroco` para
+   * separar o pior momento de cada troço; sem isto, essa função devolve tudo
+   * a `null` (comportamento das outras funções desta ficheiro inalterado). */
+  tipoViagem?: string;
 }
 
 /** Um "momento" da rota já arrumado: contagens (`EspacoCarga`) + a geometria
@@ -233,7 +237,7 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
   }
 
   let resultado: EstadoArrumado | null = null;
-  for (const aBordo of estadosDaRota(comLinhas)) {
+  for (const aBordo of estadosDaRota(comLinhas).estados) {
     const estado = empacotarEstado(caixas, aBordo);
     resultado = resultado ? pior(resultado, estado) : estado;
   }
@@ -256,11 +260,54 @@ export function gerarPlantaCargaRota(
   if (totalDeLinhas(comLinhas) === 0) return null;
 
   let resultado: EstadoArrumado | null = null;
-  for (const aBordo of estadosDaRota(comLinhas)) {
+  for (const aBordo of estadosDaRota(comLinhas).estados) {
     const estado = empacotarEstado(caixas, aBordo);
     resultado = resultado ? pior(resultado, estado) : estado;
   }
   return resultado?.packing ?? null;
+}
+
+export interface PlantaCargaPorTroco {
+  ida: ResultadoPacking | null;
+  volta: ResultadoPacking | null;
+}
+
+/**
+ * Como `gerarPlantaCargaRota`, mas devolve o pior momento de CADA troço
+ * (Ida/Volta) em separado, em vez do pior momento da rota inteira — útil
+ * para mostrar 2 plantas (uma por sentido) na página da rota. Cada estado
+ * (corte `j` de `estadosDaRota`) é atribuído ao troço da paragem em que
+ * ocorre (mesmo critério do corte por VAZIO, `segmentoDe` acima: usa a
+ * paragem em `Math.min(j, n-1)`). Uma recolha na Ida entregue na Volta
+ * (`faturarCliente`) continua a atravessar a fronteira sem se perder — herda
+ * o mesmo tratamento de `estadosDaRota` — por isso pode aparecer a bordo em
+ * momentos de ambos os troços, o que é o comportamento correto (fisicamente
+ * esteve a bordo nos dois).
+ *
+ * `tipoViagem` em falta nalgumas/todas as paragens (chamador não o preenche,
+ * ex. simulação ao vivo do registo) devolve simplesmente `{ ida: null, volta:
+ * null }` — nunca um erro.
+ */
+export function gerarPlantaCargaPorTroco(
+  caixas: CaixaInput[],
+  paragens: ParagemCarga[],
+): PlantaCargaPorTroco {
+  if (caixas.length === 0) return { ida: null, volta: null };
+  const comLinhas = filtrarLinhasValidas(paragens);
+  if (totalDeLinhas(comLinhas) === 0) return { ida: null, volta: null };
+
+  const { estados, ordenadas } = estadosDaRota(comLinhas);
+  const n = ordenadas.length;
+  const piorDoTroco = (alvo: "Ida" | "Volta"): ResultadoPacking | null => {
+    let resultado: EstadoArrumado | null = null;
+    for (let j = 0; j < estados.length; j++) {
+      if (ordenadas[Math.min(j, n - 1)]?.tipoViagem !== alvo) continue;
+      const estado = empacotarEstado(caixas, estados[j]);
+      resultado = resultado ? pior(resultado, estado) : estado;
+    }
+    return resultado?.packing ?? null;
+  };
+  return { ida: piorDoTroco("Ida"), volta: piorDoTroco("Volta") };
 }
 
 function filtrarLinhasValidas(paragens: ParagemCarga[]) {
@@ -279,8 +326,13 @@ function totalDeLinhas(comLinhas: ReturnType<typeof filtrarLinhasValidas>): numb
 
 /** Todos os "momentos" (cortes) da rota, cada um com as linhas a bordo nesse
  * instante — a parte de `verificarEspacoCarga` independente das caixas
- * (reutilizada também por `gerarPlantaCargaRota`). */
-function estadosDaRota(comLinhas: ReturnType<typeof filtrarLinhasValidas>): LinhaCarga[][] {
+ * (reutilizada também por `gerarPlantaCargaRota`/`gerarPlantaCargaPorTroco`).
+ * Devolve também `ordenadas` (paragens na sequência física usada para os
+ * cortes) — só `gerarPlantaCargaPorTroco` precisa dela, para saber a que
+ * troço (tipoViagem) pertence cada corte. */
+function estadosDaRota(
+  comLinhas: ReturnType<typeof filtrarLinhasValidas>,
+): { estados: LinhaCarga[][]; ordenadas: ReturnType<typeof filtrarLinhasValidas> } {
   // Ordena pela sequência física.
   const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
   const n = ordenadas.length;
@@ -353,5 +405,5 @@ function estadosDaRota(comLinhas: ReturnType<typeof filtrarLinhasValidas>): Linh
     estados.push(aBordo);
   }
 
-  return estados;
+  return { estados, ordenadas };
 }

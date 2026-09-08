@@ -5,7 +5,7 @@ import { carregarRota } from "@/lib/rotas-service";
 import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
-import { verificarEspacoCarga, gerarPlantaCargaRota, linhasCargaParagem } from "@/lib/calc/cargaRota";
+import { verificarEspacoCarga, gerarPlantaCargaPorTroco, linhasCargaParagem } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { AlertaBadge } from "@/components/Badge";
 import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
@@ -138,11 +138,14 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
     kmInicial: p.kmInicial,
     cliente: p.cliente,
     faturarCliente: p.faturarCliente,
+    tipoViagem: p.tipoViagem,
   }));
   const espacoCarga = verificarEspacoCarga(caixasRota, paragensCarga);
-  // Planta de carga do pior momento da rota — mesma simulação do aviso acima,
-  // gerada a partir das paragens já registadas (sem recriar pedidos à mão).
-  const packingRota = gerarPlantaCargaRota(caixasRota, paragensCarga);
+  // Planta de carga do pior momento de cada troço (Ida/Volta) — mesma
+  // simulação do aviso acima, gerada a partir das paragens já registadas
+  // (sem recriar pedidos à mão), mas separada por sentido em vez de um único
+  // pior momento da rota inteira.
+  const packingPorTroco = gerarPlantaCargaPorTroco(caixasRota, paragensCarga);
 
   return (
     <div className="space-y-5">
@@ -423,18 +426,31 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         </div>
       </div>
 
-      {/* Planta de carga: pior momento da rota, gerada a partir das paragens já
-          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui).
-          <details>/<summary> nativo: clicar no título mostra/esconde, sem
-          precisar de client component. */}
-      {packingRota && (
-        <details className="card">
-          <summary className="cursor-pointer font-semibold">Planta de carga</summary>
-          <p className="mb-3 mt-1 text-xs text-gray-400">
-            Momento de maior ocupação da rota, gerado a partir das entregas/recolhas registadas.
-          </p>
-          <CarregamentoFloorPlan caixas={packingRota.caixas} />
-        </details>
+      {/* Planta de carga: pior momento de cada troço (Ida/Volta), gerada a
+          partir das paragens já registadas — só de leitura (sem
+          arrastar/rodar, não há pedidos aqui). <details>/<summary> nativo:
+          clicar no título mostra/esconde, sem precisar de client component. */}
+      {(packingPorTroco.ida || packingPorTroco.volta) && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {packingPorTroco.ida && (
+            <details className="card">
+              <summary className="cursor-pointer font-semibold">Planta de carga — Ida</summary>
+              <p className="mb-3 mt-1 text-xs text-gray-400">
+                Momento de maior ocupação na Ida, gerado a partir das entregas/recolhas registadas.
+              </p>
+              <CarregamentoFloorPlan caixas={packingPorTroco.ida.caixas} />
+            </details>
+          )}
+          {packingPorTroco.volta && (
+            <details className="card">
+              <summary className="cursor-pointer font-semibold">Planta de carga — Volta</summary>
+              <p className="mb-3 mt-1 text-xs text-gray-400">
+                Momento de maior ocupação na Volta, gerado a partir das entregas/recolhas registadas.
+              </p>
+              <CarregamentoFloorPlan caixas={packingPorTroco.volta.caixas} />
+            </details>
+          )}
+        </div>
       )}
 
       {/* Cobranças — estado de pagamento (prazo 90 dias) */}

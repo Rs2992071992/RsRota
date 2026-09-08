@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   verificarEspacoCarga,
   gerarPlantaCargaRota,
+  gerarPlantaCargaPorTroco,
   linhasCargaParagem,
   type LinhaCarga,
   type ParagemCarga,
@@ -363,5 +364,70 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
     const p = gerarPlantaCargaRota([CAMIAO], paragens);
     expect(espaco.cabemTodas).toBe(false);
     expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
+  });
+});
+
+describe("gerarPlantaCargaPorTroco — planta separada por Ida/Volta", () => {
+  it("sem caixa configurada → { ida: null, volta: null }", () => {
+    expect(gerarPlantaCargaPorTroco([], [{ ...entrega(6, 0), tipoViagem: "Ida" }])).toEqual({
+      ida: null,
+      volta: null,
+    });
+  });
+
+  it("paragens sem tipoViagem preenchido → { ida: null, volta: null } (nunca um erro)", () => {
+    expect(gerarPlantaCargaPorTroco([CAMIAO], [entrega(6, 0)])).toEqual({ ida: null, volta: null });
+  });
+
+  it("só há Ida → volta fica null", () => {
+    const r = gerarPlantaCargaPorTroco([CAMIAO], [{ ...entrega(6, 0), tipoViagem: "Ida" }]);
+    expect(r.ida).not.toBeNull();
+    expect(r.ida!.colocados).toHaveLength(6);
+    expect(r.volta).toBeNull();
+  });
+
+  it("separa o pior momento de cada troço, não o da rota inteira", () => {
+    const paragens: ParagemCarga[] = [
+      { ...entrega(6, 0), tipoViagem: "Ida" },
+      { ...entrega(3, 50), tipoViagem: "Ida" },
+      { ...vazio(100), tipoViagem: "Ida" },
+      { ...entrega(4, 150), tipoViagem: "Volta" },
+    ];
+    // Pico da rota inteira (sem separar) seria 9 (as 2 entregas da Ida, ambas
+    // pré-carregadas desde o início do segmento) — a Volta sozinha nunca
+    // atinge esse pico.
+    const rota = gerarPlantaCargaRota([CAMIAO], paragens);
+    expect(rota!.colocados).toHaveLength(9);
+
+    const porTroco = gerarPlantaCargaPorTroco([CAMIAO], paragens);
+    expect(porTroco.ida!.colocados).toHaveLength(9);
+    expect(porTroco.volta!.colocados).toHaveLength(4);
+  });
+
+  it("recolha na Ida entregue na Volta (faturarCliente): aparece a bordo nos 2 troços, não a dobra", () => {
+    const recolhaParaVolta: ParagemCarga = {
+      entregues: [],
+      recolhidas: [{ ...P1300, nPaletes: 4, clienteNome: "Fornecedor" }],
+      tipoVeiculo: "CAMIAO",
+      kmInicial: 0,
+      cliente: "Fornecedor",
+      faturarCliente: "Cliente A",
+      tipoViagem: "Ida",
+    };
+    const entregaNaVolta: ParagemCarga = {
+      entregues: [{ ...P1300, nPaletes: 4, clienteNome: "Cliente A" }],
+      recolhidas: [],
+      tipoVeiculo: "CAMIAO",
+      kmInicial: 100,
+      cliente: "Cliente A",
+      tipoViagem: "Volta",
+    };
+    const paragens = [recolhaParaVolta, { ...vazio(50), tipoViagem: "Ida" }, entregaNaVolta];
+    const r = gerarPlantaCargaPorTroco([CAMIAO], paragens);
+    // As mesmas 4 paletes estiveram fisicamente a bordo em ambos os troços
+    // (recolhidas na Ida, só descarregadas na Volta) — não é dupla contagem,
+    // é o comportamento correto.
+    expect(r.ida!.colocados).toHaveLength(4);
+    expect(r.volta!.colocados).toHaveLength(4);
   });
 });
