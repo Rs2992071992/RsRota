@@ -2,6 +2,17 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | O plano de agosto para a sincronização offline da app
+  Motorista especificava `@capacitor-community/sqlite`. Ao chegar à hora de
+  implementar, a fila real nunca passa de uma dúzia de paragens pendentes e
+  a cache é um blob só — SQL não traz nada, só um plugin nativo pesado + um
+  web-shim (`jeep-sqlite`) só para eu conseguir testar no browser sem
+  telemóvel. | Um plano antigo nomear uma tecnologia específica não obriga a
+  segui-la ao pé da letra meses depois — perguntar antes de implementar se a
+  escala real ainda justifica a escolha (aqui: `@capacitor/preferences` +
+  JSON, mesmo padrão já usado para o token de sessão, resolveu tudo com uma
+  dependência a menos).
+
 - [2026-09-08] | O `tasks/todo.md` listava só 5 funcionalidades "por portar"
   para a app Android Motorista (28/08–02/09). Ao ler o código real
   (`app-motorista-android/src/screens/Registar.tsx`), o gap era maior: o

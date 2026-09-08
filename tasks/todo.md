@@ -1741,25 +1741,38 @@ reescrita, o offline entra por cima desta mesma base.
 - [ ] (Opcional) Logo/ícone próprio para a app Motorista, se não quiseres
   reaproveitar o camião da Administração
 
-### Fase 2, Entrega 2 — SQLite + sincronização offline (por fazer)
-- [ ] SQLite local (`@capacitor-community/sqlite`) com 2 zonas:
-  - cache de dados de referência (zonas de portagem, veículos, clientes,
-    rotas recentes) — atualizada sempre que há rede
-  - fila de "paragens por sincronizar" (criadas offline)
-- [ ] Regra combinada com o Ricardo antes de implementar: **iniciar uma
-  rota NOVA exige rede** (o ID é gerado pelo servidor, evita conflitos);
-  **continuar uma rota já ativa funciona offline** (cada paragem nova é
-  só enfileirada localmente, sem depender de ID novo)
-- [ ] Sincronização automática ao recuperar rede (plugin `Network` do
-  Capacitor) + botão manual "Sincronizar agora"; UI mostra claramente
-  paragens "por sincronizar" vs "sincronizadas"
-- [ ] As notas "já introduzido" (noites/alimentação/portagens/zona,
-  já implementadas na Entrega 1) passam a olhar também para a fila
-  local, não só para a API — para continuarem a evitar duplicação mesmo
-  offline
-- [ ] Teste manual completo: registar 3 paragens em modo avião, sincronizar
-  ao voltar a rede, confirmar no escritório que ficaram todas certas (sem
-  duplicados, sem perdas)
+### Fase 2, Entrega 2 — sincronização offline (2026-09-08) ✅ código, ⚠️ falta teste real
+
+Plano: `C:\Users\Ricardo\.claude\plans\elegant-discovering-tiger.md`. **Mudança de
+arquitetura face a este plano original**: em vez de `@capacitor-community/sqlite`,
+usa `@capacitor/preferences` (já usado para o token, `src/lib/auth.ts`) a guardar
+JSON — a fila nunca passa de uma dúzia de entradas, não precisa de SQL, e evita o
+plugin nativo pesado + o web-shim (`jeep-sqlite`) só para testar no browser.
+Confirmado com o Ricardo antes de implementar.
+
+- [x] `src/lib/fila.ts` (novo): fila de paragens por sincronizar + cache de
+  `DadosRegisto` + cache do resumo de cada rota (fallbacks quando não há rede)
+- [x] `src/lib/sync.ts` (novo): `sincronizar()` — envia a fila por ordem
+  (sequencial); erro de rede para o loop sem descartar nada; erro do
+  servidor (`ErroApi`) marca o item e para nesse ponto (não salta à frente)
+- [x] Regra combinada em agosto respeitada: **iniciar rota NOVA exige rede**
+  (bloqueado com mensagem clara); **continuar rota já ativa funciona
+  offline** (`Registar.tsx::submeter` — erro de rede + `idRotaAtiva`
+  preenchido → `adicionarAFila`, UI otimista igual à do caminho online)
+- [x] `App.tsx`: `Network.addListener("networkStatusChange", ...)`
+  sincroniza sozinho ao voltar a rede. `Registar.tsx`/`Historico.tsx`: botão
+  manual "Sincronizar agora" + indicador "N por sincronizar"
+- [x] Notas "já introduzido" (`carregarResumoRota`) juntam os itens da fila
+  local por cima da API/cache — não duplicam noites/alimentação/zona mesmo
+  offline. `Historico.tsx` mostra os pendentes na mesma lista da rota, com
+  badge "por sincronizar" em vez do botão Corrigir (editar um item ainda em
+  fila fica fora de âmbito, decisão de simplicidade)
+- [x] `npm install @capacitor/network`; `tsc -b`, `npm run build`, `oxlint`
+  (só os 3 avisos pré-existentes) limpos
+- [ ] **Não testável por mim**: modo avião num telemóvel real, `npx cap sync
+  android && gradlew assembleRelease` + o teste combinado de agosto (3
+  paragens offline → sincronizar → conferir no escritório, sem duplicados
+  nem perdas) — ação do Ricardo
 
 ### Fase 3 — Distribuição
 - [ ] Build de release assinado de cada app
