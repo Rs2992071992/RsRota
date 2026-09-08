@@ -164,7 +164,11 @@ export default function CarregamentoFloorPlan({
             <svg
               viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
               className="w-full rounded-xl border border-gray-200 bg-gray-50 shadow-sm"
-              style={{ maxHeight: 260 }}
+              style={{
+                maxHeight: 260,
+                userSelect: arrastavel ? "none" : undefined,
+                WebkitUserSelect: arrastavel ? "none" : undefined,
+              }}
               preserveAspectRatio="xMinYMin meet"
             >
               <rect
@@ -208,6 +212,9 @@ export default function CarregamentoFloorPlan({
                       onPointerDown={
                         arrastavel
                           ? (e) => {
+                              // Sem isto, o browser entra em modo de seleção de texto ao
+                              // arrastar (realça os nomes) em vez de só mover a palete.
+                              e.preventDefault();
                               const svg = e.currentTarget.ownerSVGElement;
                               const ctm = svg?.getScreenCTM();
                               setArrasto({
