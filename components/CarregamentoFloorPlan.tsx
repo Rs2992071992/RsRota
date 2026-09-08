@@ -32,6 +32,11 @@ interface Arrasto {
   startY: number;
   dx: number;
   dy: number;
+  /** Unidades do viewBox (mm) por px de ecrã — o CSS `transform: translate(...px)`
+   * num elemento SVG usa unidades locais do viewBox, não px reais do ecrã, por
+   * isso o delta do rato tem de ser convertido antes de entrar no `dx`/`dy`. */
+  escalaX: number;
+  escalaY: number;
 }
 
 export default function CarregamentoFloorPlan({
@@ -71,7 +76,11 @@ export default function CarregamentoFloorPlan({
     function mover(e: PointerEvent) {
       const a = arrastoRef.current;
       if (!a || e.pointerId !== a.pointerId) return;
-      setArrasto({ ...a, dx: e.clientX - a.startX, dy: e.clientY - a.startY });
+      setArrasto({
+        ...a,
+        dx: (e.clientX - a.startX) * a.escalaX,
+        dy: (e.clientY - a.startY) * a.escalaY,
+      });
       setAlvoRealce(alvoSob(e.clientX, e.clientY));
     }
 
@@ -199,6 +208,8 @@ export default function CarregamentoFloorPlan({
                       onPointerDown={
                         arrastavel
                           ? (e) => {
+                              const svg = e.currentTarget.ownerSVGElement;
+                              const ctm = svg?.getScreenCTM();
                               setArrasto({
                                 pedidoId: item.pedidoId,
                                 pointerId: e.pointerId,
@@ -206,6 +217,8 @@ export default function CarregamentoFloorPlan({
                                 startY: e.clientY,
                                 dx: 0,
                                 dy: 0,
+                                escalaX: ctm && ctm.a ? 1 / ctm.a : 1,
+                                escalaY: ctm && ctm.d ? 1 / ctm.d : 1,
                               });
                             }
                           : undefined
