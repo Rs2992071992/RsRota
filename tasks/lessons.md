@@ -2,6 +2,20 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | O arrasto de paletes na planta de carga (`CarregamentoFloorPlan.tsx`,
+  shipped 2026-09-07) não seguia o rato — o Ricardo reportou "o rato vai
+  deslizando e a palete não se mexe". Causa: `style={{ transform:
+  translate(dxpx, dypx) }}` num `<g>` dentro de um `<svg viewBox="0 0
+  <comprimentoMm> <larguraMm>">` — o CSS `transform` em elementos SVG
+  interpreta `px` como unidades locais do viewBox (mm), não px reais do
+  ecrã. Como o camião tem milhares de mm mas só ocupa umas centenas de px no
+  ecrã, o delta real do rato produzia um deslocamento visual minúsculo. |
+  Ao animar/arrastar um elemento SVG filho de um `<svg>` com `viewBox`
+  diferente do tamanho renderizado, nunca meter o delta de `clientX/clientY`
+  diretamente num `transform: translate(...px)` — converter primeiro para
+  unidades do viewBox via `svg.getScreenCTM()` (escala = `1/ctm.a`,
+  `1/ctm.d`) no início do arrasto.
+
 - [2026-09-07] | Ao adicionar `TabelaConsumo.veiculoId` (consumo por veículo,
   commit db89000) só se atualizou `carregarBaseSnapshot` e o seed para
   filtrar `where: { veiculoId: null }` — ficaram 3 sítios a ler/escrever a
