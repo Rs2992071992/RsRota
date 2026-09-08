@@ -5,9 +5,10 @@ import { carregarRota } from "@/lib/rotas-service";
 import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
-import { verificarEspacoCarga, linhasCargaParagem } from "@/lib/calc/cargaRota";
+import { verificarEspacoCarga, gerarPlantaCargaRota, linhasCargaParagem } from "@/lib/calc/cargaRota";
 import type { CaixaInput } from "@/lib/calc/paletePacking";
 import { AlertaBadge } from "@/components/Badge";
+import CarregamentoFloorPlan from "@/components/CarregamentoFloorPlan";
 import ParagemAcoes from "@/components/ParagemAcoes";
 import PagoToggle from "@/components/PagoToggle";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
@@ -129,16 +130,17 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       larguraMm: veicRota.reboqueHabitual.larguraMm,
     });
   }
-  const espacoCarga = verificarEspacoCarga(
-    caixasRota,
-    paragensRaw.map((p) => ({
-      ...linhasCargaParagem(p),
-      tipoVeiculo: p.tipoVeiculo,
-      kmInicial: p.kmInicial,
-      cliente: p.cliente,
-      faturarCliente: p.faturarCliente,
-    })),
-  );
+  const paragensCarga = paragensRaw.map((p) => ({
+    ...linhasCargaParagem(p),
+    tipoVeiculo: p.tipoVeiculo,
+    kmInicial: p.kmInicial,
+    cliente: p.cliente,
+    faturarCliente: p.faturarCliente,
+  }));
+  const espacoCarga = verificarEspacoCarga(caixasRota, paragensCarga);
+  // Planta de carga do pior momento da rota — mesma simulação do aviso acima,
+  // gerada a partir das paragens já registadas (sem recriar pedidos à mão).
+  const packingRota = gerarPlantaCargaRota(caixasRota, paragensCarga);
 
   return (
     <div className="space-y-5">
@@ -162,6 +164,18 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
           {rotaTemReboque ? " + reboque" : ""}: no momento de maior carga da rota cabem{" "}
           {espacoCarga.colocadas} de {espacoCarga.totalPaletes} ({espacoCarga.semEspaco} sem
           espaço). Simulação da ocupação ao longo da rota (entregas saem, recolhas entram).
+        </div>
+      )}
+
+      {/* Planta de carga: pior momento da rota, gerada a partir das paragens já
+          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui). */}
+      {packingRota && (
+        <div className="card">
+          <h3 className="mb-1 font-semibold">Planta de carga</h3>
+          <p className="mb-3 text-xs text-gray-400">
+            Momento de maior ocupação da rota, gerado a partir das entregas/recolhas registadas.
+          </p>
+          <CarregamentoFloorPlan caixas={packingRota.caixas} />
         </div>
       )}
 

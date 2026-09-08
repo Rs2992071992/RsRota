@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   verificarEspacoCarga,
+  gerarPlantaCargaRota,
   linhasCargaParagem,
   type LinhaCarga,
   type ParagemCarga,
@@ -327,5 +328,40 @@ describe("linhasCargaParagem", () => {
     const r = escalar(5, 9);
     expect(r).toHaveLength(2);
     expect(r.reduce((s, l) => s + l.nPaletes, 0)).toBe(7);
+  });
+});
+
+describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", () => {
+  it("sem caixa configurada → null", () => {
+    expect(gerarPlantaCargaRota([], [entrega(6, 0)])).toBeNull();
+  });
+
+  it("nada a bordo em rota nenhuma → null", () => {
+    expect(gerarPlantaCargaRota([CAMIAO], [entrega(0, 0)])).toBeNull();
+  });
+
+  it("entrega única que cabe → devolve a geometria com todas colocadas", () => {
+    const p = gerarPlantaCargaRota([CAMIAO], [entrega(6, 0)]);
+    expect(p).not.toBeNull();
+    expect(p!.colocados).toHaveLength(6);
+    expect(p!.naoColocados).toHaveLength(0);
+    expect(p!.caixas[0].itens).toHaveLength(6);
+  });
+
+  it("mesmo pior momento que verificarEspacoCarga (recolha fica a bordo, entrega depois)", () => {
+    const paragens = [recolha(4, 0), entrega(4, 50)];
+    const espaco = verificarEspacoCarga([CAMIAO], paragens);
+    const p = gerarPlantaCargaRota([CAMIAO], paragens);
+    expect(p).not.toBeNull();
+    expect(p!.colocados.length + p!.naoColocados.length).toBe(espaco.totalPaletes);
+    expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
+  });
+
+  it("pior momento com paletes a mais → naoColocados reflete o mesmo semEspaco", () => {
+    const paragens = [entrega(8, 0), entrega(8, 50)];
+    const espaco = verificarEspacoCarga([CAMIAO], paragens);
+    const p = gerarPlantaCargaRota([CAMIAO], paragens);
+    expect(espaco.cabemTodas).toBe(false);
+    expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
   });
 });

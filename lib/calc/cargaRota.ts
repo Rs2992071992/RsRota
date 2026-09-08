@@ -10,6 +10,7 @@ import {
   empacotar,
   expandirPedidosEmUnidades,
   type CaixaInput,
+  type ResultadoPacking,
 } from "@/lib/calc/paletePacking";
 
 export interface LinhaCarga {
@@ -149,12 +150,23 @@ export interface ParagemCarga {
   faturarCliente?: string | null;
 }
 
-/** Arruma um conjunto de linhas (um "momento" da rota) e devolve o resultado. */
-function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarga {
+/** Um "momento" da rota já arrumado: contagens (`EspacoCarga`) + a geometria
+ * real (`packing`, `null` só quando não há nada a bordo nesse momento). */
+interface EstadoArrumado {
+  espaco: EspacoCarga;
+  packing: ResultadoPacking | null;
+}
+
+/** Arruma um conjunto de linhas (um "momento" da rota) e devolve o resultado —
+ * contagens e a geometria (para desenhar a planta desse momento, se for o pior). */
+function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EstadoArrumado {
   const validas = linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0);
   const totalPaletes = validas.reduce((s, l) => s + Math.floor(l.nPaletes), 0);
   if (totalPaletes === 0) {
-    return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
+    return {
+      espaco: { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true },
+      packing: null,
+    };
   }
   const pedidos = validas.map((l, i) => ({
     pedidoId: i + 1,
@@ -169,16 +181,22 @@ function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EspacoCarg
   }));
   const r = empacotar(caixas, expandirPedidosEmUnidades(pedidos));
   return {
-    totalPaletes,
-    colocadas: r.colocados.length,
-    semEspaco: r.naoColocados.length,
-    cabemTodas: r.naoColocados.length === 0,
-    verificavel: true,
+    espaco: {
+      totalPaletes,
+      colocadas: r.colocados.length,
+      semEspaco: r.naoColocados.length,
+      cabemTodas: r.naoColocados.length === 0,
+      verificavel: true,
+    },
+    packing: r,
   };
 }
 
-const pior = (a: EspacoCarga, b: EspacoCarga): EspacoCarga =>
-  b.semEspaco > a.semEspaco || (b.semEspaco === a.semEspaco && b.totalPaletes > a.totalPaletes) ? b : a;
+const pior = (a: EstadoArrumado, b: EstadoArrumado): EstadoArrumado =>
+  b.espaco.semEspaco > a.espaco.semEspaco ||
+  (b.espaco.semEspaco === a.espaco.semEspaco && b.espaco.totalPaletes > a.espaco.totalPaletes)
+    ? b
+    : a;
 
 /**
  * Verifica se as paletes cabem no veículo (+ reboque) SIMULANDO a ocupação ao
@@ -204,14 +222,8 @@ const pior = (a: EspacoCarga, b: EspacoCarga): EspacoCarga =>
  * paletes a bordo nesse momento.
  */
 export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
-  const valida = (l: LinhaCarga) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0;
-  const comLinhas = paragens.map((p) => ({
-    ...p,
-    entregues: p.entregues.filter(valida),
-    recolhidas: p.recolhidas.filter(valida),
-  }));
-  const conta = (ls: LinhaCarga[]) => ls.reduce((a, l) => a + Math.floor(l.nPaletes), 0);
-  const totalGeral = comLinhas.reduce((s, p) => s + conta(p.entregues) + conta(p.recolhidas), 0);
+  const comLinhas = filtrarLinhasValidas(paragens);
+  const totalGeral = totalDeLinhas(comLinhas);
 
   if (caixas.length === 0) {
     return { totalPaletes: totalGeral, colocadas: totalGeral, semEspaco: 0, cabemTodas: true, verificavel: false };
@@ -220,6 +232,55 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
     return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
   }
 
+  let resultado: EstadoArrumado | null = null;
+  for (const aBordo of estadosDaRota(comLinhas)) {
+    const estado = empacotarEstado(caixas, aBordo);
+    resultado = resultado ? pior(resultado, estado) : estado;
+  }
+  return resultado?.espaco ?? { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
+}
+
+/**
+ * Planta de carga de uma rota inteira: gera a geometria (para desenhar, com o
+ * mesmo componente das Cargas do escritório) do **pior momento** da rota —
+ * mesma simulação/definição de "pior" que `verificarEspacoCarga`, mas devolve
+ * o packing em vez de só as contagens. `null` se não há caixa configurada ou
+ * não há nada a bordo em rota nenhuma (nada para desenhar).
+ */
+export function gerarPlantaCargaRota(
+  caixas: CaixaInput[],
+  paragens: ParagemCarga[],
+): ResultadoPacking | null {
+  if (caixas.length === 0) return null;
+  const comLinhas = filtrarLinhasValidas(paragens);
+  if (totalDeLinhas(comLinhas) === 0) return null;
+
+  let resultado: EstadoArrumado | null = null;
+  for (const aBordo of estadosDaRota(comLinhas)) {
+    const estado = empacotarEstado(caixas, aBordo);
+    resultado = resultado ? pior(resultado, estado) : estado;
+  }
+  return resultado?.packing ?? null;
+}
+
+function filtrarLinhasValidas(paragens: ParagemCarga[]) {
+  const valida = (l: LinhaCarga) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0;
+  return paragens.map((p) => ({
+    ...p,
+    entregues: p.entregues.filter(valida),
+    recolhidas: p.recolhidas.filter(valida),
+  }));
+}
+
+function totalDeLinhas(comLinhas: ReturnType<typeof filtrarLinhasValidas>): number {
+  const conta = (ls: LinhaCarga[]) => ls.reduce((a, l) => a + Math.floor(l.nPaletes), 0);
+  return comLinhas.reduce((s, p) => s + conta(p.entregues) + conta(p.recolhidas), 0);
+}
+
+/** Todos os "momentos" (cortes) da rota, cada um com as linhas a bordo nesse
+ * instante — a parte de `verificarEspacoCarga` independente das caixas
+ * (reutilizada também por `gerarPlantaCargaRota`). */
+function estadosDaRota(comLinhas: ReturnType<typeof filtrarLinhasValidas>): LinhaCarga[][] {
   // Ordena pela sequência física.
   const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
   const n = ordenadas.length;
@@ -264,7 +325,7 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
     return segId;
   });
 
-  let resultado: EspacoCarga | null = null;
+  const estados: LinhaCarga[][] = [];
   // Corte j (j = 0..n): estado "mesmo antes de processar a paragem de
   // índice j" — mesma semântica de sempre (entregues em i>=j ainda a bordo,
   // recolhidas em i<j já apanhadas), agora com 2 fontes combinadas:
@@ -289,9 +350,8 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
       if (idxEntrega == null || j <= idxEntrega) aBordo.push(...p.recolhidas);
     });
 
-    const estado = empacotarEstado(caixas, aBordo);
-    resultado = resultado ? pior(resultado, estado) : estado;
+    estados.push(aBordo);
   }
 
-  return resultado ?? { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
+  return estados;
 }
