@@ -2,6 +2,19 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | O arrasto de paletes na planta de carga (shipped 2026-09-07)
+  reordenava por `pedidoId` — mas `PedidoPalete.quantidade` pode ser > 1 (uma
+  "linha de pedido" representa um lote de paletes físicas iguais, não 1 só).
+  Arrastar o quadrado de 1 palete movia as `quantidade` juntas para a nova
+  posição — o Ricardo queria mover só a que agarrou. Só apanhado quando ele
+  testou e perguntou. | Sempre que um elemento visual (1 quadrado na planta)
+  representa uma unidade dentro de um agregado com quantidade (`PedidoPalete`),
+  qualquer interação "individual" (arrastar, sobretudo) tem de operar na
+  unidade, não no agregado — separar num registo de quantidade 1 primeiro (já
+  existia esse padrão para o ↻ de rotação, `dividir` com `quantidade:1`) antes
+  de aplicar a ação, e só reaproveitar o agregado diretamente quando já só
+  tem 1 unidade.
+
 - [2026-09-08] | O plano de agosto para a sincronização offline da app
   Motorista especificava `@capacitor-community/sqlite`. Ao chegar à hora de
   implementar, a fila real nunca passa de uma dúzia de paragens pendentes e

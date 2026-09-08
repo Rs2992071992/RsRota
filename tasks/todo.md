@@ -2,6 +2,29 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Planta de carga — arrastar move só 1 palete, não o lote da linha (2026-09-08)
+
+Pedido do Ricardo: "nas cargas, será que não conseguimos mudar uma palete de
+cada vez em vez de ser um lote completo?". Causa: o arrasto (shipped
+2026-09-07, ver [[planta-carga-drag]]) reordena por `pedidoId` — mas uma
+"linha de pedido" (`PedidoPalete.quantidade`) pode agrupar várias paletes
+físicas iguais; arrastar 1 quadrado movia as `quantidade` juntas.
+
+- [x] `moverPalete` (`CarregamentoDetalheEditor.tsx`): se a linha arrastada
+  tiver `quantidade > 1`, separa-a primeiro numa linha de 1 (reusa
+  `POST .../dividir` com `quantidade:1`, mesmo padrão do ↻ de rotação) e só
+  essa nova linha se reposiciona; com `quantidade === 1`, comportamento
+  inalterado (reordena a linha diretamente)
+- [x] `CarregamentoFloorPlan.tsx`: `onReordenar` passa a entregar
+  `(pedidoId, alvoPedidoId, posicao)` ao pai em vez de já calcular a nova
+  ordem — o cálculo de `reordenarArrastando` só pode correr depois de saber
+  se houve separação (o id a mover muda)
+- [x] `tsc --noEmit`, `npm test` (218, inalterados — motor de cálculo não
+  tocado) e `npm run build` limpos
+- [x] Commit `b28b129` + push (Vercel builda automaticamente)
+- [ ] Teste manual do Ricardo no browser (arrastar 1 palete de uma linha com
+  quantidade > 1 e confirmar que só ela se move, as restantes ficam)
+
 ## 🔲 Porte Android Motorista — as 5 funcionalidades em falta + modelo de dados (2026-09-08)
 
 Plano: `C:\Users\Ricardo\.claude\plans\elegant-discovering-tiger.md`. Retomado depois de
