@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ROTULOS_TIPO_PALETE, TIPOS_PALETE, TIPOS_VEICULO, TIPOS_VIAGEM } from "@/lib/validacao";
+import { pesoAproximadoCarregadoEfetivo, pesoAproximadoDescarregado } from "@/lib/calc/perStop";
 
 /** Campos editáveis de uma paragem (subconjunto do modelo Prisma). */
 export interface VeiculoOpcao {
@@ -46,7 +47,11 @@ export interface ParagemEditavel {
     | null;
   /** Recolha (ou Descarga+Recolha, se `paletes` tiver os dois sentidos). */
   recolha: boolean;
+  /** Peso aproximado DESCARREGADO (kg) — ver lib/calc/perStop.ts para o fallback
+   * de paragens antigas de RECOLHA pura. */
   pesoAproximado: number | null;
+  /** Peso aproximado RECOLHIDO/carregado (kg), 2026-09+. */
+  pesoAproximadoCarregado: number | null;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -136,7 +141,17 @@ export default function ParagemEditor({
           ? ""
           : String(paragem.tipoPaleteId),
     nPaletes: linha0 ? linha0.nPaletes : paragem.nPaletes,
-    pesoAproximado: paragem.pesoAproximado === null ? "" : String(paragem.pesoAproximado),
+    // Via os helpers de fallback (não os campos crus): uma paragem antiga
+    // (RECOLHA pura, registada antes de pesoAproximadoCarregado existir) mostra
+    // o valor já no campo certo — e ao Guardar, migra-se sozinha (ver payload).
+    pesoAproximado: (() => {
+      const v = pesoAproximadoDescarregado(paragem);
+      return v ? String(v) : "";
+    })(),
+    pesoAproximadoCarregado: (() => {
+      const v = pesoAproximadoCarregadoEfetivo(paragem);
+      return v ? String(v) : "";
+    })(),
     data: paragem.data.slice(0, 10),
   });
   const [estado, setEstado] = useState<"idle" | "a-gravar" | "a-apagar">("idle");
@@ -281,7 +296,14 @@ export default function ParagemEditor({
                   : []
                 : undefined,
         ...(modo === "paletes" ? { recolha: tipoParagem !== "DESCARGA" } : {}),
-        pesoAproximado: f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
+        // Descarregado só faz sentido em DESCARGA/MISTA; recolhido só em RECOLHA/MISTA
+        // (fora do modo paletes, tipoParagem fica sempre "DESCARGA" — comportamento inalterado).
+        pesoAproximado:
+          tipoParagem === "RECOLHA" || f.pesoAproximado === "" ? null : Number(f.pesoAproximado),
+        pesoAproximadoCarregado:
+          tipoParagem === "DESCARGA" || f.pesoAproximadoCarregado === ""
+            ? null
+            : Number(f.pesoAproximadoCarregado),
         zonaPortagem: f.zonaPortagem.trim(),
         portagensExtra: Number(f.portagensExtra),
         noitesFora: Number(f.noitesFora),
@@ -680,18 +702,36 @@ export default function ParagemEditor({
                   onChange={(e) => set("nMeiasPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
                 />
               </div>
-              <div className="col-span-2">
-                <label className="label">Peso aproximado (kg) — opcional</label>
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="Só para estimar o consumo de combustível"
-                  className="input"
-                  value={f.pesoAproximado}
-                  onChange={(e) => set("pesoAproximado", e.target.value as never)}
-                />
-              </div>
+              {tipoParagem !== "RECOLHA" && (
+                <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
+                  <label className="label">
+                    {tipoParagem === "MISTA" ? "Peso aproximado descarregado (kg)" : "Peso aproximado (kg)"} — opcional
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="Só para estimar o consumo de combustível"
+                    className="input"
+                    value={f.pesoAproximado}
+                    onChange={(e) => set("pesoAproximado", e.target.value as never)}
+                  />
+                </div>
+              )}
+              {tipoParagem !== "DESCARGA" && (
+                <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
+                  <label className="label">Peso aproximado recolhido (kg) — opcional</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="Só para estimar o consumo de combustível"
+                    className="input"
+                    value={f.pesoAproximadoCarregado}
+                    onChange={(e) => set("pesoAproximadoCarregado", e.target.value as never)}
+                  />
+                </div>
+              )}
             </>
           ) : modo === "paletes-legado" ? (
             <>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { derivarCustos } from "@/lib/calc/params";
-import { calcularRota, pesosEmTransito } from "@/lib/calc/perRoute";
+import { calcularRota, pesosAproximadosEmTransito, pesosEmTransito } from "@/lib/calc/perRoute";
 import type { ContextoCalculo } from "@/lib/calc/perStop";
 import type { ParagemInput } from "@/lib/calc/types";
 import { PARAMS, PNEUS, TABELA_CONSUMO, TABELA_PORTAGENS } from "./fixtures";
@@ -574,6 +574,71 @@ describe("pesosEmTransito", () => {
   });
 });
 
+describe("pesosAproximadosEmTransito — paralelo a pesosEmTransito, mas para paletes (2026-09)", () => {
+  it("grupo de 1 paragem -> undefined (sem correção, comportamento de hoje)", () => {
+    const [p] = pesosAproximadosEmTransito([paragemBase({ pesoAproximado: 20000 })]);
+    expect(p).toBeUndefined();
+  });
+
+  it("entrega progressiva (só pesoAproximado descarregado) -> peso vai descendo", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, pesoAproximado: 5000 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, pesoAproximado: 3000 }),
+      paragemBase({ cliente: "C", kmInicial: 200, kmFinal: 300, pesoAproximado: 2000 }),
+    ]);
+    expect(r).toEqual([10000, 5000, 2000]);
+  });
+
+  it("recolha progressiva (só pesoAproximadoCarregado) -> peso vai subindo, tal como o motorista descreveu", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", tipoViagem: "Volta", kmInicial: 0, kmFinal: 100, recolha: true, pesoAproximadoCarregado: 2000 }),
+      paragemBase({ cliente: "B", tipoViagem: "Volta", kmInicial: 100, kmFinal: 200, recolha: true, pesoAproximadoCarregado: 3000 }),
+      paragemBase({ cliente: "C", tipoViagem: "Volta", kmInicial: 200, kmFinal: 300, recolha: true, pesoAproximadoCarregado: 5000 }),
+    ]);
+    expect(r).toEqual([0, 2000, 5000]);
+  });
+
+  it("paragem MISTA (descarrega e recolhe ao mesmo tempo) entra nos dois lados", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, recolha: true, pesoAproximado: 1000, pesoAproximadoCarregado: 100 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, pesoAproximado: 500 }),
+    ]);
+    expect(r).toEqual([1500, 600]);
+  });
+
+  it("paragens VAZIO cortam o grupo em segmentos (o peso não atravessa)", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, pesoAproximado: 1000 }),
+      paragemBase({ cliente: "Vazio", tipoVeiculo: "VAZIO", kmInicial: 50, kmFinal: 150 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, pesoAproximado: 500 }),
+    ]);
+    expect(r).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("recolhas ligadas por faturarCliente não contam a dobra (mesmo lote, linha à parte)", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", tipoViagem: "Ida", kmInicial: 0, kmFinal: 10, recolha: true, pesoAproximadoCarregado: 4000, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "B", tipoViagem: "Ida", kmInicial: 10, kmFinal: 20, recolha: true, pesoAproximadoCarregado: 1800, faturarCliente: "Tecfil" }),
+      paragemBase({ cliente: "Tecfil", tipoViagem: "Volta", kmInicial: 30, kmFinal: 40, pesoAproximado: 5800 }),
+    ]);
+    // A linha começa vazia (0), acumula as 2 recolhas, e a entrega final vê o
+    // total (5800) — nunca soma-se a dobra ao grupo normal (aqui não há mais
+    // nenhuma paragem fora da linha, por isso não há "grupo normal" a testar
+    // à parte, mas a MESMA proteção de pesosEmTransito aplica-se).
+    expect(r).toEqual([0, 4000, 5800]);
+  });
+
+  it("kgCarregados/kgDescarregados de uma paragem por kg não entram no acumulador de paletes", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 9000 }),
+      paragemBase({ cliente: "B", kmInicial: 100, kmFinal: 200, pesoAproximado: 500 }),
+    ]);
+    // Se os 9000kg de "A" entrassem aqui, o acumulador começaria em 9500 — em
+    // vez disso começa nos 500kg de "B" (o único pesoAproximado do segmento).
+    expect(r).toEqual([500, 500]);
+  });
+});
+
 describe("calcularRota — peso em trânsito muda o consumo por troço (entrega progressiva)", () => {
   // 3 clientes na mesma rota/dia, camião a descarregar progressivamente:
   // 25000kg no total, entregues 15000+7000+3000 em 3 troços sucessivos.
@@ -608,6 +673,68 @@ describe("calcularRota — peso em trânsito muda o consumo por troço (entrega 
   it("Σ custo atribuído = custo total da rota (rateio continua consistente)", () => {
     const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
     expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+  });
+});
+
+describe("calcularRota — peso em trânsito (paletes) muda o consumo por troço (recolha progressiva)", () => {
+  // 3 recolhas na mesma rota/dia, camião a encher progressivamente (o cenário
+  // que o Ricardo descreveu: desce a apanhar paletes até à base) — 25000kg no
+  // total, apanhados 15000+7000+3000 em 3 troços sucessivos.
+  const multi: ParagemInput[] = [
+    paragemBase({
+      cliente: "A",
+      kmInicial: 0,
+      kmFinal: 200,
+      recolha: true,
+      pesoAproximadoCarregado: 15000,
+      nPaletes: 5,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: snapshotDimensao,
+      receitaPaga: 1000,
+    }),
+    paragemBase({
+      cliente: "B",
+      kmInicial: 200,
+      kmFinal: 350,
+      recolha: true,
+      pesoAproximadoCarregado: 7000,
+      nPaletes: 3,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: snapshotDimensao,
+      receitaPaga: 600,
+    }),
+    paragemBase({
+      cliente: "C",
+      kmInicial: 350,
+      kmFinal: 450,
+      recolha: true,
+      pesoAproximadoCarregado: 3000,
+      nPaletes: 2,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: snapshotDimensao,
+      receitaPaga: 300,
+    }),
+  ];
+  const r = calcularRota("MULTIPALETE01", multi, ctx);
+
+  it("consumo por troço reflete o peso real a bordo (25, 31, 35 L/100km), não o peso próprio da paragem isolada", () => {
+    expect(r.paragens[0].consumoL100).toBe(25); // chega a A ainda vazio (0kg a bordo)
+    expect(r.paragens[1].consumoL100).toBe(31); // chega a B já com os 15000kg de A
+    expect(r.paragens[2].consumoL100).toBe(35); // chega a C com 22000kg (15000+7000)
+  });
+
+  it("totalPesoAproximadoCarregado soma as 3 recolhas", () => {
+    expect(r.totalPesoAproximadoCarregado).toBe(25000);
+    expect(r.totalPesoAproximado).toBe(0);
+  });
+
+  it("coeficiente de carga continua por nº de paletes/capacidade (peso não entra no rateio de paletes)", () => {
+    const a = r.rateio.find((c) => c.cliente === "A")!;
+    const b = r.rateio.find((c) => c.cliente === "B")!;
+    expect(a.coefReal).toBeGreaterThan(b.coefReal); // 5 paletes > 3 paletes
   });
 });
 

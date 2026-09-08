@@ -98,6 +98,7 @@ const estadoBase = {
   nPaletes: "",
   nMeiasPaletes: "",
   pesoAproximado: "",
+  pesoAproximadoCarregado: "",
   zonaPortagem: "",
   portagensExtra: "",
   noitesFora: "",
@@ -314,6 +315,7 @@ export default function RegistoForm({
       nPaletes: v === "VAZIO" ? "" : prev.nPaletes,
       nMeiasPaletes: v === "VAZIO" ? "" : prev.nMeiasPaletes,
       pesoAproximado: v === "VAZIO" ? "" : prev.pesoAproximado,
+      pesoAproximadoCarregado: v === "VAZIO" ? "" : prev.pesoAproximadoCarregado,
       cliente:
         v === "VAZIO" ? "Vazio" : prev.tipoVeiculo === "VAZIO" && prev.cliente === "Vazio" ? "" : prev.cliente,
     }));
@@ -359,7 +361,14 @@ export default function RegistoForm({
     if (f.kmFinal !== "" && f.kmInicial !== "" && num(f.kmFinal) < num(f.kmInicial)) {
       e.kmFinal = "KM Final deve ser ≥ KM Inicial";
     }
-    for (const campo of ["kmInicial", "kmFinal", "nPaletes", "nMeiasPaletes", "pesoAproximado"] as const) {
+    for (const campo of [
+      "kmInicial",
+      "kmFinal",
+      "nPaletes",
+      "nMeiasPaletes",
+      "pesoAproximado",
+      "pesoAproximadoCarregado",
+    ] as const) {
       if (f[campo] !== "" && num(f[campo]) < 0) e[campo] = "Não pode ser negativo";
     }
     if (mostrarPaletes) {
@@ -428,7 +437,13 @@ export default function RegistoForm({
               ? linhasPaleteResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n }))
               : undefined,
         nMeiasPaletes: mostrarPaletes ? num(f.nMeiasPaletes) : 0,
-        pesoAproximado: f.pesoAproximado === "" ? null : num(f.pesoAproximado),
+        // Descarregado só faz sentido em DESCARGA/MISTA; recolhido só em RECOLHA/MISTA.
+        pesoAproximado:
+          tipoParagem === "RECOLHA" || f.pesoAproximado === "" ? null : num(f.pesoAproximado),
+        pesoAproximadoCarregado:
+          tipoParagem === "DESCARGA" || f.pesoAproximadoCarregado === ""
+            ? null
+            : num(f.pesoAproximadoCarregado),
         // O combustível usado no cálculo vem dos parâmetros (escritório); o motorista
         // não o introduz. Mantemos só o combustível "por fora" (Espanha), informativo.
         litrosAbastecidos: 0,
@@ -886,20 +901,42 @@ export default function RegistoForm({
               />
               {erros.nMeiasPaletes && <p className="mt-1 text-xs text-red-600">{erros.nMeiasPaletes}</p>}
             </div>
-            <div className="col-span-2">
-              <label className="label">Peso aproximado (kg) — opcional</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="any"
-                min="0"
-                placeholder="Só para estimar o consumo de combustível"
-                className="input"
-                value={f.pesoAproximado}
-                onChange={(e) => set("pesoAproximado", e.target.value)}
-              />
-              {erros.pesoAproximado && <p className="mt-1 text-xs text-red-600">{erros.pesoAproximado}</p>}
-            </div>
+            {tipoParagem !== "RECOLHA" && (
+              <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
+                <label className="label">
+                  {tipoParagem === "MISTA" ? "Peso aproximado descarregado (kg)" : "Peso aproximado (kg)"} — opcional
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="0"
+                  placeholder="Só para estimar o consumo de combustível"
+                  className="input"
+                  value={f.pesoAproximado}
+                  onChange={(e) => set("pesoAproximado", e.target.value)}
+                />
+                {erros.pesoAproximado && <p className="mt-1 text-xs text-red-600">{erros.pesoAproximado}</p>}
+              </div>
+            )}
+            {tipoParagem !== "DESCARGA" && (
+              <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
+                <label className="label">Peso aproximado recolhido (kg) — opcional</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="0"
+                  placeholder="Só para estimar o consumo de combustível"
+                  className="input"
+                  value={f.pesoAproximadoCarregado}
+                  onChange={(e) => set("pesoAproximadoCarregado", e.target.value)}
+                />
+                {erros.pesoAproximadoCarregado && (
+                  <p className="mt-1 text-xs text-red-600">{erros.pesoAproximadoCarregado}</p>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

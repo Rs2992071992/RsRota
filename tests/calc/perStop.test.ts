@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { derivarCustos } from "@/lib/calc/params";
-import { calcularParagem, coeficienteReal, paletesQueCabem, type ContextoCalculo } from "@/lib/calc/perStop";
+import {
+  calcularParagem,
+  coeficienteReal,
+  paletesQueCabem,
+  pesoAproximadoCarregadoEfetivo,
+  pesoAproximadoDescarregado,
+  pesoAproximadoTransportado,
+  type ContextoCalculo,
+} from "@/lib/calc/perStop";
 import type { ParagemInput, ParagemSnapshot } from "@/lib/calc/types";
 import { PARAMS, PNEUS, TABELA_CONSUMO, TABELA_PORTAGENS } from "./fixtures";
 
@@ -539,5 +547,95 @@ describe("paletes multi-linha — tamanhos diferentes na mesma paragem", () => {
     );
     expect(r.coeficienteCarga).toBeCloseTo(10 / 38 + 6 / 30, 6);
     expect(r.nPaletes).toBe(16);
+  });
+});
+
+describe("pesoAproximadoDescarregado / pesoAproximadoCarregadoEfetivo — fallback legado (2026-09)", () => {
+  it("DESCARGA (recolha=false): pesoAproximado é sempre descarregado", () => {
+    const p = { pesoAproximado: 500, recolha: false, paletes: null };
+    expect(pesoAproximadoDescarregado(p)).toBe(500);
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(0);
+  });
+
+  it("RECOLHA nova (pesoAproximadoCarregado próprio): usa-o diretamente, ignora pesoAproximado legado", () => {
+    const p = {
+      pesoAproximado: null,
+      pesoAproximadoCarregado: 500,
+      recolha: true,
+      paletes: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 6, sentido: "RECOLHA" as const }],
+    };
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(500);
+    expect(pesoAproximadoDescarregado(p)).toBe(0);
+  });
+
+  it("RECOLHA pura ANTIGA (sem pesoAproximadoCarregado, sem linha ENTREGA): valor velho conta como carregado", () => {
+    const p = { pesoAproximado: 500, recolha: true, paletes: null };
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(500);
+    expect(pesoAproximadoDescarregado(p)).toBe(0);
+  });
+
+  it("RECOLHA pura ANTIGA com paletes[] só de RECOLHA (sem sentido explícito) — mesmo fallback", () => {
+    const p = {
+      pesoAproximado: 500,
+      recolha: true,
+      paletes: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 6 }],
+    };
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(500);
+    expect(pesoAproximadoDescarregado(p)).toBe(0);
+  });
+
+  it("MISTA ANTIGA (tem linha ENTREGA e RECOLHA, sem pesoAproximadoCarregado): limitação assumida — tudo fica descarregado", () => {
+    const p = {
+      pesoAproximado: 500,
+      recolha: true,
+      paletes: [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 6, sentido: "ENTREGA" as const },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 4, sentido: "RECOLHA" as const },
+      ],
+    };
+    expect(pesoAproximadoDescarregado(p)).toBe(500);
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(0);
+  });
+
+  it("MISTA NOVA (pesoAproximado + pesoAproximadoCarregado, os dois explícitos): cada um fica com o seu", () => {
+    const p = {
+      pesoAproximado: 300,
+      pesoAproximadoCarregado: 200,
+      recolha: true,
+      paletes: [
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 6, sentido: "ENTREGA" as const },
+        { tipoPaleteId: 2, comprimentoMm: 1200, larguraMm: 1000, nPaletes: 4, sentido: "RECOLHA" as const },
+      ],
+    };
+    expect(pesoAproximadoDescarregado(p)).toBe(300);
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(200);
+    expect(pesoAproximadoTransportado(p)).toBe(300);
+  });
+
+  it("sem nada preenchido: os 3 dão 0", () => {
+    const p = { pesoAproximado: null, recolha: false, paletes: null };
+    expect(pesoAproximadoDescarregado(p)).toBe(0);
+    expect(pesoAproximadoCarregadoEfetivo(p)).toBe(0);
+    expect(pesoAproximadoTransportado(p)).toBe(0);
+  });
+});
+
+describe("calcularParagem — consumo de uma RECOLHA usa pesoAproximadoCarregado", () => {
+  const eff = snapshotComCaixa();
+
+  it("RECOLHA pura (sem pesoEmTransito, cai no fallback de paragem isolada)", () => {
+    const p = paragemBase({
+      tipoVeiculo: "CAMIAO+REBOQUE",
+      kmFinal: 100,
+      nPaletes: 10,
+      paleteComprimentoMm: 1200,
+      paleteLarguraMm: 800,
+      snapshot: eff,
+      recolha: true,
+      pesoAproximadoCarregado: 20000,
+    });
+    const r = calcularParagem(p, ctx);
+    expect(r.consumoL100).toBe(35); // 20000 kg -> escalão 35 L/100km, igual ao teste DESCARGA equivalente
+    expect(r.pesoAproximadoCarregado).toBe(20000);
   });
 });

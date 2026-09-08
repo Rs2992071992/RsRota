@@ -81,6 +81,48 @@ export function pesoTransportado(p: ParagemInput): number {
   return Math.max(p.kgCarregados || 0, p.kgDescarregados || 0);
 }
 
+/** Forma mínima aceite pelos helpers de peso aproximado abaixo — aceita tanto
+ * `ParagemInput` como a paragem crua da BD (ex. em `ParagemEditor.tsx`). */
+interface ComPesoAproximado {
+  pesoAproximado?: number | null;
+  pesoAproximadoCarregado?: number | null;
+  recolha?: boolean | null;
+  paletes?: PaleteLinha[] | null;
+}
+
+/**
+ * true quando esta paragem, registada ANTES de `pesoAproximadoCarregado`
+ * existir, era uma RECOLHA pura — nesse caso o valor recolhido vinha no campo
+ * antigo `pesoAproximado`. Mesma regra de sentido de `linhasCargaParagem`
+ * (lib/calc/cargaRota.ts): sem nenhuma linha `ENTREGA` explícita numa paragem
+ * `recolha=true`, é tudo recolha.
+ */
+function recolhaPuraSemCarregadoProprio(p: ComPesoAproximado): boolean {
+  if (!p.recolha || p.pesoAproximadoCarregado != null) return false;
+  const temEntrega = Array.isArray(p.paletes) && p.paletes.some((l) => (l.sentido ?? "RECOLHA") === "ENTREGA");
+  return !temEntrega;
+}
+
+/** Peso aproximado DESCARREGADO efetivo (kg) — ver `ParagemInput.pesoAproximado`. */
+export function pesoAproximadoDescarregado(p: ComPesoAproximado): number {
+  if (recolhaPuraSemCarregadoProprio(p)) return 0; // valor antigo já contado como carregado abaixo
+  return p.pesoAproximado ?? 0;
+}
+
+/** Peso aproximado RECOLHIDO/carregado efetivo (kg) — ver `ParagemInput.pesoAproximadoCarregado`. */
+export function pesoAproximadoCarregadoEfetivo(p: ComPesoAproximado): number {
+  if (p.pesoAproximadoCarregado != null) return p.pesoAproximadoCarregado;
+  if (recolhaPuraSemCarregadoProprio(p)) return p.pesoAproximado ?? 0;
+  return 0; // DESCARGA pura, ou MISTA antiga sem carregado conhecido (limitação assumida)
+}
+
+/** Paralelo a `pesoTransportado()`: maior entre descarregado/carregado — usado
+ * como fallback sem correção de rota (orçamentos, ou linhas/segmentos de 1
+ * paragem em `pesosAproximadosEmTransito`). */
+export function pesoAproximadoTransportado(p: ComPesoAproximado): number {
+  return Math.max(pesoAproximadoDescarregado(p), pesoAproximadoCarregadoEfetivo(p));
+}
+
 /** Capacidade do veículo conforme o tipo. */
 function capacidade(tipoVeiculo: string, cap: ComCapacidades): number {
   return tipoVeiculo === "CAMIAO+REBOQUE"
@@ -278,8 +320,13 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
   // Consumo (lookup aproximado) e combustível. Paletes: o que importa para o
   // rateio é a ocupação em espaço/base, não o peso — mas o consumo passa a usar
   // o peso aproximado (2026-08-28), quando preenchido, tal como a carga normal.
-  // Sem peso aproximado -> trata como vazio (0), como sempre foi.
-  const consumoL100 = consumoPorCarga(ehPalete ? p.pesoAproximado || 0 : pesoParaConsumo, eff.tabelaConsumo ?? []);
+  // Sem peso aproximado -> trata como vazio (0), como sempre foi. Numa rota com
+  // várias paragens, `pesoAproximadoEmTransito` (peso em trânsito, calculado ao
+  // nível da rota a partir de descarregado/carregado — ver `pesosAproximadosEmTransito`
+  // em lib/calc/perRoute.ts) tem prioridade sobre o peso próprio desta paragem
+  // isolada, mesmo princípio de `pesoParaConsumo` acima para o modo por kg.
+  const pesoAproximadoParaConsumo = p.pesoAproximadoEmTransito ?? pesoAproximadoTransportado(p);
+  const consumoL100 = consumoPorCarga(ehPalete ? pesoAproximadoParaConsumo : pesoParaConsumo, eff.tabelaConsumo ?? []);
   const litrosGastos = (consumoL100 / 100) * kmFeitos;
   const precoCombUsado =
     p.precoCombRefOverride != null ? p.precoCombRefOverride : eff.precoCombRef;
@@ -333,6 +380,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     paleteLarguraMm: p.paleteLarguraMm ?? null,
     paletes: p.paletes && p.paletes.length > 0 ? p.paletes : null,
     pesoAproximado: p.pesoAproximado ?? null,
+    pesoAproximadoCarregado: p.pesoAproximadoCarregado ?? null,
     kmFeitos,
     coeficienteCarga,
     consumoL100,

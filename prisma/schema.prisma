@@ -265,10 +265,17 @@ model Paragem {
   // uma palete inteira no rateio (lib/calc/perStop.ts).
   nMeiasPaletes Float @default(0)
 
-  // Peso aproximado transportado nesta paragem (kg) — opcional, só para alimentar a
+  // Peso aproximado DESCARREGADO nesta paragem (kg) — opcional, só para alimentar a
   // tabela de consumos (TabelaConsumo); nunca entra no rateio/coeficienteCarga, que
   // é sempre por dimensão de palete. Sem valor -> consumo trata como vazio (0 kg).
   pesoAproximado Float?
+
+  // Peso aproximado RECOLHIDO/carregado nesta paragem (kg) — opcional, 2026-09+.
+  // Paragens antigas (RECOLHA pura, registadas antes deste campo existir) guardaram
+  // esse valor no campo `pesoAproximado` acima — ver o fallback em
+  // lib/calc/perStop.ts::pesoAproximadoDescarregado/pesoAproximadoCarregadoEfetivo
+  // (mesma regra de sentido de linhasCargaParagem em lib/calc/cargaRota.ts).
+  pesoAproximadoCarregado Float?
 
   // Motorista que registou a paragem (null em dados importados/antigos).
   motoristaId Int?

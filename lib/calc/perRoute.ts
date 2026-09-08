@@ -3,6 +3,8 @@ import {
   coeficienteReal,
   efetivos,
   linhasPaleteEfetivas,
+  pesoAproximadoCarregadoEfetivo,
+  pesoAproximadoDescarregado,
   pesoTransportado,
   type ContextoCalculo,
 } from "./perStop";
@@ -46,8 +48,19 @@ function chaveGrupoPeso(p: ParagemInput): string {
  * correção — `calcularParagem` cai no peso próprio da paragem,
  * comportamento inalterado — cobre a esmagadora maioria das rotas, incl.
  * HILP01).
+ *
+ * Genérico em `carregado`/`descarregado` (2026-09+) para poder ser reaproveitado
+ * tanto pelo modo por kg (`kgCarregados`/`kgDescarregados`, ver `pesosEmTransito`
+ * abaixo) como pelo modo por paletes (`pesoAproximadoCarregado`/`pesoAproximado`,
+ * ver `pesosAproximadosEmTransito`) — mesmo algoritmo, sem duplicar a lógica de
+ * segmentação/`faturarCliente` (já apanhada 2× em bugs de "conta a dobra", ver
+ * tasks/lessons.md 2026-09-04).
  */
-export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[] {
+function pesosEmTransitoGenerico(
+  paragens: ParagemInput[],
+  carregado: (p: ParagemInput) => number,
+  descarregado: (p: ParagemInput) => number,
+): (number | undefined)[] {
   const resultado: (number | undefined)[] = paragens.map(() => undefined);
 
   // 1) Linhas recolha->entrega ligadas por faturarCliente.
@@ -83,7 +96,7 @@ export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[
     let acumulado = 0; // começa vazio — só o que for apanhado na própria linha
     for (const i of ordenados) {
       resultado[i] = acumulado;
-      acumulado += (paragens[i].kgCarregados || 0) - (paragens[i].kgDescarregados || 0);
+      acumulado += carregado(paragens[i]) - descarregado(paragens[i]);
     }
   }
 
@@ -116,15 +129,37 @@ export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[
 
     for (const seg of segmentos) {
       if (seg.length < 2) continue; // segmento de 1 -> sem correção
-      let acumulado = seg.reduce((s, i) => s + (paragens[i].kgDescarregados || 0), 0);
+      let acumulado = seg.reduce((s, i) => s + descarregado(paragens[i]), 0);
       for (const i of seg) {
         resultado[i] = acumulado;
-        acumulado += (paragens[i].kgCarregados || 0) - (paragens[i].kgDescarregados || 0);
+        acumulado += carregado(paragens[i]) - descarregado(paragens[i]);
       }
     }
   }
 
   return resultado;
+}
+
+export function pesosEmTransito(paragens: ParagemInput[]): (number | undefined)[] {
+  return pesosEmTransitoGenerico(
+    paragens,
+    (p) => p.kgCarregados || 0,
+    (p) => p.kgDescarregados || 0,
+  );
+}
+
+/**
+ * Paralelo a `pesosEmTransito`, mas para o modo de carga por paletes: usa
+ * `pesoAproximadoCarregado`/`pesoAproximado` (via os helpers de fallback de
+ * `lib/calc/perStop.ts`, que tratam paragens antigas sem o campo novo) em vez
+ * de `kgCarregados`/`kgDescarregados`. Mesmo algoritmo — corre sobre TODAS as
+ * paragens sem filtrar por modo: uma paragem por kg não preenche
+ * `pesoAproximado*` (contribui 0 aqui) e uma paragem por paletes não preenche
+ * `kgCarregados`/`kgDescarregados` (contribui 0 em `pesosEmTransito`), por
+ * isso os dois nunca se cruzam mesmo numa rota (rara) com os dois modos.
+ */
+export function pesosAproximadosEmTransito(paragens: ParagemInput[]): (number | undefined)[] {
+  return pesosEmTransitoGenerico(paragens, pesoAproximadoCarregadoEfetivo, pesoAproximadoDescarregado);
 }
 
 /**
@@ -139,7 +174,10 @@ export function calcularRota(
   // Custos efetivos por paragem (snapshot congelado ou contexto atual).
   const effs = paragens.map((p) => efetivos(p, ctx));
   const pesos = pesosEmTransito(paragens);
-  const calc = paragens.map((p, i) => calcularParagem({ ...p, pesoEmTransito: pesos[i] }, ctx));
+  const pesosAprox = pesosAproximadosEmTransito(paragens);
+  const calc = paragens.map((p, i) =>
+    calcularParagem({ ...p, pesoEmTransito: pesos[i], pesoAproximadoEmTransito: pesosAprox[i] }, ctx),
+  );
 
   // Componentes do custo total da rota.
   const somaCustoParagens = calc.reduce((a, c) => a + c.custoParagem, 0);
@@ -421,10 +459,17 @@ export function calcularRota(
       linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
     return a + nBase + (p.nMeiasPaletes || 0) * 0.5;
   }, 0);
-  // Peso aproximado (informativo — nunca entra no rateio): mesma regra.
+  // Peso aproximado descarregado/recolhido (informativo — nunca entra no
+  // rateio): mesma regra de dedução. Usa os helpers de fallback (não o campo
+  // cru) para que uma RECOLHA pura antiga (valor guardado no `pesoAproximado`
+  // de antes deste campo se dividir) conte como recolhido, não descarregado.
   const totalPesoAproximado = paragens.reduce((a, p, i) => {
     if (jaContadaNaEntrega.has(i)) return a;
-    return a + (p.pesoAproximado || 0);
+    return a + pesoAproximadoDescarregado(p);
+  }, 0);
+  const totalPesoAproximadoCarregado = paragens.reduce((a, p, i) => {
+    if (jaContadaNaEntrega.has(i)) return a;
+    return a + pesoAproximadoCarregadoEfetivo(p);
   }, 0);
 
   // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
@@ -455,6 +500,7 @@ export function calcularRota(
     totalKgDescarregados,
     totalPaletes,
     totalPesoAproximado,
+    totalPesoAproximadoCarregado,
   };
 }
 

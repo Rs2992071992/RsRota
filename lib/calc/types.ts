@@ -201,8 +201,20 @@ export interface ParagemInput {
    * para leitores antigos. Ausente/vazio -> caminho de linha única (escalares).
    */
   paletes?: PaleteLinha[] | null;
-  /** Peso aproximado (kg), só para a tabela de consumos — nunca entra no rateio. */
+  /** Peso aproximado DESCARREGADO (kg), só para a tabela de consumos — nunca entra
+   * no rateio. Paragens antigas de RECOLHA pura guardaram aqui o que hoje vai em
+   * `pesoAproximadoCarregado` — ver fallback em lib/calc/perStop.ts. */
   pesoAproximado?: number | null;
+  /** Peso aproximado RECOLHIDO/carregado (kg), 2026-09+ — ver `pesoAproximado`. */
+  pesoAproximadoCarregado?: number | null;
+  /**
+   * Peso aproximado (paletes) realmente a bordo durante ESTE troço — paralelo a
+   * `pesoEmTransito` acima, mas alimentado por `pesoAproximado`/
+   * `pesoAproximadoCarregado` em vez de `kgCarregados`/`kgDescarregados` (ver
+   * `pesosAproximadosEmTransito` em lib/calc/perRoute.ts). Se ausente, o consumo
+   * usa o peso aproximado próprio da paragem (comportamento inalterado).
+   */
+  pesoAproximadoEmTransito?: number;
   zonaPortagem: string;
   portagensExtra: number;
   noitesFora: number;
@@ -260,6 +272,8 @@ export interface ParagemCalc {
   paletes: PaleteLinha[] | null;
   /** Passthrough — ver ParagemInput.pesoAproximado. */
   pesoAproximado: number | null;
+  /** Passthrough — ver ParagemInput.pesoAproximadoCarregado. */
+  pesoAproximadoCarregado: number | null;
   kmFeitos: number;
   /** Coeficiente de carga: peso/capacidade (kg) ou nº paletes/capacidade. */
   coeficienteCarga: number;
@@ -336,6 +350,8 @@ export interface RotaCalc {
    * já é contada na paragem de entrega (senão o mesmo lote soma-se a dobra).
    */
   totalPaletes: number;
-  /** Soma de `pesoAproximado` (informativo) — mesma regra de `totalPaletes`. */
+  /** Soma de `pesoAproximado` (descarregado, informativo) — mesma regra de `totalPaletes`. */
   totalPesoAproximado: number;
+  /** Soma de `pesoAproximadoCarregado` (recolhido, informativo) — mesma regra de `totalPaletes`. */
+  totalPesoAproximadoCarregado: number;
 }

@@ -136,6 +136,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     paleteLarguraMm: p.paleteLarguraMm,
     paletes: Array.isArray(p.paletes) ? (p.paletes as unknown as PaleteLinha[]) : null,
     pesoAproximado: p.pesoAproximado,
+    pesoAproximadoCarregado: p.pesoAproximadoCarregado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
     noitesFora: p.noitesFora,

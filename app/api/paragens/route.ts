@@ -85,6 +85,7 @@ export async function POST(req: Request) {
         ? (paletesLinhas as unknown as Prisma.InputJsonValue)
         : Prisma.JsonNull,
       pesoAproximado: d.pesoAproximado ?? null,
+      pesoAproximadoCarregado: d.pesoAproximadoCarregado ?? null,
       litrosAbastecidos: d.litrosAbastecidos,
       custoAbastecido: d.custoAbastecido,
       zonaPortagem: d.zonaPortagem,

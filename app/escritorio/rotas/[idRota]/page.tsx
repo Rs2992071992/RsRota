@@ -54,6 +54,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   // parte) — uma recolha faturada a outro cliente que também tem entrega
   // nesta rota já não conta a dobra (2026-09-04).
   const totalPesoAproximado = rota.totalPesoAproximado;
+  const totalPesoAproximadoCarregado = rota.totalPesoAproximadoCarregado;
   const datasParagens = paragensRaw.map((p) => p.data);
   const dataRotaLabel =
     datasParagens.length === 0
@@ -96,6 +97,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         : null,
       recolha: p.recolha,
       pesoAproximado: p.pesoAproximado,
+      pesoAproximadoCarregado: p.pesoAproximadoCarregado,
       zonaPortagem: p.zonaPortagem,
       portagensExtra: p.portagensExtra,
       noitesFora: p.noitesFora,
@@ -213,7 +215,14 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
             <div className="card">
               <p className="text-xs text-gray-500">Peso aproximado</p>
               <p className="text-lg font-bold">
-                {totalPesoAproximado > 0 ? `${fmtNum(totalPesoAproximado)} kg` : "—"}
+                {totalPesoAproximado > 0 || totalPesoAproximadoCarregado > 0
+                  ? [
+                      totalPesoAproximado > 0 ? `${fmtNum(totalPesoAproximado)} kg desc.` : null,
+                      totalPesoAproximadoCarregado > 0 ? `${fmtNum(totalPesoAproximadoCarregado)} kg rec.` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "—"}
               </p>
             </div>
           </>
@@ -321,11 +330,20 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
                 <td className="td text-right">
                   {(() => {
                     // Rotas por paletes: kgCarregados/Descarregados ficam a 0
-                    // (não se regista peso) — mostra o peso aproximado que o
-                    // motorista introduziu + o nº de paletes ("PL"). Rotas por
-                    // kg (legado): mantém o peso transportado como sempre.
-                    const peso = p.pesoTransportado > 0 ? p.pesoTransportado : p.pesoAproximado || 0;
-                    const pesoTxt = peso > 0 ? `${fmtNum(peso)} kg` : "—";
+                    // (não se regista peso) — mostra o peso aproximado
+                    // descarregado/recolhido que o motorista introduziu + o nº
+                    // de paletes ("PL"). Rotas por kg (legado): mantém o peso
+                    // transportado como sempre.
+                    const pesoDesc = p.pesoTransportado > 0 ? p.pesoTransportado : p.pesoAproximado || 0;
+                    const pesoCarr = p.pesoTransportado > 0 ? 0 : p.pesoAproximadoCarregado || 0;
+                    const pesoTxt =
+                      pesoDesc > 0 && pesoCarr > 0
+                        ? `${fmtNum(pesoDesc)}/${fmtNum(pesoCarr)} kg`
+                        : pesoCarr > 0
+                          ? `${fmtNum(pesoCarr)} kg rec.`
+                          : pesoDesc > 0
+                            ? `${fmtNum(pesoDesc)} kg`
+                            : "—";
                     return p.nPaletes > 0 ? `${pesoTxt} · ${fmtNum(p.nPaletes)} PL` : pesoTxt;
                   })()}
                 </td>

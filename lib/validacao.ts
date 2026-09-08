@@ -56,6 +56,7 @@ export const paragemSchema = z
       .max(40)
       .optional(),
     pesoAproximado: numOpcional,
+    pesoAproximadoCarregado: numOpcional,
     litrosAbastecidos: numNaoNeg.default(0),
     custoAbastecido: numNaoNeg.default(0),
     zonaPortagem: z.string().trim().default(""),

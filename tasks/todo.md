@@ -2,6 +2,58 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔲 Peso aproximado carregado (recolhas) + peso em trânsito para paletes (2026-09-08)
+
+Plano: `C:\Users\Ricardo\.claude\plans\sparkling-toasting-ullman.md`. Pedido do
+Ricardo: guardar o peso das recolhas à parte do descarregado, para o sistema
+saber o que vai realmente no carro ao longo da rota e derivar o consumo disso
+— não de um palpite fixo por paragem. Espelha `pesosEmTransito` (peso em
+trânsito do modo kg, já existente) para o modo de paletes.
+
+- [x] `prisma/schema.prisma`: `Paragem.pesoAproximadoCarregado Float?` novo
+  (`pesoAproximado` passa a significar sempre "descarregado")
+- [x] `lib/calc/perStop.ts`: helpers `pesoAproximadoDescarregado`/
+  `pesoAproximadoCarregadoEfetivo`/`pesoAproximadoTransportado` (fallback para
+  paragens antigas de RECOLHA pura — mesma regra de sentido de
+  `linhasCargaParagem`); `calcularParagem` usa-os no ramo `ehPalete`
+- [x] `lib/calc/perRoute.ts`: `pesosEmTransito` refeito sobre um núcleo
+  genérico (`pesosEmTransitoGenerico`); novo `pesosAproximadosEmTransito`
+  (mesmo algoritmo — segmentos VAZIO + linhas `faturarCliente` — para
+  paletes); `totalPesoAproximadoCarregado` novo em `RotaCalc`
+- [x] `lib/validacao.ts`, `app/api/paragens/route.ts`, `lib/rotas-service.ts`:
+  campo novo propagado (schema, POST, `paragemToInput`); PATCH sem alteração
+  (spread genérico já propaga)
+- [x] `RegistoForm.tsx` + `ParagemEditor.tsx`: campo único "Peso aproximado"
+  passa a depender de `tipoParagem` (DESCARGA/RECOLHA/MISTA), MISTA mostra os
+  dois lado a lado; `ParagemEditor` pré-preenche via os helpers de fallback
+  (auto-migra uma paragem antiga ao ser reeditada e guardada)
+- [x] `app/escritorio/rotas/[idRota]/page.tsx` + `app/motorista/historico/page.tsx`:
+  sítios de leitura atualizados (coluna "Peso/Paletes", cartão "Peso aproximado")
+- [x] +18 testes novos (`perStop.test.ts`: fallback legado; `perRoute.test.ts`:
+  `pesosAproximadosEmTransito` espelhando `pesosEmTransito`, +teste end-to-end
+  via `calcularRota` com recolha progressiva). 241 testes verdes, `tsc --noEmit`
+  e `npm run build` limpos
+- [x] `npm run db:push` corrido pelo Ricardo (coluna nova aplicada na BD real, Neon)
+- [x] Diff contra a BD real (`carregarRotas({})` via `git stash` + script
+  descartável, antes/depois): **9 de 31 rotas mudam** (16 paragens) — todas por
+  melhoria genuína de precisão, não regressão:
+  - Recolhas antigas (`recolha=true`, valor no campo legado): o consumo deixa
+    de aplicar o valor cru da paragem isolada e passa a refletir a posição real
+    na rota (ex. RIC-Tec-A23/Tec-justlog: 37→24 L/100km — é a 1ª recolha do dia,
+    o camião chega vazio, não com o peso "adivinhado" antigo)
+  - Descargas em rotas multi-paragem: sobem para refletir o que ainda vai a
+    bordo para entregas seguintes (mesmo princípio já validado no modo kg,
+    ex. RIC-Tec-eurored: 25→28, RIC-A22/Tec-A2: 25→35)
+  - `totalPesoAproximadoCarregado` passa a existir (RIC-armazém 0→600kg,
+    RIC-Percam 0→3000kg) — valor que já lá estava mas contava como
+    "descarregado" por engano em paragens antigas de RECOLHA pura
+  - As outras 22 rotas ficam byte-a-byte iguais (sem paletes recolhidas/sem
+    recolha antiga sem `pesoAproximadoCarregado`)
+- [x] Commit + push (Vercel builda automaticamente)
+- [ ] Fora de âmbito: porte para a app Android Motorista (`Registar.tsx`)
+- [ ] Teste manual do Ricardo: registar uma paragem RECOLHA/MISTA real no
+  telemóvel e confirmar que os 2 campos de peso aparecem como esperado
+
 ## ☑️ Planta de carga automática nas Rotas (2026-09-08)
 
 Pedido do Ricardo (com um desenho à mão — sequência de clientes na rota +

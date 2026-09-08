@@ -2,6 +2,29 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | O Ricardo pediu para dividir "Peso aproximado" em
+  descarregado/carregado numa paragem MISTA — a 1ª ideia (só dividir o campo e
+  voltar a juntar com máximo/soma, sem mais efeito nenhum) foi corretamente
+  recusada por ele ("com estas duas opções se calhar nem vale a pena mexer") —
+  dividir um valor só para o voltar a juntar não resolve nada. O pedido real,
+  só descoberto ao perguntar, era mais fundo: quer que o peso carregado numa
+  recolha alimente um "peso em trânsito" real ao longo da rota (o mesmo
+  mecanismo que `pesosEmTransito` já faz para o modo kg desde 2026-08-22),
+  para o consumo deixar de depender de um palpite fixo por paragem. Isto
+  reverte parcialmente a decisão de 2026-08-28 ("peso aproximado passou a
+  alimentar a tabela de consumos... campo explícito, opcional") — só o
+  "opcional/campo único" fica revisto, o "explícito, pedido conscientemente"
+  mantém-se. | Quando um pedido de UI simples ("dois campos lado a lado")
+  parece resolver-se com uma escolha arbitrária (máximo? soma?) sem nenhum
+  efeito a jusante, isso é sinal de que falta perguntar o "para quê" — o valor
+  real estava no efeito a jusante (peso em trânsito), não no formulário.
+  Implementação: generalizar o algoritmo existente (`pesosEmTransito` →
+  `pesosEmTransitoGenerico` parametrizado por carregado/descarregado) em vez
+  de duplicá-lo para o novo par de campos — ver `pesosAproximadosEmTransito`
+  em `lib/calc/perRoute.ts`. Verificado com diff `git stash` contra as 31
+  rotas reais: 9 mudam de consumo/custo combustível (todas por precisão maior,
+  usando dados já recolhidos — nenhuma regressão), 22 ficam byte-a-byte iguais.
+
 - [2026-09-08] | O arrasto de paletes na planta de carga (shipped 2026-09-07)
   reordenava por `pedidoId` — mas `PedidoPalete.quantidade` pode ser > 1 (uma
   "linha de pedido" representa um lote de paletes físicas iguais, não 1 só).

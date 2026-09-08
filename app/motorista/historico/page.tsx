@@ -55,6 +55,7 @@ export default async function HistoricoPage() {
       : null,
     recolha: p.recolha,
     pesoAproximado: p.pesoAproximado,
+    pesoAproximadoCarregado: p.pesoAproximadoCarregado,
     zonaPortagem: p.zonaPortagem,
     portagensExtra: p.portagensExtra,
     noitesFora: p.noitesFora,
