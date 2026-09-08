@@ -169,18 +169,6 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         </div>
       )}
 
-      {/* Planta de carga: pior momento da rota, gerada a partir das paragens já
-          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui). */}
-      {packingRota && (
-        <div className="card">
-          <h3 className="mb-1 font-semibold">Planta de carga</h3>
-          <p className="mb-3 text-xs text-gray-400">
-            Momento de maior ocupação da rota, gerado a partir das entregas/recolhas registadas.
-          </p>
-          <CarregamentoFloorPlan caixas={packingRota.caixas} />
-        </div>
-      )}
-
       {/* Resumo rentabilidade */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="card">
@@ -434,6 +422,18 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
           </table>
         </div>
       </div>
+
+      {/* Planta de carga: pior momento da rota, gerada a partir das paragens já
+          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui). */}
+      {packingRota && (
+        <div className="card">
+          <h3 className="mb-1 font-semibold">Planta de carga</h3>
+          <p className="mb-3 text-xs text-gray-400">
+            Momento de maior ocupação da rota, gerado a partir das entregas/recolhas registadas.
+          </p>
+          <CarregamentoFloorPlan caixas={packingRota.caixas} />
+        </div>
+      )}
 
       {/* Cobranças — estado de pagamento (prazo 90 dias) */}
       <Cobrancas paragens={paragensRaw} faturado={rota.receitaTotal} />
