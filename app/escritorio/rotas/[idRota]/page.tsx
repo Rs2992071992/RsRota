@@ -424,15 +424,17 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       </div>
 
       {/* Planta de carga: pior momento da rota, gerada a partir das paragens já
-          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui). */}
+          registadas — só de leitura (sem arrastar/rodar, não há pedidos aqui).
+          <details>/<summary> nativo: clicar no título mostra/esconde, sem
+          precisar de client component. */}
       {packingRota && (
-        <div className="card">
-          <h3 className="mb-1 font-semibold">Planta de carga</h3>
-          <p className="mb-3 text-xs text-gray-400">
+        <details className="card">
+          <summary className="cursor-pointer font-semibold">Planta de carga</summary>
+          <p className="mb-3 mt-1 text-xs text-gray-400">
             Momento de maior ocupação da rota, gerado a partir das entregas/recolhas registadas.
           </p>
           <CarregamentoFloorPlan caixas={packingRota.caixas} />
-        </div>
+        </details>
       )}
 
       {/* Cobranças — estado de pagamento (prazo 90 dias) */}
