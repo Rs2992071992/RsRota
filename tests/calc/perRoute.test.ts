@@ -836,9 +836,12 @@ describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra 
   it("recolha faturada a um cliente que TAMBÉM tem entrega nesta rota -> só conta uma vez", () => {
     const paragens: ParagemInput[] = [
       paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 50, ...palete(5) }),
-      // Recolha em "Fornecedor" faturada a "Tecfil" — 3 paletes.
+      // Recolha em "Fornecedor" faturada a "Tecfil" — 3 paletes. `recolha: true`
+      // (o motorista marca sempre a recolha; sem isso os helpers de fallback de
+      // peso não têm como saber que o valor é recolhido, não descarregado).
       paragemBase({
         cliente: "Fornecedor",
+        recolha: true,
         faturarCliente: "Tecfil",
         kmInicial: 50,
         kmFinal: 100,

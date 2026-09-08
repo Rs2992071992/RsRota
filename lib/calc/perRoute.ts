@@ -72,7 +72,14 @@ function pesosEmTransitoGenerico(
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO") return;
     const alvo = p.faturarCliente?.trim();
-    if (alvo && clientesEntregues.has(alvo)) {
+    // Só entra na linha se for uma recolha "pura" (nada de seu a descarregar
+    // aqui) — uma paragem MISTA (descarrega localmente E recolhe para outro
+    // cliente) tem o seu próprio descarregado sem nada a ver com a linha; se
+    // entrasse, a subtração desse valor dava peso negativo/zero à linha (visto
+    // como "vazio" no consumo) e escondia o descarregado local da paragem, que
+    // fica sem nenhuma correção (não está em nenhum grupo). Fica de fora da
+    // linha -> cai no mecanismo 2 (grupo normal) com o seu peso completo.
+    if (alvo && clientesEntregues.has(alvo) && descarregado(p) === 0) {
       if (!linhas.has(alvo)) linhas.set(alvo, []);
       linhas.get(alvo)!.push(i);
       numaLinha.add(i);
@@ -449,28 +456,48 @@ export function calcularRota(
   // false/vestigial nesse caso, por isso não basta olhar para p.volume).
   // Meias-paletes contam a 0,5 (nunca ocuparam base própria, mas contam para
   // o total transportado).
+  //
+  // A dedução de `jaContadaNaEntrega` só pode excluir a PARTE recolhida de uma
+  // paragem — nunca a paragem inteira: uma MISTA (descarrega localmente E
+  // recolhe para outro cliente) tem uma entrega própria, sem nada a ver com a
+  // recolha faturada, que tem sempre de contar. Por linha (`paletes[]`,
+  // `sentido` explícito ou o da paragem em fallback — mesma regra de
+  // `linhasCargaParagem`); no estilo legado (sem `paletes[]`, sem sentido
+  // possível) a paragem é sempre 100% um sentido só, mantém-se a exclusão
+  // inteira de sempre.
   const totalPaletes = paragens.reduce((a, p, i) => {
-    if (jaContadaNaEntrega.has(i)) return a;
     const linhas = linhasPaleteEfetivas(p);
     const ehPaleteLegado =
       p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
     if (linhas.length === 0 && !ehPaleteLegado) return a;
-    const nBase =
-      linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
+    let nBase: number;
+    if (linhas.length > 0) {
+      const sentidoParagem: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
+      nBase = linhas.reduce((s, l) => {
+        const sentido = l.sentido ?? sentidoParagem;
+        if (sentido === "RECOLHA" && jaContadaNaEntrega.has(i)) return s;
+        return s + (l.nPaletes || 0);
+      }, 0);
+    } else {
+      if (jaContadaNaEntrega.has(i)) return a;
+      nBase = p.nPaletes || 0;
+    }
     return a + nBase + (p.nMeiasPaletes || 0) * 0.5;
   }, 0);
   // Peso aproximado descarregado/recolhido (informativo — nunca entra no
-  // rateio): mesma regra de dedução. Usa os helpers de fallback (não o campo
-  // cru) para que uma RECOLHA pura antiga (valor guardado no `pesoAproximado`
-  // de antes deste campo se dividir) conte como recolhido, não descarregado.
-  const totalPesoAproximado = paragens.reduce((a, p, i) => {
-    if (jaContadaNaEntrega.has(i)) return a;
-    return a + pesoAproximadoDescarregado(p);
-  }, 0);
-  const totalPesoAproximadoCarregado = paragens.reduce((a, p, i) => {
-    if (jaContadaNaEntrega.has(i)) return a;
-    return a + pesoAproximadoCarregadoEfetivo(p);
-  }, 0);
+  // rateio). Usa os helpers de fallback (não o campo cru) para que uma
+  // RECOLHA pura antiga (valor guardado no `pesoAproximado` de antes deste
+  // campo se dividir) conte como recolhido, não descarregado. Ao contrário de
+  // `totalPaletes` (um total só, a somar entrega+recolha), descarregado e
+  // carregado já são 2 totais SEPARADOS (2 cartões distintos) — não há dupla
+  // contagem a evitar somando cada um sem exclusão: o mesmo lote pode
+  // aparecer uma vez em cada cartão (recolhido aqui, descarregado ali), o que
+  // é exatamente o esperado, não um erro.
+  const totalPesoAproximado = paragens.reduce((a, p) => a + pesoAproximadoDescarregado(p), 0);
+  const totalPesoAproximadoCarregado = paragens.reduce(
+    (a, p) => a + pesoAproximadoCarregadoEfetivo(p),
+    0,
+  );
 
   // Datas da rota: a mais antiga (início) e a mais recente (fim) das paragens.
   const tempos = paragens

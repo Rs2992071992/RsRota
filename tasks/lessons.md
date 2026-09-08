@@ -2,6 +2,36 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | No mesmo dia em que `pesosAproximadosEmTransito`/`totalPesoAproximado`
+  foram lançados (ver entrada anterior), o Ricardo reportou uma rota real
+  (RIC-Percam) com um caso que nenhum teste cobria: uma paragem MISTA
+  (`Tec-Percam`, descarrega 28.365 kg localmente E recolhe 3.000 kg para
+  faturar a `Tecfil`, que tem entrega mais tarde na mesma rota). Dois bugs
+  ligados, ambos por assumir que uma paragem com `faturarCliente` é sempre
+  100% recolha (nunca mista): (1) `totalPaletes`/`totalPesoAproximado`/
+  `totalPesoAproximadoCarregado` excluíam a paragem INTEIRA via
+  `jaContadaNaEntrega` (índice), não só a parte recolhida — a entrega local de
+  22 paletes/28.365 kg desaparecia dos totais junto com a recolha (22→44
+  paletes reais viravam 22); (2) o mecanismo de "linha" `faturarCliente` em
+  `pesosEmTransitoGenerico` juntava a paragem à linha e subtraía o seu
+  descarregado LOCAL (28.365) da conta da linha (que só devia somar/subtrair o
+  que é da própria recolha) — dava peso 0/negativo à linha, e o consumo saía
+  como se fosse vazio (25 L/100km em vez de refletir a carga real). | (1)
+  Qualquer exclusão "já contado noutro sítio" baseada em `faturarCliente` tem
+  de ser ao nível da LINHA de palete (`sentido`), nunca ao nível da paragem
+  inteira — uma paragem pode ser mista. Corrigido: `totalPaletes` agora exclui
+  só as linhas `RECOLHA`; `totalPesoAproximado`/`Carregado` deixaram de
+  precisar de exclusão nenhuma (são 2 totais SEPARADOS — o mesmo lote pode
+  aparecer uma vez em cada, isso não é dobra). (2) Uma paragem só pode entrar
+  na "linha" de `pesosEmTransitoGenerico` se o seu próprio `descarregado` for
+  0 — senão fica de fora (cai no mecanismo 2, grupo normal) para não
+  contaminar a linha com peso que não lhe pertence. Esta 2ª regra vive no
+  núcleo genérico partilhado com o modo kg — mesmo sem nenhum teste kg a
+  cobrir esta combinação exata (mista + faturarCliente), o bug já lá estava
+  latente, só nunca tinha sido exercitado. Verificado com diff `git stash`
+  contra as 31 rotas reais: 8 mudam (todas a corrigir valores escondidos a
+  mais, nunca a menos — nenhuma regressão), 23 ficam iguais.
+
 - [2026-09-08] | O Ricardo pediu para dividir "Peso aproximado" em
   descarregado/carregado numa paragem MISTA — a 1ª ideia (só dividir o campo e
   voltar a juntar com máximo/soma, sem mais efeito nenhum) foi corretamente

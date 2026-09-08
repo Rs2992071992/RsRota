@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Fix: paragem MISTA + faturarCliente contava a menos (paletes/peso/consumo) (2026-09-08)
+
+Pedido do Ricardo, ao testar RIC-Percam (paragem mista: descarrega 22 PL/28.365 kg
+localmente E recolhe 22 PL/3.000 kg faturados a Tecfil): "levei 22 para cima e
+trouxe 22 para baixo" mas a rota só mostrava 22 paletes no total, e o consumo
+tratava a paragem como vazia. Ver `tasks/lessons.md` para a causa raiz completa
+(2 bugs ligados, ambos por assumir que `faturarCliente` = paragem 100% recolha).
+
+- [x] `lib/calc/perRoute.ts::totalPaletes`: exclusão de `jaContadaNaEntrega`
+  passa a ser por LINHA (`sentido`), não pela paragem inteira
+- [x] `lib/calc/perRoute.ts::totalPesoAproximado/totalPesoAproximadoCarregado`:
+  deixam de ter qualquer exclusão (são 2 totais separados, não há dobra a evitar)
+- [x] `pesosEmTransitoGenerico`: uma paragem só entra na "linha" `faturarCliente`
+  se o seu próprio descarregado for 0 (senão contamina a linha com peso alheio)
+- [x] Teste existente corrigido (`recolha: true` em falta no fixture da T4);
+  241 testes verdes, `tsc --noEmit`/`npm run build` limpos
+- [x] Verificado contra RIC-Percam diretamente: 44 paletes (era 22), 31.365 kg
+  descarregados + 3.000 kg recolhidos (era 3.000/0), consumo Tec-Percam 45
+  L/100km (era 25, "vazio")
+- [x] Diff `git stash` contra as 31 rotas reais: 8 mudam (RIC-Tec-A23,
+  RIC-maravedis2, RIC-armazém, RIC-Tec-A22, RIC-A2, RIC-Percam,
+  RIC-Tec-eurored, RIC-A22) — todas a subir (valores escondidos a mais, nunca
+  a menos), 23 ficam byte-a-byte iguais
+- [x] Commit + push (Vercel builda automaticamente)
+
 ## 🔲 Peso aproximado carregado (recolhas) + peso em trânsito para paletes (2026-09-08)
 
 Plano: `C:\Users\Ricardo\.claude\plans\sparkling-toasting-ullman.md`. Pedido do
