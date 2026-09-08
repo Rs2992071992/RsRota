@@ -2,6 +2,16 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-08] | Depois do fix da escala (ver entrada abaixo), o arrasto de
+  paletes ainda "só selecionava os nomes" — o `onPointerDown` no `<rect>`
+  nunca chamava `e.preventDefault()`, pelo que o browser entrava em modo de
+  seleção de texto (realçava os `<span>` dos nomes dos clientes) durante o
+  movimento do rato, em vez de só disparar o arrasto custom. | Em qualquer
+  handler `onPointerDown` que inicia um drag manual (sem `draggable`
+  nativo), chamar sempre `e.preventDefault()` logo no início — e, se houver
+  texto visível por cima (labels, foreignObject), reforçar com
+  `user-select: none` no contentor enquanto o arrasto estiver ativo.
+
 - [2026-09-08] | O arrasto de paletes na planta de carga (`CarregamentoFloorPlan.tsx`,
   shipped 2026-09-07) não seguia o rato — o Ricardo reportou "o rato vai
   deslizando e a palete não se mexe". Causa: `style={{ transform:
