@@ -27,6 +27,27 @@ tratava a paragem como vazia. Ver `tasks/lessons.md` para a causa raiz completa
   a menos), 23 ficam byte-a-byte iguais
 - [x] Commit + push (Vercel builda automaticamente)
 
+### Afinação (mesmo dia, o Ricardo reparou que o consumo de Tec-Percam — 45
+L/100km sobre 31.365 kg — ainda não fazia sentido: os 3.000 kg só se recolhem
+DEPOIS de chegar, não deviam somar-se ao peso de quem chega)
+
+- [x] `pesosEmTransitoGenerico`: uma paragem com `faturarCliente` válido fica
+  de fora do mecanismo 2 (grupo normal) SEMPRE, com ou sem linha formada — e o
+  destino correspondente também, mesmo que a linha não se tenha formado (todas
+  as origens desqualificadas). Cada uma cai isolada no próprio
+  `pesoAproximadoTransportado` — nunca misturada com o peso de outra paragem
+- [x] +2 testes novos (`pesosAproximadosEmTransito` isolado + `calcularRota`
+  end-to-end com os números reais de RIC-Percam). 243 testes verdes
+- [x] Verificado contra RIC-Percam: Tec-Percam 45 L/100km sobre os seus
+  próprios 28.365 kg (não 31.365), Tecfil 25 L/100km sobre os seus 3.000 kg
+- [x] Diff `git stash` contra as 31 rotas reais (desta vez contra o fix
+  anterior, já em produção): só 1 muda mais (RIC-Tec-eurored — tinha 2
+  paragens antigas com o mesmo padrão, `faturarCliente` mas registadas como
+  descarregado, a contaminar o mesmo segmento numa escala menor); os totais
+  (totalPaletes/totalPesoAproximado/Carregado) ficam iguais em todas — só o
+  consumo/custo por paragem refina
+- [x] Commit + push (Vercel builda automaticamente)
+
 ## 🔲 Peso aproximado carregado (recolhas) + peso em trânsito para paletes (2026-09-08)
 
 Plano: `C:\Users\Ricardo\.claude\plans\sparkling-toasting-ullman.md`. Pedido do

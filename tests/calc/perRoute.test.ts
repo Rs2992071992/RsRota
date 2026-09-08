@@ -628,6 +628,28 @@ describe("pesosAproximadosEmTransito — paralelo a pesosEmTransito, mas para pa
     expect(r).toEqual([0, 4000, 5800]);
   });
 
+  it("paragem MISTA faturada a outro cliente (caso real RIC-Percam): fica de fora da linha E do grupo normal, cada uma com o resultado indefinido (cai no fallback isolado — peso próprio, não misturado)", () => {
+    const r = pesosAproximadosEmTransito([
+      // Descarrega 28365 localmente E recolhe 3000 para faturar a Tecfil.
+      paragemBase({
+        cliente: "Tec-Percam",
+        recolha: true,
+        faturarCliente: "Tecfil",
+        kmInicial: 0,
+        kmFinal: 100,
+        pesoAproximado: 28365,
+        pesoAproximadoCarregado: 3000,
+      }),
+      paragemBase({ cliente: "Tecfil", kmInicial: 100, kmFinal: 200, pesoAproximado: 3000 }),
+    ]);
+    // Nenhuma das duas fica no grupo normal (isso juntaria os 28365 da entrega
+    // local de Percam aos 3000 já contabilizados via faturarCliente, dando
+    // 31365 — sobrestimado, o mesmo lote de 3000 contado 2×) nem numa linha
+    // (a de Percam desqualifica-se por ter descarregado próprio) — undefined
+    // nas duas, cada paragem cai no seu peso próprio isolado em calcularParagem.
+    expect(r).toEqual([undefined, undefined]);
+  });
+
   it("kgCarregados/kgDescarregados de uma paragem por kg não entram no acumulador de paletes", () => {
     const r = pesosAproximadosEmTransito([
       paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 9000 }),
@@ -879,5 +901,50 @@ describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra 
     ];
     const r = calcularRota("T6", paragens, ctx);
     expect(r.totalPaletes).toBe(8);
+  });
+
+  it("paragem MISTA faturada a outro cliente (caso real RIC-Percam) — entrega local conta, consumo não trata como vazio", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Tec-Percam",
+        recolha: true,
+        faturarCliente: "Tecfil",
+        kmInicial: 353418,
+        kmFinal: 354135,
+        paleteComprimentoMm: 1300,
+        paleteLarguraMm: 1100,
+        paletes: [
+          { tipoPaleteId: 1, comprimentoMm: 1300, larguraMm: 1100, nPaletes: 22, sentido: "ENTREGA" },
+          { tipoPaleteId: 1, comprimentoMm: 1300, larguraMm: 1100, nPaletes: 22, sentido: "RECOLHA" },
+        ],
+        pesoAproximado: 28365,
+        pesoAproximadoCarregado: 3000,
+      }),
+      paragemBase({
+        cliente: "Tecfil",
+        kmInicial: 354135,
+        kmFinal: 354853,
+        paleteComprimentoMm: 1300,
+        paleteLarguraMm: 1100,
+        nPaletes: 22,
+        pesoAproximado: 3000,
+      }),
+    ];
+    const r = calcularRota("RIC-Percam", paragens, ctx);
+    // 22 entregues em Percam + 22 recolhidos (faturados a Tecfil, mas a
+    // entrega em Tecfil é que conta) + 22 já contados na entrega de Tecfil
+    // -> nBase de Percam = 22 (ENTREGA) + 0 (RECOLHA, excluída) = 22; Tecfil = 22.
+    expect(r.totalPaletes).toBe(44);
+    // Descarregado: os 28365 próprios de Percam + os 3000 entregues em Tecfil.
+    expect(r.totalPesoAproximado).toBe(31365);
+    // Carregado: só os 3000 recolhidos em Percam.
+    expect(r.totalPesoAproximadoCarregado).toBe(3000);
+    // Consumo: cada paragem usa o seu PRÓPRIO peso (maior dos dois), nunca o
+    // do outro lado da linha nem a soma dos dois — sem correção de rota (as
+    // duas ficam de fora do grupo normal e da linha, ver pesosEmTransitoGenerico).
+    const percam = r.paragens.find((p) => p.cliente === "Tec-Percam")!;
+    const tecfil = r.paragens.find((p) => p.cliente === "Tecfil")!;
+    expect(percam.consumoL100).toBe(45); // 28365 kg -> escalão mais alto, não "vazio"
+    expect(tecfil.consumoL100).toBe(25); // 3000 kg -> escalão mais baixo
   });
 });

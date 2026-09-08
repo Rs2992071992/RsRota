@@ -32,6 +32,30 @@ Formato: [data] | o que correu mal | regra para evitar
   contra as 31 rotas reais: 8 mudam (todas a corrigir valores escondidos a
   mais, nunca a menos — nenhuma regressão), 23 ficam iguais.
 
+- [2026-09-08] | O fix acima (regra "só entra na linha se descarregado=0")
+  resolveu o negativo/zero mas deixou a paragem MISTA cair no mecanismo 2
+  (grupo normal), que soma TODO o descarregado do segmento como "já a bordo
+  desde o início" — em RIC-Percam isso dava 31.365 kg (28.365 próprios +
+  3.000 do Tecfil, que só é apanhado ALI, não vinha pré-carregado) a Tec-Percam,
+  sobrestimado. O Ricardo apanhou pela lógica ("levo 28000kg para o cliente...
+  depois é que carrego os 3000kg... não deveria juntar os pesos, mas
+  colocá-los em sítios separados") sem eu ter sequer apontado o problema. |
+  Uma paragem com `faturarCliente` (origem) nunca deve entrar no mecanismo 2
+  também — não só na linha. Fix: `numaLinha` (o conjunto que o mecanismo 2
+  ignora) passa a incluir a origem SEMPRE que tem um alvo válido (com ou sem
+  qualificar para a linha) — e o destino correspondente também, mesmo que a
+  linha não se tenha formado (todas as origens desqualificadas). Sem
+  `resultado[i]`, cada uma cai isolada no próprio `pesoAproximadoTransportado`
+  (o maior dos dois valores PRÓPRIOS, nunca misturado com o de outra paragem)
+  — Percam passa a 28.365 (não 0, não 31.365), Tecfil a 3.000. Confirmado com
+  a MESMA disciplina de diff `git stash`: só mais 1 rota mudou (RIC-Tec-eurored,
+  que tinha 2 paragens antigas com o mesmo padrão — peso ligado a
+  `faturarCliente` mas `recolha=false`/registado como descarregado — a
+  contaminar o mesmo tipo de segmento numa escala menor). Regra geral: quando
+  o utilizador reage a um fix dizendo "mas isto também não faz sentido", não
+  assumir que é só desconforto com o número novo — verificar a física do
+  cenário primeiro, muitas vezes tem razão.
+
 - [2026-09-08] | O Ricardo pediu para dividir "Peso aproximado" em
   descarregado/carregado numa paragem MISTA — a 1ª ideia (só dividir o campo e
   voltar a juntar com máximo/soma, sem mais efeito nenhum) foi corretamente

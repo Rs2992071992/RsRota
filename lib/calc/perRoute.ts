@@ -67,32 +67,43 @@ function pesosEmTransitoGenerico(
   const clientesEntregues = new Set(
     paragens.filter((p) => p.tipoVeiculo !== "VAZIO").map((p) => p.cliente?.trim()),
   );
+  // `numaLinha` = "fora do mecanismo 2 (grupo normal)" — mais lato do que só
+  // "está dentro de uma linha" (ver `alvosComOrigem` abaixo).
   const numaLinha = new Set<number>();
   const linhas = new Map<string, number[]>();
+  const alvosComOrigem = new Set<string>();
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO") return;
     const alvo = p.faturarCliente?.trim();
-    // Só entra na linha se for uma recolha "pura" (nada de seu a descarregar
-    // aqui) — uma paragem MISTA (descarrega localmente E recolhe para outro
-    // cliente) tem o seu próprio descarregado sem nada a ver com a linha; se
-    // entrasse, a subtração desse valor dava peso negativo/zero à linha (visto
-    // como "vazio" no consumo) e escondia o descarregado local da paragem, que
-    // fica sem nenhuma correção (não está em nenhum grupo). Fica de fora da
-    // linha -> cai no mecanismo 2 (grupo normal) com o seu peso completo.
-    if (alvo && clientesEntregues.has(alvo) && descarregado(p) === 0) {
+    if (!alvo || !clientesEntregues.has(alvo)) return;
+    alvosComOrigem.add(alvo);
+    // A origem NUNCA fica no grupo normal, com ou sem linha — o seu carregado
+    // tem destino conhecido (não é "reposicionamento" a ficar no mesmo fluxo).
+    numaLinha.add(i);
+    // Mas só entra mesmo na CONTA da linha se for uma recolha "pura" (nada de
+    // seu a descarregar aqui): uma paragem MISTA (descarrega localmente E
+    // recolhe para outro cliente) tem o seu descarregado local sem nada a ver
+    // com a linha — juntá-lo dava peso negativo/zero à linha (visto como
+    // "vazio" no consumo) E escondia o descarregado local, sem nenhuma
+    // correção. Fica de fora da conta (mas fora do grupo normal na mesma) ->
+    // sem `resultado[i]`, cai no fallback isolado da própria paragem
+    // (`pesoAproximadoTransportado`/`pesoParaConsumo`, ver perStop.ts) — o
+    // seu peso PRÓPRIO, não o de ninguém mais.
+    if (descarregado(p) === 0) {
       if (!linhas.has(alvo)) linhas.set(alvo, []);
       linhas.get(alvo)!.push(i);
-      numaLinha.add(i);
     }
   });
-  // Junta a própria entrega (a paragem cujo `cliente` é o alvo da linha).
+  // Junta a própria entrega (a paragem cujo `cliente` é o alvo de uma linha) —
+  // sai do grupo normal mesmo que a linha não se tenha formado (todas as
+  // origens desqualificadas por serem mistas): o seu descarregado É o que
+  // vinha da(s) origem(ns), não deve diluir-se num grupo que já não as inclui.
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO" || p.faturarCliente?.trim()) return;
     const nome = p.cliente?.trim();
-    if (nome && linhas.has(nome)) {
-      linhas.get(nome)!.push(i);
-      numaLinha.add(i);
-    }
+    if (!nome || !alvosComOrigem.has(nome)) return;
+    numaLinha.add(i);
+    if (linhas.has(nome)) linhas.get(nome)!.push(i);
   });
 
   for (const indices of linhas.values()) {
