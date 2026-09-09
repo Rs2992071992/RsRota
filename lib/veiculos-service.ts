@@ -3,7 +3,7 @@
 // de cálculo, só de uma agregação simples sobre as paragens do veículo.
 
 import { prisma } from "@/lib/db";
-import { linhasPaleteEfetivas } from "@/lib/calc/perStop";
+import { linhasPaleteEfetivas, pesoAproximadoDescarregado, pesoAproximadoCarregadoEfetivo } from "@/lib/calc/perStop";
 import type { PaleteLinha } from "@/lib/calc/types";
 
 const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -11,7 +11,10 @@ const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set"
 export interface EstatisticasVeiculo {
   cargasEfetuadas: number;
   clientesAtendidos: number;
-  /** Kg carregados + descarregados no ano corrente (soma das duas colunas). */
+  /** Kg carregados + descarregados no ano corrente — soma os 2 estilos de
+   * rota (nunca se sobrepõem numa mesma paragem): kg legado (modo "kg"
+   * manual, pré-2026-08-28) + peso aproximado (rotas por paletes, ver
+   * `lib/calc/perStop.ts::pesoAproximadoDescarregado`/`pesoAproximadoCarregadoEfetivo`). */
   kgAnoAtual: number;
   /** Paletes transportadas no ano corrente (recolha faturada a outro cliente com entrega na mesma rota não conta a dobra). */
   paletesAnoAtual: number;
@@ -35,6 +38,9 @@ type ParagemVeiculo = {
   paleteComprimentoMm: number | null;
   paleteLarguraMm: number | null;
   paletes: PaleteLinha[] | null;
+  pesoAproximado: number | null;
+  pesoAproximadoCarregado: number | null;
+  recolha: boolean;
   data: Date;
 };
 
@@ -99,6 +105,9 @@ export async function carregarEstatisticasVeiculo(veiculoId: number): Promise<Es
         paleteComprimentoMm: true,
         paleteLarguraMm: true,
         paletes: true,
+        pesoAproximado: true,
+        pesoAproximadoCarregado: true,
+        recolha: true,
         data: true,
       },
     })
@@ -118,15 +127,15 @@ export async function carregarEstatisticasVeiculo(veiculoId: number): Promise<Es
   const porMesPaletes = new Array(12).fill(0);
   paragens.forEach((p, i) => {
     if (p.data.getFullYear() !== anoAtual) return;
+    if (jaContadaNaEntrega.has(i)) return; // recolha faturada a outro cliente com entrega na mesma rota — já contada lá
     const mes = p.data.getMonth();
-    const kg = p.kgCarregados + p.kgDescarregados;
+    const kg =
+      p.kgCarregados + p.kgDescarregados + pesoAproximadoDescarregado(p) + pesoAproximadoCarregadoEfetivo(p);
     kgAnoAtual += kg;
     porMesKg[mes] += kg;
-    if (!jaContadaNaEntrega.has(i)) {
-      const nPal = nPaletesParagem(p);
-      paletesAnoAtual += nPal;
-      porMesPaletes[mes] += nPal;
-    }
+    const nPal = nPaletesParagem(p);
+    paletesAnoAtual += nPal;
+    porMesPaletes[mes] += nPal;
   });
   const serieMensalAnoAtual = NOMES_MES.map((mes, i) => ({ mes, kg: porMesKg[i] }));
   const serieMensalPaletesAnoAtual = NOMES_MES.map((mes, i) => ({ mes, paletes: porMesPaletes[i] }));
