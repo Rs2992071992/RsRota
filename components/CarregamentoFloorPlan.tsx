@@ -163,6 +163,10 @@ export default function CarregamentoFloorPlan({
             {/* Desenhado na horizontal: o eixo do comprimento (o mais comprido)
                 fica em X, a largura em Y — mais natural para ler um camião
                 visto de cima do que a orientação vertical (comprimento em Y). */}
+            <div className="mb-1 flex items-center justify-between text-[10px] font-medium uppercase tracking-wide text-gray-400">
+              <span>◄ Frente (cabine)</span>
+              <span>Portas ►</span>
+            </div>
             <svg
               viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
               className="w-full rounded-xl border border-gray-200 bg-gray-50 shadow-sm"

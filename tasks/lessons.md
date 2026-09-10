@@ -2,6 +2,41 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-10] | A planta de carga das Rotas arrumava as paletes pela ordem das
+  paragens (1.ª entrega encostada à cabine, `y=0`). O Ricardo (com print):
+  "as primeiras paletes da frente no camião são as últimas" — carrega-se ao
+  CONTRÁRIO da descarga (quem sai primeiro entra por último, à mão nas portas),
+  por isso a 1.ª entrega devia estar junto às portas e a última encostada à
+  cabine. 1.ª tentativa: inverter a ordem só na geração da planta
+  (`gerarPlantaCargaRota`/`PorTroco`), deixando `verificarEspacoCarga`
+  intocado. Errado: o packing é sensível à ordem (lição 2026-08-30), por isso
+  em 4 rotas reais (maravedis2, A2, maravedis, A22) a planta passava a colocar
+  um nº de paletes diferente do que o aviso "cabem X de Y" reportava — a mesma
+  inconsistência geometria-vs-contagens que a lição de 2026-09-08 tinha
+  garantido estar a zero. | Quando `verificarEspacoCarga` e as plantas
+  (`gerarPlantaCargaRota`, `gerarPlantaCargaPorTroco`) partilham o mesmo motor
+  (`empacotarEstado`), qualquer mudança de ORDEM de arrumação tem de ir no
+  ponto partilhado, nunca só num dos ramos — senão o desenho e o aviso
+  divergem. Fix: `empacotarEstado` arruma sempre com `.reverse()` (ordem
+  física de carga), usado pelos 3. Diff `git stash` contra as 30 rotas reais:
+  26 byte-a-byte iguais; 4 mudam o nº do aviso (todas já em aviso vermelho,
+  nenhuma entra/sai do aviso) — 3 ficam menos alarmistas (o packer encaixa
+  mais nessa ordem: A22 51→39, maravedis2 16→12, A2 8→7), maravedis 1→2.
+  `totalPaletes` e qualquer valor de dinheiro/rateio inalterados (esta função
+  não toca em custos). Rótulos "◄ Frente (cabine)" / "Portas ►" no
+  `CarregamentoFloorPlan` para o eixo deixar de ser ambíguo (vale também para
+  as Cargas manuais).
+
+- [2026-09-09] | O porte das 5 funcionalidades de paletes para a app Motorista
+  Android (2026-09-08) copiou `pesoAproximado` do `RegistoForm.tsx` do site mas
+  esqueceu o campo irmão `pesoAproximadoCarregado` ("peso recolhido") — a app
+  Android ficou sem forma de registar o peso do que foi recolhido numa paragem
+  Recolha/Mista. Regra: ao portar um formulário do site (`app/motorista/**`)
+  para `app-motorista-android/src/`, comparar campo a campo os dois estados
+  React (`estadoBase`/`f`) lado a lado, não só os que "parecem" o par
+  visual — campos assimétricos por tipoParagem (um só aparece em Descarga,
+  o outro só em Recolha/Mista) são fáceis de portar apenas um dos dois.
+
 - [2026-09-08] | No mesmo dia em que `pesosAproximadosEmTransito`/`totalPesoAproximado`
   foram lançados (ver entrada anterior), o Ricardo reportou uma rota real
   (RIC-Percam) com um caso que nenhum teste cobria: uma paragem MISTA

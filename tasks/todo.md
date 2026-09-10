@@ -2,6 +2,52 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Planta de carga das Rotas — ordem de carga invertida (2026-09-10)
+
+Pedido do Ricardo (com print): "as primeiras paletes da frente no camião são as
+últimas". A planta da rota arrumava a 1.ª paragem encostada à cabine (esquerda,
+`y=0`) e a última junto às portas — ao contrário da ordem física de carga
+(carrega-se ao contrário da descarga: quem sai primeiro entra por último, à mão
+nas portas).
+
+- [x] `lib/calc/cargaRota.ts`: `empacotarEstado` arruma sempre pela ordem
+  inversa das paragens (`.reverse()`) — partilhado por `verificarEspacoCarga`,
+  `gerarPlantaCargaRota` e `gerarPlantaCargaPorTroco` (senão o aviso e o
+  desenho divergem — packing é sensível à ordem, ver lessons 2026-09-10)
+- [x] `components/CarregamentoFloorPlan.tsx`: rótulos "◄ Frente (cabine)" /
+  "Portas ►" por cima de cada caixa (correto também para as Cargas manuais)
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: nota "Ordem de carga: a última
+  paragem encostada à cabine, a primeira junto às portas"
+- [x] +1 teste (`cargaRota.test.ts`: última paragem em `y=0`, primeira junto às
+  portas). 249 testes verdes, `tsc --noEmit` e `next build` limpos
+- [x] Diff `git stash` contra as 30 rotas reais: 26 iguais; 4 mudam o nº do
+  aviso vermelho (nenhuma entra/sai do aviso): A22 51→39, maravedis2 16→12,
+  A2 8→7 sem espaço (packer encaixa mais nesta ordem), maravedis 1→2.
+  `totalPaletes`/dinheiro inalterados
+- [ ] Commit + push
+- [ ] Confirmação visual do Ricardo numa rota real
+
+## ☑️ Fix: app Motorista Android — faltava o campo "Peso aproximado recolhido (kg)" (2026-09-09)
+
+Reportado pelo Ricardo: "na app offline, falta o campo dos kg recolhidos". O
+porte das 5 funcionalidades de paletes (2026-09-08) copiou `pesoAproximado`
+(peso descarregado) mas não `pesoAproximadoCarregado` (peso recolhido) do
+`RegistoForm.tsx` do site — em Recolha/Mista não havia onde o motorista
+registar o peso do que apanhou.
+
+- [x] `app-motorista-android/src/screens/Registar.tsx`: novo campo
+  `pesoAproximadoCarregado` no estado, validação, payload e reset ao
+  escolher veículo VAZIO; UI replica o site — "Peso aproximado (kg)"
+  escondido em Recolha, "Peso aproximado recolhido (kg)" escondido em Descarga
+- [x] `app-motorista-android/src/lib/types.ts`: `pesoAproximadoCarregado` em
+  `Paragem` e `NovaParagemPayload`
+- [x] `tsc -b` + `vite build` (Android) limpos
+- [x] `.apk` novo gerado (`npx cap sync android && ./gradlew assembleRelease`,
+  09/09 11:42) — `android/app/build/outputs/apk/release/app-release.apk`
+- [ ] Instalar o `.apk` novo no telemóvel do motorista
+- [ ] Teste manual do Ricardo (registar uma Recolha/Mista, confirmar que o
+  peso recolhido fica gravado)
+
 ## ☑️ Fix: paragem MISTA + faturarCliente contava a menos (paletes/peso/consumo) (2026-09-08)
 
 Pedido do Ricardo, ao testar RIC-Percam (paragem mista: descarrega 22 PL/28.365 kg
@@ -184,12 +230,13 @@ era maior: o modelo de paletes do Android ainda era o pré-catálogo
 - [x] `tsc --noEmit`, `npm test` (218, inalterados), `npm run build` (site) e
   `tsc -b && vite build` (Android) limpos; `oxlint` só com 3 avisos
   pré-existentes (mesmo padrão do `RegistoForm.tsx` do site)
-- [ ] Teste manual do Ricardo (registo real, correção no histórico)
-- [ ] Commit + push do site (Vercel builda automaticamente) — **atenção**:
-  a APK atualmente instalada espera `rotasRecentes: string[]`, o dropdown
-  "continuar rota recente" antigo parte até o `.apk` novo ser instalado
-- [ ] Gerar `.apk` novo (`npm run build && npx cap sync android && cd android
-  && ./gradlew assembleRelease`) e instalar no telemóvel do motorista
+- [x] Commit + push do site (`f240367`, já em `main`/Vercel)
+- [x] `.apk` novo gerado (`android/app/build/outputs/apk/release/app-release.apk`,
+  08/09 17:22, posterior a todas as fontes alteradas)
+- [ ] Instalar o `.apk` novo no telemóvel do motorista — **por confirmar com
+  o Ricardo**, a app instalada pode ainda estar na versão antiga
+- [ ] Teste manual do Ricardo (registo real, correção no histórico) —
+  só depois do `.apk` novo instalado
 
 ## 🔲 Estatísticas do veículo — kg a dobra em backhaul + paletes em falta (2026-09-08)
 

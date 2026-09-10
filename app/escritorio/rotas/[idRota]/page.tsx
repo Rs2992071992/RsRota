@@ -437,6 +437,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
               <summary className="cursor-pointer font-semibold">Planta de carga — Ida</summary>
               <p className="mb-3 mt-1 text-xs text-gray-400">
                 Momento de maior ocupação na Ida, gerado a partir das entregas/recolhas registadas.
+                Ordem de carga: a última paragem encostada à cabine, a primeira junto às portas.
               </p>
               <CarregamentoFloorPlan caixas={packingPorTroco.ida.caixas} />
             </details>
@@ -446,6 +447,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
               <summary className="cursor-pointer font-semibold">Planta de carga — Volta</summary>
               <p className="mb-3 mt-1 text-xs text-gray-400">
                 Momento de maior ocupação na Volta, gerado a partir das entregas/recolhas registadas.
+                Ordem de carga: a última paragem encostada à cabine, a primeira junto às portas.
               </p>
               <CarregamentoFloorPlan caixas={packingPorTroco.volta.caixas} />
             </details>

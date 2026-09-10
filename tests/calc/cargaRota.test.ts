@@ -365,6 +365,22 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
     expect(espaco.cabemTodas).toBe(false);
     expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
   });
+
+  it("ordem inversa: a última paragem fica encostada à frente (y=0), a primeira junto às portas", () => {
+    const stop = (cliente: string, km: number): ParagemCarga => ({
+      entregues: [{ ...P1300, nPaletes: 2, clienteNome: cliente }],
+      recolhidas: [],
+      tipoVeiculo: "CAMIAO",
+      kmInicial: km,
+    });
+    // Ordem das paragens: A (km 0) → B (km 50) → C (km 100).
+    const p = gerarPlantaCargaRota([CAMIAO], [stop("A", 0), stop("B", 50), stop("C", 100)]);
+    expect(p!.colocados).toHaveLength(6);
+    const frente = p!.colocados.reduce((m, it) => (it.y < m.y ? it : m));
+    const portas = p!.colocados.reduce((m, it) => (it.y > m.y ? it : m));
+    expect(frente.clienteNome).toBe("C"); // última entrega, carregada primeiro
+    expect(portas.clienteNome).toBe("A"); // primeira entrega, sai sem mexer no resto
+  });
 });
 
 describe("gerarPlantaCargaPorTroco — planta separada por Ida/Volta", () => {

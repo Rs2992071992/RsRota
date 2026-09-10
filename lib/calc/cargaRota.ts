@@ -162,9 +162,18 @@ interface EstadoArrumado {
 }
 
 /** Arruma um conjunto de linhas (um "momento" da rota) e devolve o resultado —
- * contagens e a geometria (para desenhar a planta desse momento, se for o pior). */
+ * contagens e a geometria (para desenhar a planta desse momento, se for o pior).
+ *
+ * As linhas são arrumadas pela ordem INVERSA das paragens — a última paragem a
+ * entregar fica encostada à frente do camião (fundo da caixa, y=0) e a
+ * primeira fica junto às portas. É a ordem física real de carga (carrega-se ao
+ * contrário da descarga: quem sai primeiro entra por último, à mão nas portas).
+ * `verificarEspacoCarga` e as plantas partilham esta mesma ordem, para o aviso
+ * "cabem X de Y" e o desenho nunca se contradizerem. */
 function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EstadoArrumado {
-  const validas = linhas.filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0);
+  const validas = linhas
+    .filter((l) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0)
+    .reverse();
   const totalPaletes = validas.reduce((s, l) => s + Math.floor(l.nPaletes), 0);
   if (totalPaletes === 0) {
     return {
@@ -224,6 +233,10 @@ const pior = (a: EstadoArrumado, b: EstadoArrumado): EstadoArrumado =>
  *
  * Devolve o **pior momento** (mais paletes sem espaço); `totalPaletes` =
  * paletes a bordo nesse momento.
+ *
+ * A arrumação de cada momento segue a ordem INVERSA das paragens (ver
+ * `empacotarEstado`) — a ordem física de carga. Partilhada com as plantas para
+ * o aviso e o desenho baterem certo.
  */
 export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
   const comLinhas = filtrarLinhasValidas(paragens);
@@ -250,6 +263,11 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
  * mesma simulação/definição de "pior" que `verificarEspacoCarga`, mas devolve
  * o packing em vez de só as contagens. `null` se não há caixa configurada ou
  * não há nada a bordo em rota nenhuma (nada para desenhar).
+ *
+ * A geometria é arrumada pela ordem INVERSA das paragens (ver
+ * `empacotarEstado`): a última entrega encostada à frente do camião (esquerda
+ * no desenho, junto à cabine), a primeira junto às portas — a ordem real de
+ * carga.
  */
 export function gerarPlantaCargaRota(
   caixas: CaixaInput[],
