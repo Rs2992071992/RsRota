@@ -24,7 +24,7 @@ nas portas).
   aviso vermelho (nenhuma entra/sai do aviso): A22 51→39, maravedis2 16→12,
   A2 8→7 sem espaço (packer encaixa mais nesta ordem), maravedis 1→2.
   `totalPaletes`/dinheiro inalterados
-- [ ] Commit + push
+- [x] Commit `f6b463f` + push (Vercel builda automaticamente)
 - [ ] Confirmação visual do Ricardo numa rota real
 
 ## ☑️ Fix: app Motorista Android — faltava o campo "Peso aproximado recolhido (kg)" (2026-09-09)
