@@ -23,7 +23,7 @@ rotas de PDF/import/export, geocode. Ver `tasks/lessons.md` para o detalhe.
   (prototype pollution/ReDoS) usado em `/api/importar`; bloqueio de login
   por `codigo`, não por IP
 - [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados) limpos
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit `1c75a25` + push (Vercel builda automaticamente)
 
 ## ⏸️ PARADO — plano para vender a app a uma transportadora (2026-09-12)
 
