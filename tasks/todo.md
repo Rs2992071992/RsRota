@@ -43,7 +43,7 @@ tempo (quase 50 t assumidas a bordo), inflacionando o consumo calculado.
   L/100km (correto: nada a bordo antes da recolha), entrega 41→35 (correto:
   só os 24.960 kg recolhidos, nunca a dobra); custo total da rota
   1221,04€→1198,56€; as outras 28 rotas ficam byte-a-byte iguais
-- [ ] Commit + push
+- [x] Commit `e397bc5` + push (Vercel builda automaticamente)
 - [ ] Confirmação visual do Ricardo em RIC-Tec-A24 (consumo de Ges-thc)
 
 ## ☑️ Recolha + entrega do mesmo cliente (sem faturarCliente) contava a dobra (2026-09-11)
