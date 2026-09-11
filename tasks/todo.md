@@ -39,7 +39,7 @@ ao mesmo tempo = 44 fantasma → banner "cabem 24 de 44 (20 sem espaço)" falso;
   desaparece (22 de 22 cabem); as outras 28 ficam byte-a-byte iguais (a 1ª
   tentativa, sem os guarda-corpos, tinha mudado mais 3 rotas incorretamente —
   greenopinion, Ges-ktubo, A2 — apanhado e corrigido antes de commitar)
-- [ ] Commit + push
+- [x] Commit `23aebbf` + push (Vercel builda automaticamente)
 - [ ] Confirmação visual do Ricardo em RIC-Tec-A24
 
 ## ☑️ Planta de carga das Rotas — ordem de carga invertida (2026-09-10)
