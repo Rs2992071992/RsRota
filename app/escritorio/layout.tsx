@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LogOut } from "lucide-react";
 import { exigirPerfil } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -21,8 +22,17 @@ export default async function EscritorioLayout({ children }: { children: React.R
       <header className="relative border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-manager.png" alt="RsRota Manager" className="h-14 w-auto rounded-lg py-1" />
+            {/* Fonte é 600x537px/604KB — `next/image` gera uma versão otimizada
+                (WebP/AVIF, dimensionada ao tamanho real exibido) em vez de
+                servir o PNG original em todas as páginas do escritório. */}
+            <Image
+              src="/logo-manager.png"
+              alt="RsRota Manager"
+              width={150}
+              height={134}
+              priority
+              className="h-14 w-auto rounded-lg py-1"
+            />
             <NavLinks vencidos={vencidos} />
           </div>
           <form action="/api/auth/logout" method="post">

@@ -2,6 +2,18 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-12] | Pedido do Ricardo de auditoria de "peso" do projeto encontrou
+  `app/escritorio/layout.tsx` a servir `public/logo-manager.png` (600×537px,
+  604 KB) num `<img>` cru para um logo de 56px de altura, em todas as páginas
+  do escritório — com um `// eslint-disable-next-line @next/next/no-img-element`
+  a calar o aviso do linter em vez de aplicar a correção que o próprio aviso
+  sugere. | Um `eslint-disable` num ficheiro de produção (não teste/script)
+  vale a pena revisitar de vez em quando — nem sempre é "falso positivo
+  aceite conscientemente", às vezes é só a correção mais chata a ter sido
+  adiada. Fix: `next/image` em vez de `<img>` (deixa o Next/Vercel gerar
+  WebP/AVIF no tamanho realmente exibido). Feito também em
+  `app/login/page.tsx` (logo-icon.png, mesmo padrão, achado secundário).
+
 - [2026-09-11] | Continuação da lição anterior (mesmo padrão, sítio
   diferente): depois de corrigir `totalPaletes`/ocupação para o
   reposicionamento Ges-thc, o Ricardo reparou pela FÍSICA ("repara, agora

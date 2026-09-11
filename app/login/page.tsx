@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Truck, Building2 } from "lucide-react";
 
 type Perfil = "ESCRITORIO" | "MOTORISTA";
@@ -105,7 +106,7 @@ export default function LoginPage() {
 
       <div className="card relative w-full max-w-sm border-0 shadow-2xl">
         <div className="mb-1 flex items-center gap-2">
-          <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg" />
+          <Image src="/logo-icon.png" alt="" width={80} height={80} priority className="h-10 w-10 rounded-lg" />
           <h1 className="text-xl font-bold tracking-tight text-brand">RsRota</h1>
         </div>
         <p className="mb-6 text-sm text-gray-500">A tua rota, os teus custos, sob controlo.</p>

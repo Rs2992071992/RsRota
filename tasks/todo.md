@@ -2,6 +2,31 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Otimização de peso — logo servido em `<img>` cru (2026-09-12)
+
+Pedido do Ricardo ("faz uma análise do projeto para saber se está muito
+pesado"). Análise completa: código (20.890 linhas), dependências, bundle JS
+(~1,3 MB total, code-split por página, `@react-pdf/renderer` isolado no
+servidor), base de dados (161 paragens — volume trivial) e queries (sem N+1)
+estavam todos leves. Único achado real: `app/escritorio/layout.tsx` servia
+`public/logo-manager.png` (600×537px, 604 KB) num `<img>` cru para mostrar um
+logo de 56px de altura — em TODAS as páginas do escritório — com um
+`eslint-disable-next-line @next/next/no-img-element` a silenciar o aviso em
+vez de o corrigir.
+
+- [x] `app/escritorio/layout.tsx`: `<img>` → `next/image` (`width=150
+  height=134`, `priority` — é o logo do cabeçalho, sempre visível sem scroll)
+- [x] `app/login/page.tsx`: mesmo fix em `logo-icon.png` (128×128/37 KB,
+  exibido a 40px) — achado secundário, mesmo padrão
+- [x] `public/login-bg.jpg` (fundo CSS `background-image`, 84 KB) deixado
+  intocado — já é um tamanho razoável e converter para `next/image` exigiria
+  restruturar para `fill` sem ganho que justifique o risco
+- [x] `tsc --noEmit` e `next build` limpos, `npm test` (259, inalterados —
+  mudança de UI, não de motor de cálculo)
+- [ ] Commit + push (Vercel builda automaticamente)
+- [ ] Confirmação visual do Ricardo (logo do escritório e do login continuam
+  com o aspeto de sempre, agora servidos otimizados)
+
 ## ☑️ Consumo/custo também dobrava no reposicionamento Ges-thc (pesosEmTransitoGenerico) (2026-09-11)
 
 Continuação do fix anterior (mesmo dia): o Ricardo reparou ("repara, agora
