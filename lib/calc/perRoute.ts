@@ -63,9 +63,24 @@ function pesosEmTransitoGenerico(
 ): (number | undefined)[] {
   const resultado: (number | undefined)[] = paragens.map(() => undefined);
 
-  // 1) Linhas recolha->entrega ligadas por faturarCliente.
+  // 1) Linhas recolha->entrega ligadas por `faturarCliente` OU, sem ele, pelo
+  // próprio `cliente` da recolha (reposicionamento: recolhe e mais tarde
+  // entrega o mesmo lote ao mesmo cliente, ex. RIC-Tec-A24 — recolhe em
+  // Ges-thc, entrega essas mesmas paletes no fim; mesma regra já aplicada a
+  // `totalPaletes`/ocupação, ver tasks/lessons.md 2026-09-11). `clientesEntregues`
+  // (solto — qualquer cliente da rota) continua a servir só o `faturarCliente`,
+  // como sempre; a ligação por cliente próprio usa `clientesComEntregaReal`
+  // (estrito — só clientes com descarregado>0 nesta rota), senão uma recolha
+  // solta sem entrega nenhuma excluir-se-ia a si própria (o seu cliente está
+  // sempre no set solto).
   const clientesEntregues = new Set(
     paragens.filter((p) => p.tipoVeiculo !== "VAZIO").map((p) => p.cliente?.trim()),
+  );
+  const clientesComEntregaReal = new Set(
+    paragens
+      .filter((p) => p.tipoVeiculo !== "VAZIO" && descarregado(p) > 0)
+      .map((p) => p.cliente?.trim())
+      .filter((x): x is string => !!x),
   );
   // `numaLinha` = "fora do mecanismo 2 (grupo normal)" — mais lato do que só
   // "está dentro de uma linha" (ver `alvosComOrigem` abaixo).
@@ -74,8 +89,21 @@ function pesosEmTransitoGenerico(
   const alvosComOrigem = new Set<string>();
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO") return;
-    const alvo = p.faturarCliente?.trim();
-    if (!alvo || !clientesEntregues.has(alvo)) return;
+    const viaFatura = p.faturarCliente?.trim();
+    // Ligação pelo próprio cliente só para recolha PURA — `p.recolha` (não só
+    // `descarregado(p) === 0`, que também é verdade para uma ENTREGA vulgar
+    // sem peso aproximado registado; sem este `p.recolha`, essa entrega
+    // "sem peso" seria mal-interpretada como uma recolha e ligada à entrega
+    // seguinte do mesmo cliente — bug real apanhado no diff contra as rotas
+    // reais, RIC-Plas-Sonae: 2 entregas a "Plas-Sonae", uma sem peso
+    // registado, davam peso em trânsito negativo). Uma MISTA (`p.recolha`
+    // true mas com descarregado>0) também não liga pelo próprio cliente — a
+    // sua entrega local não tem nada a ver com a sua recolha (lotes
+    // diferentes por definição).
+    const alvo = viaFatura || (p.recolha && descarregado(p) === 0 ? p.cliente?.trim() : undefined);
+    if (!alvo) return;
+    const clientesAlvo = viaFatura ? clientesEntregues : clientesComEntregaReal;
+    if (!clientesAlvo.has(alvo)) return;
     alvosComOrigem.add(alvo);
     // A origem NUNCA fica no grupo normal, com ou sem linha — o seu carregado
     // tem destino conhecido (não é "reposicionamento" a ficar no mesmo fluxo).
@@ -98,8 +126,13 @@ function pesosEmTransitoGenerico(
   // sai do grupo normal mesmo que a linha não se tenha formado (todas as
   // origens desqualificadas por serem mistas): o seu descarregado É o que
   // vinha da(s) origem(ns), não deve diluir-se num grupo que já não as inclui.
+  // `numaLinha.has(i)` (não só `p.faturarCliente`) exclui qualquer origem já
+  // processada acima — incl. uma recolha ligada pelo PRÓPRIO cliente (sem
+  // faturarCliente): sem este `numaLinha.has(i)`, essa origem passaria aqui
+  // outra vez (o seu próprio `cliente` está em `alvosComOrigem`) e entraria
+  // duplicada em `linhas`, com um índice a mais na conta da linha.
   paragens.forEach((p, i) => {
-    if (p.tipoVeiculo === "VAZIO" || p.faturarCliente?.trim()) return;
+    if (p.tipoVeiculo === "VAZIO" || numaLinha.has(i)) return;
     const nome = p.cliente?.trim();
     if (!nome || !alvosComOrigem.has(nome)) return;
     numaLinha.add(i);

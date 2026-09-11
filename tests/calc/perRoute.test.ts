@@ -561,6 +561,20 @@ describe("pesosEmTransito", () => {
     expect(r).toEqual([500, 600]);
   });
 
+  it("recolha PURA e entrega do MESMO cliente, sem faturarCliente (reposicionamento) -> linha à parte, não conta a dobra", () => {
+    const r = pesosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, kgDescarregados: 5000 }),
+      // Recolhe 4000 em X (sem faturarCliente)...
+      paragemBase({ cliente: "X", tipoViagem: "Volta", kmInicial: 200, kmFinal: 250, recolha: true, kgCarregados: 4000 }),
+      // ...e entrega esses MESMOS 4000 kg no fim, ao próprio X.
+      paragemBase({ cliente: "X", tipoViagem: "Volta", kmInicial: 250, kmFinal: 300, kgDescarregados: 4000 }),
+    ]);
+    // Sem a ligação, a entrega veria os 4000 recolhidos SOMADOS aos seus
+    // próprios 4000 (grupo normal, pré-carregados desde o início) = 8000.
+    expect(r[1]).toBe(0);
+    expect(r[2]).toBe(4000);
+  });
+
   it("uma linha não contamina o grupo normal do resto da rota", () => {
     const r = pesosEmTransito([
       // Linha Tecfil (fora do agrupamento normal por completo).
@@ -626,6 +640,57 @@ describe("pesosAproximadosEmTransito — paralelo a pesosEmTransito, mas para pa
     // nenhuma paragem fora da linha, por isso não há "grupo normal" a testar
     // à parte, mas a MESMA proteção de pesosEmTransito aplica-se).
     expect(r).toEqual([0, 4000, 5800]);
+  });
+
+  it("recolha PURA e entrega do MESMO cliente, sem faturarCliente (reposicionamento, caso real RIC-Tec-A24) -> linha à parte, não conta a dobra", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "Tec-A2", kmInicial: 0, kmFinal: 100, pesoAproximado: 10000 }),
+      paragemBase({ cliente: "Vazio", tipoVeiculo: "VAZIO", kmInicial: 150, kmFinal: 150 }),
+      // Recolhe 24960 em Ges-thc (sem faturarCliente)...
+      paragemBase({ cliente: "Ges-thc", tipoViagem: "Volta", kmInicial: 200, kmFinal: 250, recolha: true, pesoAproximadoCarregado: 24960 }),
+      // ...e entrega esse MESMO peso no fim, ao próprio Ges-thc.
+      paragemBase({ cliente: "Ges-thc", tipoViagem: "Volta", kmInicial: 250, kmFinal: 300, pesoAproximado: 24960 }),
+    ]);
+    // Sem a ligação, a entrega veria os 24960 recolhidos SOMADOS aos seus
+    // próprios 24960 (o "grupo normal" assume-os pré-carregados desde o
+    // início do segmento) = 49920 — quase o dobro do real. Com a linha: a
+    // recolha começa vazia (0, nada deste lote ainda a bordo) e a entrega vê
+    // só o que foi recolhido (24960), nunca a soma.
+    expect(r[2]).toBe(0);
+    expect(r[3]).toBe(24960);
+  });
+
+  it("recolha PURA de um cliente SEM entrega nesta rota (sem faturarCliente) -> sem correção (não é reposicionamento, comportamento de sempre)", () => {
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 100, pesoAproximado: 5000 }),
+      // Recolha solta em "Fornecedor" — nunca entregue nesta rota.
+      paragemBase({ cliente: "Fornecedor", kmInicial: 100, kmFinal: 200, recolha: true, pesoAproximadoCarregado: 3000 }),
+    ]);
+    // "A" e "Fornecedor" ficam no mesmo grupo normal de sempre (sem linha
+    // nenhuma a formar-se — o cliente da recolha não tem entrega na rota).
+    expect(r).toEqual([5000, 0]);
+  });
+
+  it("2 entregas do MESMO cliente (recolha=false), uma sem pesoAproximado registado -> NÃO liga como reposicionamento (caso real RIC-Plas-Sonae)", () => {
+    // A 2ª entrega tem pesoAproximado null (descarregado efetivo = 0), mas
+    // NÃO é uma recolha (`recolha: false`) — não pode ser confundida com uma
+    // recolha "pura" só porque o descarregado dá zero (bug real: dava peso em
+    // trânsito negativo à 2ª entrega).
+    const r = pesosAproximadosEmTransito([
+      paragemBase({ cliente: "Plas-Sonae", kmInicial: 0, kmFinal: 100, pesoAproximado: 18150 }),
+      paragemBase({ cliente: "Plas-Sonae", kmInicial: 100, kmFinal: 200 }), // sem pesoAproximado
+    ]);
+    expect(r).toEqual([18150, 0]);
+    expect(r.every((v) => (v ?? 0) >= 0)).toBe(true);
+  });
+
+  it("paragem MISTA (entrega ≠ recolha, sem faturarCliente) não liga pelo próprio cliente — grupo normal de sempre", () => {
+    const r = pesosAproximadosEmTransito([
+      // Descarrega 6000 e recolhe 4000 no mesmo cliente/stop — lotes diferentes.
+      paragemBase({ cliente: "Tecfence", kmInicial: 0, kmFinal: 50, recolha: true, pesoAproximado: 6000, pesoAproximadoCarregado: 4000 }),
+      paragemBase({ cliente: "B", kmInicial: 50, kmFinal: 100, pesoAproximado: 500 }),
+    ]);
+    expect(r).toEqual([6500, 4500]); // mesmo cálculo do "grupo normal" de sempre (sem ligação nenhuma)
   });
 
   it("paragem MISTA faturada a outro cliente (caso real RIC-Percam): fica de fora da linha E do grupo normal, cada uma com o resultado indefinido (cai no fallback isolado — peso próprio, não misturado)", () => {

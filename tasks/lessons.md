@@ -2,6 +2,40 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-11] | Continuação da lição anterior (mesmo padrão, sítio
+  diferente): depois de corrigir `totalPaletes`/ocupação para o
+  reposicionamento Ges-thc, o Ricardo reparou pela FÍSICA ("repara, agora
+  aumenta a média de consumo" — uma entrega devia aliviar peso, não
+  aumentá-lo) que faltava aplicar a mesma correção a
+  `pesosEmTransitoGenerico` (consumo/custo combustível — dinheiro real). Ao
+  estender essa função com a mesma ideia (ligar recolha→entrega pelo próprio
+  `cliente`, não só `faturarCliente`), 2 bugs reais, ambos só apanhados pelo
+  diff `git stash` contra as 29 rotas reais (nunca pelos testes do cenário
+  novo — teria passado ao lado dos dois sem essa disciplina): (a) o passo
+  "junta a própria entrega" continuava a excluir origens já processadas
+  filtrando por `p.faturarCliente?.trim()` — como a nova origem (ligada pelo
+  próprio cliente) não tem `faturarCliente`, essa paragem era reprocessada e
+  entrava DUPLICADA no array `linhas`, com um índice a mais na conta; (b) a
+  condição usava `descarregado(p) === 0` sozinha como proxy de "é uma
+  recolha pura" — mas uma ENTREGA NORMAL sem peso aproximado registado
+  (`pesoAproximado` null, comum em dados reais) também dá `descarregado === 0`
+  sem ser recolha nenhuma; em RIC-Plas-Sonae (2 entregas ao mesmo cliente, a
+  2ª sem peso registado) isto ligava as duas como reposicionamento, dando
+  peso em trânsito NEGATIVO à 2ª. | (1) Uma condição "exclui X se já
+  processado" tem de usar o mesmo conjunto (`numaLinha`, não um proxy como
+  `faturarCliente`) que o passo anterior usa para MARCAR X como processado —
+  se o critério de entrada mudar (aqui: já não exige `faturarCliente`), o
+  critério de saída tem de acompanhar, senão duplica. (2) Nunca usar "um
+  valor numérico dá zero" como proxy de "isto é do tipo Y" quando existe um
+  campo booleano explícito (`p.recolha`) para essa distinção — um valor
+  zero/null é ambíguo (pode ser "não há nada" tanto para o tipo Y como para
+  qualquer outro), o booleano não é. Ver [[cargaRota.ts::alvoRecolha]] e
+  `perRoute.ts::totalPaletes` (fix irmão do mesmo dia) — ambos já usavam o
+  campo estrutural certo (`entregues.length`/`p.recolha`), só
+  `pesosEmTransitoGenerico` escorregou para o proxy numérico. Diff final:
+  só RIC-Tec-A24 muda (consumo Ges-thc 35/41→24/35 L/100km, custo
+  1221,04→1198,56€), as outras 28 rotas reais ficam iguais.
+
 - [2026-09-11] | O Ricardo reportou (rota real RIC-Tec-A24): recolhe 22
   paletes em Ges-thc na Volta e entrega essas MESMAS 22 no fim, ao próprio
   Ges-thc (reposicionamento) — sem `faturarCliente` (esse campo só liga uma

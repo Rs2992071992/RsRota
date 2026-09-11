@@ -2,6 +2,50 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Consumo/custo também dobrava no reposicionamento Ges-thc (pesosEmTransitoGenerico) (2026-09-11)
+
+Continuação do fix anterior (mesmo dia): o Ricardo reparou ("repara, agora
+aumenta a média de consumo") que a entrega final em Ges-thc (RIC-Tec-A24)
+mostrava 41 L/100km — o consumo mais alto da rota, quando fisicamente devia
+BAIXAR (entrega = camião a aliviar peso). Causa: `totalPaletes`/ocupação já
+tinham sido corrigidos (secção acima), mas `pesosEmTransitoGenerico` (que
+alimenta o consumo/custo de combustível, dinheiro real) só ligava
+recolha→entrega via `faturarCliente` — sem ele, a recolha (24.960 kg) e a
+entrega (24.960 kg) do mesmo lote em Ges-thc contavam-se as DUAS ao mesmo
+tempo (quase 50 t assumidas a bordo), inflacionando o consumo calculado.
+
+- [x] `lib/calc/perRoute.ts::pesosEmTransitoGenerico`: mesma extensão do fix
+  anterior — liga também pelo próprio `cliente` quando a recolha é PURA
+  (`p.recolha === true` E `descarregado(p) === 0`)
+- [x] **2 bugs reais apanhados pelo diff contra as rotas reais antes de
+  commitar** (nenhum dos dois coberto pelos testes do cenário novo,
+  só descoberto correndo contra dados reais — mesma disciplina de sempre):
+  (a) a 1ª versão do "junta a própria entrega" ainda usava
+  `p.faturarCliente?.trim()` para excluir origens já processadas — como a
+  origem agora pode não ter `faturarCliente` nenhum (liga pelo próprio
+  cliente), essa paragem era reprocessada e entrava DUPLICADA em `linhas`,
+  dando peso em trânsito errado; fix: usar `numaLinha.has(i)` (mais lato,
+  cobre as duas origens) em vez de `p.faturarCliente?.trim()`;
+  (b) a condição inicial usava só `descarregado(p) === 0` como proxy de
+  "recolha pura" — mas isso é IGUALMENTE verdade para uma ENTREGA normal sem
+  peso aproximado registado (`pesoAproximado` null); em RIC-Plas-Sonae (2
+  entregas ao mesmo cliente, a 2ª sem peso registado) isto ligava as duas
+  como se fosse um reposicionamento, dando peso em trânsito NEGATIVO à 2ª.
+  Fix: exigir também `p.recolha === true` na condição
+- [x] +4 testes (`pesosAproximadosEmTransito`: reposicionamento não soma,
+  recolha solta sem entrega fica normal, MISTA não liga por cliente próprio,
+  2 entregas do mesmo cliente sem `recolha` não ligam — regressão direta do
+  bug (b); `pesosEmTransito` kg: mesmo reposicionamento). 259 testes verdes,
+  `tsc`/`next build` limpos
+- [x] Diff `git stash` contra as 29 rotas reais (2 rondas — a 1ª apanhou
+  RIC-Plas-Sonae a mudar incorretamente por causa do bug (b), corrigido antes
+  de commitar): **só RIC-Tec-A24 muda** — consumo de Ges-thc recolha 35→24
+  L/100km (correto: nada a bordo antes da recolha), entrega 41→35 (correto:
+  só os 24.960 kg recolhidos, nunca a dobra); custo total da rota
+  1221,04€→1198,56€; as outras 28 rotas ficam byte-a-byte iguais
+- [ ] Commit + push
+- [ ] Confirmação visual do Ricardo em RIC-Tec-A24 (consumo de Ges-thc)
+
 ## ☑️ Recolha + entrega do mesmo cliente (sem faturarCliente) contava a dobra (2026-09-11)
 
 Pedido do Ricardo (rota real RIC-Tec-A24): "aquando vais para uma recolha na
