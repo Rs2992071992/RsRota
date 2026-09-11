@@ -2,6 +2,108 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ⏸️ PARADO — plano para vender a app a uma transportadora (2026-09-12)
+
+**Estado: em pausa a pedido do Ricardo (2026-09-12).** O objetivo imediato
+passou a ser só domínio próprio para uso pessoal/da própria empresa (ver
+secção seguinte) — isto NÃO faz parte do trabalho ativo. Fica registado tal
+e qual para retomar no futuro, se/quando o Ricardo decidir avançar com a
+venda a outra transportadora. Não iniciar nenhuma fase sem pedido explícito.
+
+Pedido original do Ricardo: quer saber o que falta fazer para poder vender esta app a
+uma empresa de transportes, **sem arriscar os dados reais que está a inserir
+agora** (161 paragens/31 rotas na BD de produção, Neon). A app é hoje
+100% mono-empresa (`Parametros.id` é singleton fixo a `1`, sem `empresaId` em
+lado nenhum) — "vender" a curto prazo só pode ser "instância dedicada nova"
+(deploy Vercel + BD Neon próprios por cliente), não SaaS multi-tenant.
+
+### Regra de ouro (vale para todas as fases abaixo)
+**Nunca testar nada disto contra o projeto Vercel / BD Neon de produção
+atuais.** Toda a validação usa uma BD Neon separada (branch ou projeto novo)
++ um deployment Vercel separado (preview ou projeto novo). `npm run db:reset`
+NUNCA corre contra a `DATABASE_URL` de produção.
+
+### Fase 0 — Rede de segurança (fazer primeiro, ~15 min, zero risco)
+- [ ] Confirmar o plano Neon atual e a retenção do point-in-time recovery
+- [ ] `pg_dump`/export manual da BD de produção para um ficheiro fora do
+  repo (backup extra, independente da Neon)
+- [ ] Confirmar que o `.env` local aponta para a BD certa antes de qualquer
+  comando `db:push`/`db:reset` ser sequer considerado
+
+### Fase 1 — Auditoria técnica ("o que falta para clonar em segurança")
+Estado atual de cada peça (verificar, não é tudo por fazer):
+- [x] `prisma/seed.ts` já é genérico e idempotente (parâmetros default,
+  1 veículo "Camião principal", pneus-tipo) — dá uma base limpa por instância
+- [x] `.env.example` já documenta todas as env vars necessárias
+  (`DATABASE_URL`/`DIRECT_URL`/`AUTH_SECRET`/`ORS_API_KEY`/`TOLLGURU_API_KEY`/
+  `APP_ORIGINS_PERMITIDAS`)
+- [ ] PINs por defeito (`1234`/`0000`, documentados no README) — falta um
+  passo explícito "trocar no 1º acesso" no checklist de onboarding (hoje é
+  fácil esquecer)
+- [ ] Validar que `/api/importar` (Excel) cobre o que uma empresa nova
+  precisa importar de uma vez (veículos, motoristas, clientes) sem exigir
+  criação manual um a um
+- [ ] Decidir o que fazer à vulnerabilidade do pacote `xlsx` (CDN Sheetjs,
+  prototype pollution/ReDoS sem fix) antes de dar acesso de importação a
+  utilizadores fora de casa — ver lessons.md 2026-08-16
+- [ ] `grep` ao código (não só à BD) por qualquer nome/valor específico do
+  teu negócio hardcoded fora do schema (ex. nomes de clientes/veículos em
+  fixtures, textos de exemplo)
+- [ ] Decidir branding: nome "RsRota" fixo para todos os clientes, ou
+  white-label (logo/nome configurável)?
+
+### Fase 2 — Ensaio (rehearsal) num ambiente descartável
+- [ ] Criar uma Neon DB **branch** de teste (cópia instantânea, isolada da
+  produção)
+- [ ] Apontar um Vercel **Preview Deployment** a essa branch (env var
+  `DATABASE_URL` só nesse ambiente)
+- [ ] Correr o fluxo completo "nova instância" do zero: `db:push` + `db:seed`
+  + trocar PINs + configurar `Parametros` + importar 1 veículo/motorista/
+  cliente fictício + registar 1 rota de teste
+- [ ] Cronometrar — isto decide se o modelo "cópia dedicada" é rentável
+  (quanto tempo/cliente) ou se precisa de mais automação antes de vender
+- [ ] Corrigir o que travar no caminho
+
+### Fase 3 — Kit de "nova instância" (documentar/scriptar)
+- [ ] Guia passo-a-passo (ou script) a partir do que resultou na Fase 2
+- [ ] Separar claramente o que é standard (schema, motor de cálculo,
+  `lib/calc/**`) do que é por-cliente (`Parametros`, frota, catálogo de
+  paletes, tabela de portagens)
+
+### Fase 4 — Parte não-técnica (pode correr em paralelo às fases 1-3)
+- [ ] Preço (setup + mensalidade) — ver conversa anterior desta sessão
+- [ ] Contrato/RGPD (advogado): limitação de responsabilidade, subcontratante
+  de dados dos motoristas
+- [ ] Demo com dados fictícios (nunca os dados reais de produção)
+
+### Fase 5 — Piloto
+- [ ] 1º cliente, ambiente 100% separado (projeto Vercel + BD Neon próprios),
+  sem qualquer ligação à tua instância
+
+**Próximo passo (quando retomado):** confirmar com o Ricardo por qual fase
+começar (Fase 0 é imediata e sem risco; Fase 1 é só auditoria, também sem
+tocar em código).
+
+## 🔲 Domínio próprio para uso pessoal (2026-09-12)
+
+Pedido do Ricardo, a seguir ao plano acima ter ficado parado: quer um
+domínio próprio para a app atual (uso pessoal/da própria empresa), não uma
+instância nova. Confirmado no código: zero referências fixas ao domínio
+`app-logistica-olive.vercel.app` no site, cookie de sessão sem `domain`
+fixo, CORS só relevante para a app Android (origem diferente) — é só
+configuração Vercel + DNS, sem tocar em código nem na BD. A app Android
+aponta para o domínio `.vercel.app` atual (`.env.production`), que continua
+a funcionar em paralelo mesmo depois de adicionar o domínio novo (não
+precisa de mudar nada aí, a menos que o Ricardo queira mais tarde).
+
+- [ ] Ricardo escolhe/confirma o domínio (registado ou a registar)
+- [ ] Vercel → projeto → Settings → Domains → adicionar o domínio
+- [ ] Criar os registos DNS que o Vercel indicar no registador do domínio
+- [ ] Confirmar HTTPS ativo e o site a responder no domínio novo
+- [ ] (opcional, sem pressa) atualizar `VITE_API_BASE` na app Android +
+  `.apk` novo, só se um dia se quiser que a app do motorista também use o
+  domínio novo
+
 ## ☑️ Otimização de peso — logo servido em `<img>` cru (2026-09-12)
 
 Pedido do Ricardo ("faz uma análise do projeto para saber se está muito
