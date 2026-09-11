@@ -213,6 +213,25 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
       expect(r.totalPaletes).toBe(9);
     });
 
+    it("recolha PURA e entrega do MESMO cliente, sem faturarCliente (reposicionamento, caso real RIC-Tec-A24) -> pico não é a soma", () => {
+      const paragens: ParagemCarga[] = [
+        { entregues: [], recolhidas: [{ ...P1300, nPaletes: 8, clienteNome: "Ges-thc" }], tipoVeiculo: "CAMIAO", kmInicial: 0, cliente: "Ges-thc" },
+        { entregues: [{ ...P1300, nPaletes: 8, clienteNome: "Ges-thc" }], recolhidas: [], tipoVeiculo: "CAMIAO", kmInicial: 100, cliente: "Ges-thc" },
+      ];
+      const r = verificarEspacoCarga([CAMIAO], paragens);
+      // Sem a ligação, o pico seria 16 (recolhidas em 0 + "entregues desde o
+      // início" em 1) — mais do que cabe no camião (10). Com a ligação, o
+      // pico é 8 (nunca há 16 a bordo ao mesmo tempo) — cabe.
+      expect(r.totalPaletes).toBe(8);
+      expect(r.cabemTodas).toBe(true);
+    });
+
+    it("paragem MISTA (entrega ≠ recolha) não liga pelo próprio cliente — comportamento normal de mista", () => {
+      const paragens: ParagemCarga[] = [mista(6, 4, 0)];
+      const r = verificarEspacoCarga([CAMIAO], paragens);
+      expect(r.totalPaletes).toBe(6); // pico = max(6, 4), como qualquer mista
+    });
+
     it("2 entregas para o mesmo alvo: só a 1ª fecha a linha (limitação assumida)", () => {
       const paragens: ParagemCarga[] = [
         recolhaPara(5, 0, "Cliente A"),

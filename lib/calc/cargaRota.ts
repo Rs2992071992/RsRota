@@ -355,9 +355,20 @@ function estadosDaRota(
   const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
   const n = ordenadas.length;
 
-  // Linhas recolha->entrega ligadas por faturarCliente (ver comentário acima).
-  // Passo 1: recolhas cujo faturarCliente aponta para um cliente que também
-  // tem entrega nesta rota. Passo 2: a(s) entrega(s) desse cliente.
+  // Linhas recolha->entrega (ver comentário acima). Passo 1: recolhas cujo
+  // alvo tem também uma entrega nesta rota. O alvo é `faturarCliente` (recolha
+  // faturada a outro cliente) OU, numa recolha PURA (sem entrega própria), o
+  // seu próprio `cliente` — recolher e mais tarde entregar as mesmas paletes
+  // ao/no mesmo cliente (reposicionamento; ex. RIC-Tec-A24: recolhe 22 em
+  // Ges-thc, entrega essas 22 no fim) é o mesmo lote físico, não pode contar a
+  // dobra na ocupação. Uma MISTA (descarrega E recolhe) nunca liga pelo
+  // próprio cliente — a sua entrega não tem nada a ver com a sua recolha.
+  // Passo 2: a(s) entrega(s) desse alvo.
+  const alvoRecolha = (p: {
+    faturarCliente?: string | null;
+    cliente?: string;
+    entregues: LinhaCarga[];
+  }) => p.faturarCliente?.trim() || (p.entregues.length === 0 ? p.cliente?.trim() : undefined);
   const clientesComEntrega = new Set(
     ordenadas
       .filter((p) => p.entregues.length > 0)
@@ -367,7 +378,7 @@ function estadosDaRota(
   const numaLinha = new Set<number>();
   const alvos = new Set<string>();
   ordenadas.forEach((p, i) => {
-    const alvo = p.faturarCliente?.trim();
+    const alvo = alvoRecolha(p);
     if (alvo && p.recolhidas.length > 0 && clientesComEntrega.has(alvo)) {
       numaLinha.add(i);
       alvos.add(alvo);
@@ -415,8 +426,7 @@ function estadosDaRota(
     // (a entrega, se existir, tem índice >= j) — atravessa segmentos/VAZIO.
     ordenadas.forEach((p, i) => {
       if (!numaLinha.has(i) || p.recolhidas.length === 0 || i >= j) return;
-      const alvo = p.faturarCliente!.trim();
-      const idxEntrega = entregaIndicePorAlvo.get(alvo);
+      const idxEntrega = entregaIndicePorAlvo.get(alvoRecolha(p)!);
       if (idxEntrega == null || j <= idxEntrega) aBordo.push(...p.recolhidas);
     });
 

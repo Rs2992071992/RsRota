@@ -2,6 +2,46 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Recolha + entrega do mesmo cliente (sem faturarCliente) contava a dobra (2026-09-11)
+
+Pedido do Ricardo (rota real RIC-Tec-A24): "aquando vais para uma recolha na
+volta, carregas as paletes e depois no fim entregas, ele tá a somar em vez de
+diminuir no final". Confirmado: as 22 paletes recolhidas em Ges-thc (Volta) são
+as MESMAS entregues no fim ao próprio Ges-thc — um reposicionamento sem
+`faturarCliente` (que só liga recolha a ENTREGA DE OUTRO cliente). Sem ligação
+nenhuma entre as duas linhas, a simulação de ocupação contava as 22 recolhidas
+(ficam a bordo até ao fim) E as 22 entregues (assumidas a bordo desde o início)
+ao mesmo tempo = 44 fantasma → banner "cabem 24 de 44 (20 sem espaço)" falso; e
+"Paletes transportadas" somava 66 em vez de 44.
+
+- [x] `lib/calc/cargaRota.ts::estadosDaRota`: a linha recolha→entrega passa a
+  também ligar pelo próprio `cliente` (não só `faturarCliente`) quando a
+  recolha é PURA (sem entrega própria) — mesmo mecanismo já usado para
+  faturarCliente, só a origem do alvo muda
+- [x] `lib/calc/perRoute.ts::calcularRota` (`totalPaletes`): mesma regra —
+  `jaContadaNaEntrega` passa a excluir também uma recolha pura cujo próprio
+  cliente tem uma entrega REAL nesta rota (`clientesComEntregaReal`, calculado
+  à parte do `faturarCliente`, que continua a usar o set "solto" de sempre)
+- [x] Guarda-corpo essencial (apanhado no diff real, corrigido antes de
+  commitar): a 1ª tentativa ligava por QUALQUER recolha com o mesmo cliente,
+  o que (a) uma recolha pura sem entrega nenhuma na rota excluía-se A SI
+  PRÓPRIA (o seu cliente está sempre na lista "solta") e (b) uma paragem MISTA
+  perdia a sua própria entrega da simulação de ocupação ao ser puxada para a
+  linha pelo lado da recolha. Fix: só liga por cliente próprio quando (i) o
+  alvo tem uma entrega REAL (não só "aparece na rota") e (ii) a recolha é
+  PURA (sem entrega própria — uma mista nunca liga pelo seu cliente)
+- [x] +4 testes (`cargaRota.test.ts`: reposicionamento não soma, mista não liga
+  por cliente próprio; `perRoute.test.ts`: reposicionamento, recolha solta sem
+  entrega continua a contar, mista não afetada). 254 testes verdes, `tsc` e
+  `next build` limpos
+- [x] Diff `git stash` contra as 29 rotas reais (contra o commit anterior,
+  `f6b463f`): só RIC-Tec-A24 muda — totalPaletes 66→44, banner "não cabem"
+  desaparece (22 de 22 cabem); as outras 28 ficam byte-a-byte iguais (a 1ª
+  tentativa, sem os guarda-corpos, tinha mudado mais 3 rotas incorretamente —
+  greenopinion, Ges-ktubo, A2 — apanhado e corrigido antes de commitar)
+- [ ] Commit + push
+- [ ] Confirmação visual do Ricardo em RIC-Tec-A24
+
 ## ☑️ Planta de carga das Rotas — ordem de carga invertida (2026-09-10)
 
 Pedido do Ricardo (com print): "as primeiras paletes da frente no camião são as

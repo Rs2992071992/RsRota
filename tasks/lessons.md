@@ -2,6 +2,41 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-11] | O Ricardo reportou (rota real RIC-Tec-A24): recolhe 22
+  paletes em Ges-thc na Volta e entrega essas MESMAS 22 no fim, ao próprio
+  Ges-thc (reposicionamento) — sem `faturarCliente` (esse campo só liga uma
+  recolha à entrega de OUTRO cliente). A simulação de ocupação
+  (`cargaRota.ts::estadosDaRota`) e `totalPaletes` (`perRoute.ts`) só sabiam
+  ligar recolha→entrega via `faturarCliente`; sem ele, as 22 recolhidas e as
+  22 entregues contavam-se as DUAS (44 fantasma) — banner de sobreocupação
+  falso + "Paletes transportadas" a 66 em vez de 44. 1ª tentativa: ligar
+  SEMPRE que uma recolha e uma entrega partilham `cliente`. Teve 2 bugs
+  reais, só apanhados pelo diff `git stash` contra as 29 rotas reais (nunca
+  pelos testes, que só cobriam o cenário novo): (a) o set "clientes com
+  entrega" usado para o `faturarCliente` (`clientesComEntregaTotal`) é na
+  verdade "todos os clientes da rota" (não só os com entrega) — uma recolha
+  PURA sem entrega nenhuma na rota (ex. RIC-Blo-greenopinion, Blo-casimper
+  recolhe 22, nunca entregue) excluía-se A SI PRÓPRIA, porque o seu próprio
+  cliente está sempre nesse set "solto"; (b) uma paragem MISTA (descarrega E
+  recolhe, ex. RIC-A2/Tecfence: entrega 6 + recolhe 4, lotes DIFERENTES) era
+  puxada para a "linha" pelo lado da recolha e perdia a sua própria entrega
+  da simulação de ocupação (nunca mais contada nem no "resto" nem na linha,
+  que só transporta recolhidas). | (1) Ao decidir se um cliente "tem
+  entrega" para fins de dedução, nunca reutilizar um set que só lista
+  "clientes que aparecem na rota" — construir um set estrito (teve mesmo uma
+  linha ENTREGA, não só uma paragem qualquer), senão uma recolha solta
+  exclui-se a si própria. (2) Uma recolha só pode ligar-se pelo PRÓPRIO
+  cliente (sem `faturarCliente`) quando é PURA — sem nenhuma entrega
+  própria — nunca uma mista: a entrega de uma mista não tem nada a ver com a
+  sua recolha, são lotes distintos por definição da funcionalidade "Descarga
+  + Recolha" (ver 2026-09-02 abaixo). Fix idêntico e isolado em
+  `cargaRota.ts::estadosDaRota` (`alvoRecolha`, só usa o próprio `cliente`
+  quando `entregues.length === 0`) e `perRoute.ts::calcularRota`
+  (`clientesComEntregaReal`, calculado à parte do set solto de sempre, +
+  guarda `p.recolha && !temEntrega(p)`). Diff final: só a rota do Ricardo
+  muda (66→44, banner desaparece), as outras 28 rotas reais ficam
+  byte-a-byte iguais.
+
 - [2026-09-10] | A planta de carga das Rotas arrumava as paletes pela ordem das
   paragens (1.ª entrega encostada à cabine, `y=0`). O Ricardo (com print):
   "as primeiras paletes da frente no camião são as últimas" — carrega-se ao

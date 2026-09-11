@@ -442,24 +442,50 @@ export function calcularRota(
   const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
   const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
 
-  // Recolha para entregar a outro cliente (`faturarCliente`, mesma regra de
-  // `pesosEmTransito`): as SUAS paletes/peso aproximado não entram nos totais
-  // da rota — já são contadas na paragem de entrega desse cliente (senão o
-  // mesmo lote soma-se a dobra: uma vez na recolha, outra na entrega). Só se
-  // aplica quando o alvo tem mesmo uma entrega nesta rota — sem isso (ex.
-  // entregue numa rota diferente, não registada aqui) o valor conta-se aqui,
-  // como sempre (é o único registo que existe desse lote).
+  // Recolha cujo lote também é entregue nesta rota: as SUAS paletes não entram
+  // nos totais da recolha — já são contadas na paragem de entrega (senão o
+  // mesmo lote soma-se a dobra). Dois casos:
+  //  a) `faturarCliente` = X: recolha faturada a outro cliente que também tem
+  //     uma paragem nesta rota (regra de sempre, mesma de `pesosEmTransito`).
+  //  b) recolha PURA (sem entrega própria) cujo próprio `cliente` recebe uma
+  //     ENTREGA nesta rota — recolher e mais tarde entregar o mesmo lote ao
+  //     mesmo cliente (reposicionamento; ex. RIC-Tec-A24: recolhe 22 em
+  //     Ges-thc e entrega essas 22 no fim). Aqui o alvo tem de ter mesmo uma
+  //     ENTREGA (não basta aparecer na rota) — senão uma recolha solta
+  //     excluir-se-ia a si própria (o seu cliente está sempre na lista).
   const clientesComEntregaTotal = new Set(
     paragens
       .filter((p) => p.tipoVeiculo !== "VAZIO")
       .map((p) => p.cliente?.trim())
       .filter((x): x is string => !!x),
   );
+  const temEntrega = (p: ParagemInput): boolean => {
+    if (p.tipoVeiculo === "VAZIO") return false;
+    const linhas = linhasPaleteEfetivas(p);
+    if (linhas.length > 0) {
+      const sp: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
+      return linhas.some((l) => (l.sentido ?? sp) === "ENTREGA");
+    }
+    return !p.recolha;
+  };
+  const clientesComEntregaReal = new Set(
+    paragens
+      .filter(temEntrega)
+      .map((p) => p.cliente?.trim())
+      .filter((x): x is string => !!x),
+  );
   const jaContadaNaEntrega = new Set<number>();
   paragens.forEach((p, i) => {
     if (p.tipoVeiculo === "VAZIO") return;
-    const alvo = p.faturarCliente?.trim();
-    if (alvo && clientesComEntregaTotal.has(alvo)) jaContadaNaEntrega.add(i);
+    const viaFatura = p.faturarCliente?.trim();
+    if (viaFatura) {
+      if (clientesComEntregaTotal.has(viaFatura)) jaContadaNaEntrega.add(i);
+      return;
+    }
+    const nome = p.cliente?.trim();
+    if (p.recolha && !temEntrega(p) && nome && clientesComEntregaReal.has(nome)) {
+      jaContadaNaEntrega.add(i);
+    }
   });
 
   // Cobre os 2 estilos de palete: legado (volume=true ou tipoVeiculo literal

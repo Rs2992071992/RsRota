@@ -903,6 +903,48 @@ describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra 
     expect(r.totalPaletes).toBe(8);
   });
 
+  it("recolha PURA e entrega do MESMO cliente, sem faturarCliente (reposicionamento, caso real RIC-Tec-A24) -> só conta uma vez", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({ cliente: "Tec-A2", kmInicial: 0, kmFinal: 100, ...palete(15) }),
+      // Recolhe 22 em Ges-thc (sem faturarCliente — não é para outro cliente)...
+      paragemBase({ cliente: "Ges-thc", recolha: true, kmInicial: 200, kmFinal: 300, ...palete(22) }),
+      // ...e entrega essas MESMAS 22 no fim, ao próprio Ges-thc.
+      paragemBase({ cliente: "Ges-thc", kmInicial: 300, kmFinal: 400, ...palete(22) }),
+    ];
+    const r = calcularRota("RIC-Tec-A24", paragens, ctx);
+    expect(r.totalPaletes).toBe(37); // 15 + 22 (na entrega) — a recolha não soma outra vez
+  });
+
+  it("recolha PURA de um cliente SEM entrega nesta rota -> conta normalmente (não é reposicionamento)", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({ cliente: "A", kmInicial: 0, kmFinal: 50, ...palete(5) }),
+      // Recolha solta em "Fornecedor" — nunca entregue nesta rota.
+      paragemBase({ cliente: "Fornecedor", recolha: true, kmInicial: 50, kmFinal: 100, ...palete(3) }),
+    ];
+    const r = calcularRota("T7", paragens, ctx);
+    expect(r.totalPaletes).toBe(8); // 5 + 3, nada para excluir
+  });
+
+  it("paragem MISTA (entrega ≠ recolha, sem faturarCliente) não liga pelo próprio cliente — a recolha conta à parte", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Tecfence",
+        recolha: true,
+        kmInicial: 0,
+        kmFinal: 50,
+        paleteComprimentoMm: 1300,
+        paleteLarguraMm: 1100,
+        paletes: [
+          { tipoPaleteId: 1, comprimentoMm: 1300, larguraMm: 1100, nPaletes: 6, sentido: "ENTREGA" },
+          { tipoPaleteId: 1, comprimentoMm: 1300, larguraMm: 1100, nPaletes: 4, sentido: "RECOLHA" },
+        ],
+      }),
+    ];
+    const r = calcularRota("T-mista-tecfence", paragens, ctx);
+    // A recolha da mista NÃO é o mesmo lote da sua própria entrega — conta as duas.
+    expect(r.totalPaletes).toBe(10);
+  });
+
   it("paragem MISTA faturada a outro cliente (caso real RIC-Percam) — entrega local conta, consumo não trata como vazio", () => {
     const paragens: ParagemInput[] = [
       paragemBase({
