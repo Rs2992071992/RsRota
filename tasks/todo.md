@@ -23,7 +23,7 @@ vez de o corrigir.
   restruturar para `fill` sem ganho que justifique o risco
 - [x] `tsc --noEmit` e `next build` limpos, `npm test` (259, inalterados —
   mudança de UI, não de motor de cálculo)
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit `cf4f71e` + push (Vercel builda automaticamente)
 - [ ] Confirmação visual do Ricardo (logo do escritório e do login continuam
   com o aspeto de sempre, agora servidos otimizados)
 
