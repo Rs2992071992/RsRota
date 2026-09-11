@@ -12,6 +12,12 @@ export default function ImportarCliente() {
 
   async function importar() {
     if (!ficheiro) return;
+    // Ação destrutiva e irreversível (apaga TODAS as paragens antes de
+    // inserir as do ficheiro) — uma confirmação a mais evita que um clique
+    // enganado apague dados reais sem se dar por isso.
+    if (!window.confirm("Isto apaga TODAS as paragens atuais e substitui-as pelas do ficheiro. Não há undo. Continuar?")) {
+      return;
+    }
     setEstado("a-importar");
     setErro(null);
     setResultado(null);

@@ -2,6 +2,29 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Auditoria de segurança + bugs (2026-09-12)
+
+Pedido do Ricardo: "verifica a segurança e se existem bugs". Revistas as 44
+rotas API (auth/ownership), `lib/auth.ts`/`lib/session.ts`, `proxy.ts` (CORS),
+rotas de PDF/import/export, geocode. Ver `tasks/lessons.md` para o detalhe.
+
+- [x] Confirmado: correções de segurança de 2026-08-16 continuam intactas
+  (HMAC constant-time, sem fallback de segredo em produção, bloqueio de PIN,
+  autorização por dono em `paragens/[id]`)
+- [x] Confirmado: sem IDOR novo, sem SQLi/eval/dangerouslySetInnerHTML fora
+  de um script de migração local, CORS por allowlist correta, PDFs sem path
+  traversal, geocode sem SSRF
+- [x] **Bug real encontrado e corrigido**: `POST /api/importar` apaga TODAS
+  as paragens (`deleteMany({})`) com um clique, só com aviso de texto (sem
+  `confirm()`) — risco direto para os dados reais que o Ricardo está a
+  inserir. Fix: `window.confirm` em `ImportarCliente.tsx` antes do pedido
+- [x] Riscos já conhecidos e aceites, reiterados dado o plano de domínio
+  próprio (mais exposição): pacote `xlsx` do CDN Sheetjs sem fix
+  (prototype pollution/ReDoS) usado em `/api/importar`; bloqueio de login
+  por `codigo`, não por IP
+- [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados) limpos
+- [ ] Commit + push (Vercel builda automaticamente)
+
 ## ⏸️ PARADO — plano para vender a app a uma transportadora (2026-09-12)
 
 **Estado: em pausa a pedido do Ricardo (2026-09-12).** O objetivo imediato

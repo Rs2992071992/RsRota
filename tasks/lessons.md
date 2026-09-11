@@ -2,6 +2,27 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-12] | Auditoria de segurança/bugs pedida pelo Ricardo (`verifica a
+  segurança e se existem bugs`) confirmou que as correções de 2026-08-16
+  continuam intactas (HMAC constant-time, sem fallback de segredo em
+  produção, bloqueio de PIN por força bruta, autorização por dono em
+  `paragens/[id]`) e não encontrou vulnerabilidades novas nas 44 rotas API
+  (ownership/IDOR, CORS por allowlist, PDFs sem path traversal, geocode sem
+  SSRF, zero `$queryRaw`/`eval`/`dangerouslySetInnerHTML` fora de um script
+  de migração local). Encontrou, sim, um BUG real de perda de dados:
+  `POST /api/importar` faz `prisma.paragem.deleteMany({})` (apaga TODAS as
+  paragens) antes de inserir as do ficheiro — só com um aviso de texto na UI,
+  sem `confirm()` nem qualquer travão contra um clique enganado. Mesmo
+  restrito a ESCRITORIO, é exatamente o tipo de acidente que preocupava o
+  Ricardo (dados reais a serem inseridos ao mesmo tempo desta auditoria). |
+  Qualquer ação que faça `deleteMany({})`/substituição total de uma tabela
+  a partir de um upload de ficheiro merece SEMPRE uma confirmação explícita
+  (`window.confirm` no mínimo) antes do pedido à API — um aviso de texto ao
+  lado do botão não trava um clique automático/apressado. Fix aplicado:
+  `window.confirm` em `ImportarCliente.tsx` antes do `fetch`. Não mexi no
+  comportamento destrutivo da API em si (pode ser intencional para o fluxo
+  de resync a partir do Excel mestre) — só a fricção do lado do cliente.
+
 - [2026-09-12] | Pedido do Ricardo de auditoria de "peso" do projeto encontrou
   `app/escritorio/layout.tsx` a servir `public/logo-manager.png` (600×537px,
   604 KB) num `<img>` cru para um logo de 56px de altura, em todas as páginas
