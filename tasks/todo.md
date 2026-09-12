@@ -35,8 +35,9 @@ depois recolhemos, ta a subir a média e a juntar as paletes"). Investigação
 - [x] Diff contra as 31 rotas reais (`carregarRota` + `verificarEspacoCarga`
   paragem a paragem): só RIC-Tec-A23 muda (2→25, correção real, não
   regressão), as outras 30 ficam byte-a-byte iguais.
-- [ ] Push (Vercel builda automaticamente) e confirmação do Ricardo no ecrã
-  da rota RIC-Percam (aviso deve refletir 22 no pico, não 44).
+- [x] Commit `eefe04f` + push (Vercel builda automaticamente)
+- [ ] Confirmação do Ricardo no ecrã da rota RIC-Percam (aviso deve refletir
+  22 no pico, não 44).
 
 ## ☑️ Lentidão nas edições — opção 3: cache dos dados de configuração (2026-09-12)
 
