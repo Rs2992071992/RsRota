@@ -51,7 +51,7 @@ identificado, não o passo 4 completo.
   continua a demorar o que sempre demorou (~900ms) — como esperado, não era
   o alvo
 - [x] `tsc --noEmit`, `next build` e `npm test` (259) limpos
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit `da54d05` + push (Vercel builda automaticamente)
 
 ### Por fazer, só se algum dia se quiser ir mais fundo (23 ficheiros, risco
 maior — não iniciado, decisão explícita do Ricardo de não avançar agora)
