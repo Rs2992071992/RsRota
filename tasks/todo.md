@@ -39,6 +39,33 @@ depois recolhemos, ta a subir a média e a juntar as paletes"). Investigação
 - [ ] Confirmação do Ricardo no ecrã da rota RIC-Percam (aviso deve refletir
   22 no pico, não 44).
 
+### Auditoria a todas as rotas (pedido do Ricardo: "verifica se aparecem erros desses")
+
+Corrida `verificarEspacoCarga` (já com a Causa 2 corrigida) às 31 rotas reais
++ procura de paragens `recolha=true` sem `faturarCliente` com uma entrega de
+paletes/peso iguais na mesma rota (candidatas ao mesmo padrão do Tec-Percam).
+
+- [x] 6 rotas com aviso vermelho: RIC-maravedis, RIC-A22, RIC-plastiserra,
+  RIC-maravedis2 e RIC-Tec-eurored são cadeias de entregas puras (sem
+  recolha nenhuma) ou já têm `faturarCliente` bem atribuído — avisos reais,
+  não o mesmo bug (RIC-A22/RIC-Tec-eurored já revistos em lições antigas).
+- [x] RIC-Tec-A24 (Ges-thc) e RIC-Blo-greenopinion (Blo-casimper): já
+  cobertos pelos mecanismos existentes (reposicionamento pelo próprio
+  cliente / recolha para outra rota) — confirmados corretos, nada a mudar.
+- [x] RIC-A2 / Tecfence: recolha de 4 paletes sem `faturarCliente`.
+  Confirmado pelo Ricardo -> destino é o Tecfil. Fix: `faturarCliente:
+  "Tecfil"` na paragem 132 (Prisma direto, equivalente ao PATCH). Pico da
+  rota desceu de 32→28 (ainda em aviso — falta real de espaço a rever
+  separadamente, não é o mesmo bug).
+- [x] RIC-Ges-ktubo / Gesplast: recolha de 12 paletes/13.150kg sem
+  `faturarCliente`, nomes "Gesplast"/"Ges-plasgal" (provável inconsistência
+  de escrita do mesmo cliente). Confirmado pelo Ricardo -> mesmo cliente.
+  Fix: `faturarCliente: "Ges-plasgal"` na paragem 292. Rota passa a
+  `cabemTodas: true` (20/20).
+- [ ] Apenas dados (Prisma direto, sem alterar código) — nada para commitar
+  além desta nota; confirmar visualmente nas 2 rotas quando o Ricardo tiver
+  oportunidade.
+
 ## ☑️ Lentidão nas edições — opção 3: cache dos dados de configuração (2026-09-12)
 
 Pedido do Ricardo ("porque é que sempre que alteramos algum dado a app
