@@ -34,12 +34,32 @@ BD — cada query fica ~300ms, todas em fila. `carregarContexto()` e
 - [ ] Confirmação do Ricardo em produção (editar Parâmetros e confirmar que
   os valores novos aparecem logo a seguir, sem ficar preso ao cache)
 
-### Follow-up identificado (não feito nesta ronda)
-`app/escritorio/rotas/[idRota]/page.tsx` também busca `tabelaPortagem` e
-`parametros` diretamente (para dropdowns/valores da própria página), fora de
-`carregarRota()` — mais 2 queries que também podiam reaproveitar
-`carregarDadosBase()`. Deixado de fora para manter esta ronda pequena e
-focada só em `lib/`; próximo passo natural se se quiser espremer mais.
+### ☑️ Follow-up feito a seguir (2026-09-12) — "passo 4"
+
+Pedido do Ricardo ("e o passo 4?"). Expliquei que trocar `router.refresh()`
+por atualização cirúrgica é um padrão em 23 ficheiros com dificuldades muito
+diferentes (toggles simples vs. `ParagemEditor`/`OrcamentoForm`, que mexem em
+cálculos derivados no servidor). O Ricardo escolheu o alvo seguro já
+identificado, não o passo 4 completo.
+
+- [x] `app/escritorio/rotas/[idRota]/page.tsx`: as 2 queries diretas
+  (`tabelaPortagem`, `parametros`) passam a reutilizar `carregarDadosBase()`
+  em vez de repetir o que `carregarRota()` já buscava indiretamente
+- [x] Verificado com rota de diagnóstico temporária (removida): valores
+  idênticos à forma antiga (`iguais: true`), 1.184ms → 7ms nesta parte
+  específica; a query de paragens da rota (não cacheável, muda sempre)
+  continua a demorar o que sempre demorou (~900ms) — como esperado, não era
+  o alvo
+- [x] `tsc --noEmit`, `next build` e `npm test` (259) limpos
+- [ ] Commit + push (Vercel builda automaticamente)
+
+### Por fazer, só se algum dia se quiser ir mais fundo (23 ficheiros, risco
+maior — não iniciado, decisão explícita do Ricardo de não avançar agora)
+- Casos fáceis (toggles/apagar): `PagoToggle`, `ApagarRota`, `ApagarMotorista`,
+  `ApagarOrcamento`, `AvariasTabela`, etc. — risco baixo-médio
+- Casos difíceis (recalculam custos/rateio no servidor): `ParagemEditor`,
+  `OrcamentoForm`, `CarregamentoDetalheEditor` — risco médio-alto, exige
+  validação cuidadosa contra dados reais
 
 ### Ainda por avaliar (fora do código, decisão do Ricardo)
 - Opção 1: subir `connection_limit` de 1 para 2-3 na `DATABASE_URL` do

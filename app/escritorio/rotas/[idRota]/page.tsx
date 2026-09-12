@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { carregarRota } from "@/lib/rotas-service";
+import { carregarDadosBase } from "@/lib/dados-base";
 import { listarNomesClientes } from "@/lib/clientes-service";
 import { fmtEuro, fmtNum, fmtNum2, fmtData } from "@/lib/format";
 import { estadoPagamento } from "@/lib/calc/pagamentos";
@@ -21,10 +22,11 @@ export const dynamic = "force-dynamic";
 export default async function RotaDetalhe(props: { params: Promise<{ idRota: string }> }) {
   const params = await props.params;
   const idRota = decodeURIComponent(params.idRota);
-  const [{ rota, paragensRaw }, portagens, parametros, veiculos, tiposPalete, nomesClientes] = await Promise.all([
+  const [{ rota, paragensRaw }, dadosBase, veiculos, tiposPalete, nomesClientes] = await Promise.all([
     carregarRota(idRota),
-    prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
-    prisma.parametros.findUnique({ where: { id: 1 } }),
+    // `parametros`/`tabelaPortagem` já vinham em cache indireta via `carregarRota`
+    // (contexto/snapshot) — reutilizar aqui em vez de repetir as 2 queries.
+    carregarDadosBase(),
     prisma.veiculo.findMany({
       where: { categoria: "PESADO" },
       orderBy: { nome: "asc" },
@@ -35,10 +37,10 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
   ]);
   if (!rota) notFound();
 
-  const zonas = portagens.map((p) => p.zona);
+  const zonas = dadosBase.portagens.map((p) => p.zona);
   const clientes = nomesClientes.map((c) => c.nome);
-  const valorNoite = parametros?.valorNoite ?? 70;
-  const precoCombRef = parametros?.precoCombRef ?? 1.834;
+  const valorNoite = dadosBase.parametros.valorNoite;
+  const precoCombRef = dadosBase.parametros.precoCombRef;
   // Valor comum a todas as paragens da rota (null = a usar o padrão, ou valores mistos).
   const overridesRota = Array.from(new Set(paragensRaw.map((p) => p.precoCombRefOverride ?? null)));
   const overrideRotaAtual = overridesRota.length === 1 ? overridesRota[0] : null;
