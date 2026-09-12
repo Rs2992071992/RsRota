@@ -2,6 +2,35 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-12] | O Ricardo reportou RIC-Percam ("numa volta com entrega e
+  recolha, o sistema está a juntar tudo... a subir a média e a juntar as
+  paletes"). Causa 1: a recolha do Tec-Percam (22 PL/3000kg) estava sem
+  `faturarCliente` ("por atribuir"), embora fosse a mesma carga entregue a
+  seguir no Tecfil — sem o campo, o motor assume (corretamente) que a carga
+  fica a bordo até ao fim da rota, somando-se à entrega ainda pendente do
+  Tecfil (22+22=44). Preenchido o campo, o número desceu para 22 — mas por
+  uma razão ERRADA: `estadosDaRota` (`lib/calc/cargaRota.ts`) excluía a
+  paragem MISTA inteira do "resto" assim que a sua recolha entrava numa
+  linha, apagando também a sua entrega própria (lote sem nada a ver com a
+  recolha). Só ficou visível a sério no diff contra as 31 rotas reais:
+  RIC-Tec-A23 (Tec-A2 entrega 25 + recolhe 2 p/ Tecfil) dava
+  `totalPaletes: 2` — as 25 tinham desaparecido, mascarado durante meses
+  porque nenhuma rota real tinha entrega-própria ≠ recolha-da-linha na MESMA
+  paragem grande o suficiente para dar pelo desvio (em RIC-Percam os dois
+  valores eram ambos 22, escondendo o bug por coincidência numérica). |
+  (1) Quando um valor "bate certo" só depois de mudar um dado (aqui:
+  preencher `faturarCliente`), não parar aí — rastrear a lógica à mão para
+  confirmar que bate certo pela razão CERTA, não por coincidência (aqui:
+  22 recolhidos == 22 entregues escondia a entrega a ser apagada). (2) Ao
+  excluir uma paragem "já contada numa linha" (`faturarCliente`), a exclusão
+  tem de ser por PAPEL (é origem? exclui só as recolhidas; é destino? exclui
+  só as entregues) — nunca a paragem inteira, mesmo depois de já se ter
+  corrigido este exato padrão em `perRoute.ts::totalPaletes` (lição
+  2026-09-08 abaixo) e não em `cargaRota.ts::estadosDaRota`, que partilha o
+  mesmo tipo de dado e sofria do mesmo problema. Fix:
+  `origensLinha`/`destinosLinha` como conjuntos separados em vez de um
+  `numaLinha` só. Ver [[cargaRota.ts::alvoRecolha]].
+
 - [2026-09-12] | Investigação de lentidão ("porque é que sempre que alteramos
   algum dado a app demora?") mostrou, com queries a sério contra a Neon de
   produção: 1ª query depois de estar inativa = 1.625ms (acordar o compute

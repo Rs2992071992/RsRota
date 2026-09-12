@@ -375,12 +375,19 @@ function estadosDaRota(
       .map((p) => p.cliente?.trim())
       .filter((x): x is string => !!x),
   );
-  const numaLinha = new Set<number>();
+  // Origem (a recolha que entra na linha) e destino (a entrega que a fecha)
+  // guardados em conjuntos SEPARADOS — nunca um só `numaLinha` — porque uma
+  // paragem MISTA pode ser a origem de uma linha e continuar a ter a sua
+  // PRÓPRIA entrega, sem nada a ver com essa recolha (ex. RIC-Percam:
+  // Tec-Percam descarrega 22 localmente E recolhe 22 para o Tecfil — as 22
+  // locais não podem desaparecer só porque a recolha entrou numa linha).
+  const origensLinha = new Set<number>();
+  const destinosLinha = new Set<number>();
   const alvos = new Set<string>();
   ordenadas.forEach((p, i) => {
     const alvo = alvoRecolha(p);
     if (alvo && p.recolhidas.length > 0 && clientesComEntrega.has(alvo)) {
-      numaLinha.add(i);
+      origensLinha.add(i);
       alvos.add(alvo);
     }
   });
@@ -390,10 +397,10 @@ function estadosDaRota(
   // uma entrega normal (limitação assumida: só a 1ª entrega fecha a linha).
   const entregaIndicePorAlvo = new Map<string, number>();
   ordenadas.forEach((p, i) => {
-    if (numaLinha.has(i)) return;
+    if (origensLinha.has(i)) return;
     const nome = p.cliente?.trim();
     if (nome && p.entregues.length > 0 && alvos.has(nome) && !entregaIndicePorAlvo.has(nome)) {
-      numaLinha.add(i);
+      destinosLinha.add(i);
       entregaIndicePorAlvo.set(nome, i);
     }
   });
@@ -414,18 +421,24 @@ function estadosDaRota(
     const segCorte = segmentoDe[Math.min(j, n - 1)];
     const aBordo: LinhaCarga[] = [];
 
-    // 1) Resto: só paragens fora de qualquer linha, só dentro do MESMO
-    // segmento (VAZIO) do corte — comportamento inalterado.
+    // 1) Resto: dentro do MESMO segmento (VAZIO) do corte. As entregues contam
+    // sempre, EXCETO nas paragens que fecham uma linha (`destinosLinha`) — essa
+    // entrega É o lote da linha a ser entregue, já contado pelo passo 2 até
+    // aqui, não pode voltar a contar como "entrega normal". As recolhidas
+    // contam sempre, EXCETO nas que abrem uma linha (`origensLinha`) — essas
+    // vivem só no passo 2. Sem esta separação por PAPEL (não por paragem
+    // inteira), uma paragem MISTA que é origem de linha perdia a sua própria
+    // entrega (lote distinto, nada a ver com a recolha) — ver RIC-Percam.
     ordenadas.forEach((p, i) => {
-      if (numaLinha.has(i) || segmentoDe[i] !== segCorte) return;
-      if (i >= j) aBordo.push(...p.entregues);
-      if (i < j) aBordo.push(...p.recolhidas);
+      if (segmentoDe[i] !== segCorte) return;
+      if (i >= j && !destinosLinha.has(i)) aBordo.push(...p.entregues);
+      if (i < j && !origensLinha.has(i)) aBordo.push(...p.recolhidas);
     });
 
     // 2) Linhas: recolhas já apanhadas (i<j) cujo alvo ainda não foi entregue
     // (a entrega, se existir, tem índice >= j) — atravessa segmentos/VAZIO.
     ordenadas.forEach((p, i) => {
-      if (!numaLinha.has(i) || p.recolhidas.length === 0 || i >= j) return;
+      if (!origensLinha.has(i) || p.recolhidas.length === 0 || i >= j) return;
       const idxEntrega = entregaIndicePorAlvo.get(alvoRecolha(p)!);
       if (idxEntrega == null || j <= idxEntrega) aBordo.push(...p.recolhidas);
     });

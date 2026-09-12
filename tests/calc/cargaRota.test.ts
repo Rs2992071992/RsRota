@@ -232,6 +232,27 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
       expect(r.totalPaletes).toBe(6); // pico = max(6, 4), como qualquer mista
     });
 
+    it("paragem MISTA que é ORIGEM de uma linha (faturarCliente) mantém a sua PRÓPRIA entrega (caso real RIC-Percam/RIC-Tec-A23)", () => {
+      // Tec-A2 descarrega 25 (entrega própria, nada a ver com a recolha) E
+      // recolhe 2 para faturar ao Tecfil, que entrega essas 2 mais à frente.
+      // A entrega própria não pode desaparecer só por a recolha ter entrado
+      // numa linha — bug real encontrado: a paragem inteira era excluída do
+      // "resto", perdendo a sua entrega (pico caía de 25 para 2).
+      const paragens: ParagemCarga[] = [
+        {
+          entregues: [{ ...P1300, nPaletes: 25, clienteNome: "Tec-A2" }],
+          recolhidas: [{ ...P1300, nPaletes: 2, clienteNome: "Tec-A2" }],
+          tipoVeiculo: "CAMIAO+REBOQUE",
+          kmInicial: 0,
+          cliente: "Tec-A2",
+          faturarCliente: "Tecfil",
+        },
+        entregaCliente(2, 100, "Tecfil"),
+      ];
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      expect(r.totalPaletes).toBe(25);
+    });
+
     it("2 entregas para o mesmo alvo: só a 1ª fecha a linha (limitação assumida)", () => {
       const paragens: ParagemCarga[] = [
         recolhaPara(5, 0, "Cliente A"),

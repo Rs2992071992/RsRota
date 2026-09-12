@@ -2,6 +2,42 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ RIC-Percam: recolha "por atribuir" a inflacionar o aviso de sobrelotação (2026-09-12)
+
+Pedido do Ricardo ("o sistema tem de perceber que descarregamos as paletes e
+depois recolhemos, ta a subir a média e a juntar as paletes"). Investigação
+(dados reais via Prisma) mostrou 2 causas distintas na mesma paragem
+(Tec-Percam, RIC-Percam):
+
+- [x] Causa 1 (dados): a recolha de 22 paletes/3000kg no Tec-Percam estava com
+  `faturarCliente` vazio ("por atribuir") — mas é a MESMA carga entregue a
+  seguir no Tecfil (22 paletes/3000kg, confirmado pelo Ricardo). Sem o campo
+  preenchido, o motor não sabia ligar as duas e assumia (corretamente, no
+  pior caso) que ficava a bordo até ao fim da rota. Fix: `faturarCliente:
+  "Tecfil"` na paragem 105 via Prisma (equivalente ao PATCH
+  `/api/paragens/[id]` que a UI já expõe em "Faturar a").
+- [x] Causa 2 (bug real em `lib/calc/cargaRota.ts::estadosDaRota`, só
+  exposto depois de corrigir a causa 1): uma paragem MISTA que é ORIGEM de
+  uma "linha" (a sua recolha liga a outro cliente via `faturarCliente`) tinha
+  a paragem INTEIRA excluída do "resto" — incluindo a sua própria entrega,
+  um lote completamente à parte da recolha. Em RIC-Percam isso ficou
+  mascarado (entrega e recolha eram ambas 22, o número final calhou certo
+  pela razão errada); no diff contra as 31 rotas reais apanhou-se o caso a
+  sério: RIC-Tec-A23 (Tec-A2 entrega 25 + recolhe 2 p/ Tecfil) dava
+  `totalPaletes: 2` (as 25 desapareciam) em vez de 25.
+- [x] Fix: separar `numaLinha` em `origensLinha`/`destinosLinha` — as
+  entregues de uma paragem só saem do "resto" se ela for DESTINO de uma
+  linha (a entrega É o lote da linha); as recolhidas só saem se for ORIGEM.
+  Uma mesma paragem pode agora ser origem de uma linha e continuar com a sua
+  própria entrega normal.
+- [x] Teste novo em `tests/calc/cargaRota.test.ts` (caso RIC-Percam/RIC-Tec-A23).
+  `npx vitest run` (259→260, todos verdes) e `tsc --noEmit` limpos.
+- [x] Diff contra as 31 rotas reais (`carregarRota` + `verificarEspacoCarga`
+  paragem a paragem): só RIC-Tec-A23 muda (2→25, correção real, não
+  regressão), as outras 30 ficam byte-a-byte iguais.
+- [ ] Push (Vercel builda automaticamente) e confirmação do Ricardo no ecrã
+  da rota RIC-Percam (aviso deve refletir 22 no pico, não 44).
+
 ## ☑️ Lentidão nas edições — opção 3: cache dos dados de configuração (2026-09-12)
 
 Pedido do Ricardo ("porque é que sempre que alteramos algum dado a app
