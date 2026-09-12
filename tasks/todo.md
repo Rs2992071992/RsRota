@@ -30,7 +30,7 @@ BD — cada query fica ~300ms, todas em fila. `carregarContexto()` e
   volta a ir à BD (1.176ms) e recacheia
 - [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados — é
   otimização de acesso a dados, não do motor de cálculo) limpos
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit `2d0d163` + push (Vercel builda automaticamente)
 - [ ] Confirmação do Ricardo em produção (editar Parâmetros e confirmar que
   os valores novos aparecem logo a seguir, sem ficar preso ao cache)
 
