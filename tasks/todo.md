@@ -2,6 +2,52 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Lentidão nas edições — opção 3: cache dos dados de configuração (2026-09-12)
+
+Pedido do Ricardo ("porque é que sempre que alteramos algum dado a app
+demora?"), depois de medir a causa: `connection_limit=1` (necessário para o
+pooler Neon) faz com que `Promise.all` não dê paralelismo nenhum a nível da
+BD — cada query fica ~300ms, todas em fila. `carregarContexto()` e
+`carregarBaseSnapshot()` buscavam as mesmas `Parametros`/`Pneu` global/
+`TabelaConsumo` global cada uma por si, duplicando 3 queries por página. Ver
+`tasks/lessons.md` para os números medidos.
+
+- [x] `lib/dados-base.ts` (novo): `carregarDadosBase()` — as 4 tabelas de
+  configuração global (`Parametros`, `Pneu`/`TabelaConsumo` globais,
+  `TabelaPortagem`) numa só função, cacheada com `unstable_cache` (tag
+  `dados-base`, cache indefinido até `revalidateTag`)
+- [x] `lib/contexto.ts::carregarContexto` e
+  `lib/snapshot-service.ts::carregarBaseSnapshot` passam a reutilizar
+  `carregarDadosBase()` em vez de repetirem as queries cada uma por si
+- [x] `app/api/parametros/route.ts` (PUT, único caminho de escrita destas 4
+  tabelas): `revalidateTag(TAG_DADOS_BASE, { expire: 0 })` no fim da
+  transação — sem janela "stale" (esta app não pode mostrar custos
+  desatualizados nem por 1 pedido)
+- [x] Verificado num `next build && next start` a sério (contra a BD de
+  produção, só leituras + 1 invalidação de teste, nada escrito) com uma rota
+  de diagnóstico temporária, já removida: 1ª chamada 2.523ms, chamadas
+  seguintes 0-1ms (cache), dados byte-a-byte iguais; depois de invalidar,
+  volta a ir à BD (1.176ms) e recacheia
+- [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados — é
+  otimização de acesso a dados, não do motor de cálculo) limpos
+- [ ] Commit + push (Vercel builda automaticamente)
+- [ ] Confirmação do Ricardo em produção (editar Parâmetros e confirmar que
+  os valores novos aparecem logo a seguir, sem ficar preso ao cache)
+
+### Follow-up identificado (não feito nesta ronda)
+`app/escritorio/rotas/[idRota]/page.tsx` também busca `tabelaPortagem` e
+`parametros` diretamente (para dropdowns/valores da própria página), fora de
+`carregarRota()` — mais 2 queries que também podiam reaproveitar
+`carregarDadosBase()`. Deixado de fora para manter esta ronda pequena e
+focada só em `lib/`; próximo passo natural se se quiser espremer mais.
+
+### Ainda por avaliar (fora do código, decisão do Ricardo)
+- Opção 1: subir `connection_limit` de 1 para 2-3 na `DATABASE_URL` do
+  Vercel — mais paralelismo real, mas foi baixado para 1 por causa de um
+  crash em produção (ver 2026-08-27); testar com cuidado
+- Opção 2: desativar o autosuspend do compute Neon (painel Neon, plano
+  pago) — elimina o ~1,6s de "acordar" depois de inatividade
+
 ## ☑️ Auditoria de segurança + bugs (2026-09-12)
 
 Pedido do Ricardo: "verifica a segurança e se existem bugs". Revistas as 44

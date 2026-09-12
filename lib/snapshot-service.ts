@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { carregarDadosBase } from "@/lib/dados-base";
 import {
   calcularSnapshot,
   type MotoristaParams,
@@ -61,14 +62,9 @@ export interface BaseSnapshot {
 }
 
 export async function carregarBaseSnapshot(): Promise<BaseSnapshot> {
-  const [base, pneus, consumo] = await Promise.all([
-    prisma.parametros.findUnique({ where: { id: 1 } }),
-    prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
-    prisma.tabelaConsumo.findMany({ where: { veiculoId: null }, orderBy: { cargaKg: "asc" } }),
-  ]);
-  if (!base) throw new Error("Parâmetros não inicializados. Corra `npm run db:seed`.");
+  const { parametros, pneus, consumo } = await carregarDadosBase();
   return {
-    base: base as ParametrosCusto,
+    base: parametros as ParametrosCusto,
     pneusGlobais: pneus.map(toPneuItem),
     tabelaConsumoGlobal: consumo.map(toEscalaoConsumo),
   };

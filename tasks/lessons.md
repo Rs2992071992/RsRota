@@ -2,6 +2,43 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-12] | Investigação de lentidão ("porque é que sempre que alteramos
+  algum dado a app demora?") mostrou, com queries a sério contra a Neon de
+  produção: 1ª query depois de estar inativa = 1.625ms (acordar o compute
+  Neon + handshake), queries seguintes = ~300ms CADA, e — crucial —
+  `Promise.all` de 4 queries deu o MESMO tempo (1.269ms) do que as mesmas 4
+  a sério sequenciais (1.248ms). Causa: `DATABASE_URL` tem
+  `connection_limit=1` (necessário para o pooler pgbouncer em modo
+  transaction, ver entrada 2026-08-13 abaixo) — só pode correr 1 query de
+  cada vez, por isso `Promise.all` no código não dá paralelismo NENHUM a
+  nível da BD, mesmo escrito certo. `carregarContexto()` (4 queries) e
+  `carregarBaseSnapshot()` (3 queries) buscavam as MESMAS `Parametros`/
+  `Pneu` global/`TabelaConsumo` global cada uma por si — todas as páginas de
+  rota chamam as duas, ~3 queries a dobrar por carregamento de página. Fix:
+  `lib/dados-base.ts` — uma única função `carregarDadosBase()` cacheada com
+  `unstable_cache` (tag `dados-base`, sem `revalidate` = cache indefinido até
+  `revalidateTag`), reaproveitada pelas duas. Invalidada em `PUT
+  /api/parametros` (único caminho de escrita das 4 tabelas) com
+  `revalidateTag(TAG, { expire: 0 })` — sem janela "stale", porque esta app
+  não pode mostrar valores desatualizados mesmo por 1 pedido (cálculo de
+  custos/faturação). Verificado num `next start` a sério (não dá para testar
+  `unstable_cache` com um script `tsx` solto — dá `Invariant: incrementalCache
+  missing`, precisa do runtime do Next a correr) contra a rota de
+  produção: 1ª chamada 2.523ms, chamadas seguintes 0-1ms (cache), dados
+  byte-a-byte iguais; depois de `revalidateTag`, a chamada seguinte volta a
+  ir à BD (1.176ms) e depois volta a cachear. | (1) `Promise.all` só dá
+  paralelismo real se a BD por trás tiver ligações suficientes — com
+  `connection_limit=1` é decoração, todas as queries ficam em fila na mesma
+  ligação. (2) Antes de otimizar uma função que lê dados de configuração
+  quase-imutáveis (só mudam por 1 rota de escrita conhecida), verificar se
+  já não está a ser buscada 2× por sítios diferentes do código — aqui o
+  cache resolveu as 2 coisas de uma vez (menos queries + reutilização entre
+  pedidos). (3) Scripts `tsx` soltos não conseguem testar `unstable_cache`
+  (falta o runtime do Next) — para verificar isto correu-se `next build` +
+  `next start` a sério com uma rota de diagnóstico temporária (apagada no
+  fim), nunca contra a BD de produção com escrita real (só leituras + 1
+  `revalidateTag` de teste, sem mudar nenhum dado).
+
 - [2026-09-12] | Auditoria de segurança/bugs pedida pelo Ricardo (`verifica a
   segurança e se existem bugs`) confirmou que as correções de 2026-08-16
   continuam intactas (HMAC constant-time, sem fallback de segredo em

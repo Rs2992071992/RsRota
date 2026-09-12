@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSessao } from "@/lib/session";
+import { TAG_DADOS_BASE } from "@/lib/dados-base";
 
 const n = z.number().finite();
 
@@ -74,6 +76,11 @@ export async function PUT(req: Request) {
     prisma.tabelaConsumo.deleteMany({ where: { veiculoId: null } }),
     prisma.tabelaConsumo.createMany({ data: consumo.map((c) => ({ ...c, veiculoId: null })) }),
   ]);
+
+  // Invalida já (sem janela "stale") o cache de `lib/dados-base.ts` — as 4
+  // tabelas acima acabaram de mudar; sem isto, o resto da app continuaria a
+  // ver os valores antigos até o cache expirar sozinho (nunca, por design).
+  revalidateTag(TAG_DADOS_BASE, { expire: 0 });
 
   return NextResponse.json({ ok: true });
 }

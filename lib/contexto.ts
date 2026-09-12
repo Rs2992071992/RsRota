@@ -1,28 +1,16 @@
-import { prisma } from "@/lib/db";
+import { carregarDadosBase } from "@/lib/dados-base";
 import { derivarCustos } from "@/lib/calc/params";
 import type { ContextoCalculo } from "@/lib/calc/perStop";
 import type { ParametrosCusto } from "@/lib/calc/types";
 
 /**
- * Carrega parâmetros e tabelas da BD e constrói o ContextoCalculo usado pelo
- * motor de cálculo. Esta é a ponte entre a camada de dados e a lógica pura.
+ * Constrói o ContextoCalculo usado pelo motor de cálculo a partir dos dados
+ * de configuração "globais" (cacheados em `lib/dados-base.ts` — só mudam via
+ * `PUT /api/parametros`). Esta é a ponte entre a camada de dados e a lógica pura.
  */
 export async function carregarContexto(): Promise<ContextoCalculo> {
-  const [params, pneus, consumo, portagens] = await Promise.all([
-    prisma.parametros.findUnique({ where: { id: 1 } }),
-    // Pneus "globais" (template/fallback). Os pneus por-veículo entram via snapshot.
-    prisma.pneu.findMany({ where: { veiculoId: null }, orderBy: { ordem: "asc" } }),
-    // Só a tabela "global" (veiculoId null) — as tabelas de consumo por-veículo
-    // entram no cálculo via snapshot (ver lib/snapshot-service.ts), não por aqui.
-    prisma.tabelaConsumo.findMany({ where: { veiculoId: null }, orderBy: { cargaKg: "asc" } }),
-    prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
-  ]);
-
-  if (!params) {
-    throw new Error("Parâmetros não inicializados. Corra `npm run db:seed`.");
-  }
-
-  const p: ParametrosCusto = params;
+  const { parametros, pneus, consumo, portagens } = await carregarDadosBase();
+  const p: ParametrosCusto = parametros;
 
   return {
     params: p,
