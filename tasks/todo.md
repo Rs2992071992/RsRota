@@ -2,6 +2,22 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Revisão dos 2 riscos "aceites" (xlsx + connection_limit) (2026-09-14)
+
+Pedido do Ricardo ("avançamos"), depois de eu ter listado o estado geral do
+projeto e apontado estes 2 como "riscos aceites, não esquecidos".
+
+- [x] `xlsx`: investigado a sério (advisories oficiais SheetJS/GitHub) —
+  **não é risco nenhum**, já resolvido desde 2026-08-16. Ver `lessons.md` e
+  as 3 referências corrigidas mais abaixo neste ficheiro.
+- [ ] `connection_limit=1`: **não avançado** — subir isto só pode ser
+  testado com segurança contra uma Neon DB branch + Vercel Preview
+  Deployment separados (regra de ouro já usada no plano de venda, mais
+  abaixo), nunca direto em produção (foi baixado para 1 depois de um crash
+  real em 2026-08-27, ver lessons.md). Não tenho `vercel`/`neon` CLI
+  autenticado nesta máquina — preciso que o Ricardo crie a branch de teste
+  (ou me dê acesso) antes de eu poder testar isto com dados a sério.
+
 ## ☑️ RIC-Percam: recolha "por atribuir" a inflacionar o aviso de sobrelotação (2026-09-12)
 
 Pedido do Ricardo ("o sistema tem de perceber que descarregamos as paletes e
@@ -149,9 +165,12 @@ rotas de PDF/import/export, geocode. Ver `tasks/lessons.md` para o detalhe.
   `confirm()`) — risco direto para os dados reais que o Ricardo está a
   inserir. Fix: `window.confirm` em `ImportarCliente.tsx` antes do pedido
 - [x] Riscos já conhecidos e aceites, reiterados dado o plano de domínio
-  próprio (mais exposição): pacote `xlsx` do CDN Sheetjs sem fix
-  (prototype pollution/ReDoS) usado em `/api/importar`; bloqueio de login
-  por `codigo`, não por IP
+  próprio (mais exposição): bloqueio de login por `codigo`, não por IP.
+  ~~pacote `xlsx` sem fix~~ — **corrigido nesta auditoria (2026-09-14)**: o
+  build do CDN SheetJS 0.20.3 já usado (`eb73407`, 2026-08-16) resolve os 2
+  CVEs (prototype pollution + ReDoS); scanners que ainda o assinalam estão a
+  avaliar o pacote npm abandonado, não o CDN — falso positivo confirmado
+  pela própria SheetJS. Ver `tasks/lessons.md` 2026-09-14
 - [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados) limpos
 - [x] Commit `1c75a25` + push (Vercel builda automaticamente)
 
@@ -196,9 +215,9 @@ Estado atual de cada peça (verificar, não é tudo por fazer):
 - [ ] Validar que `/api/importar` (Excel) cobre o que uma empresa nova
   precisa importar de uma vez (veículos, motoristas, clientes) sem exigir
   criação manual um a um
-- [ ] Decidir o que fazer à vulnerabilidade do pacote `xlsx` (CDN Sheetjs,
-  prototype pollution/ReDoS sem fix) antes de dar acesso de importação a
-  utilizadores fora de casa — ver lessons.md 2026-08-16
+- [x] ~~Decidir o que fazer à vulnerabilidade do pacote `xlsx`~~ — não há
+  nada a decidir: o CDN Sheetjs 0.20.3 já em uso corrige os 2 CVEs
+  conhecidos (verificado 2026-09-14, ver lessons.md)
 - [ ] `grep` ao código (não só à BD) por qualquer nome/valor específico do
   teu negócio hardcoded fora do schema (ex. nomes de clientes/veículos em
   fixtures, textos de exemplo)
@@ -1626,9 +1645,8 @@ https://claude.ai/code/artifact/7fdf773c-38bc-475f-9c24-a0d0117506e9
 - [ ] Upgrade major do Next.js (14→16) — corrige as CVEs restantes de
   DoS/SSRF/cache poisoning, mas exige React 19 e teste dedicado (adiado na
   auditoria de segurança de 2026-08-16, ver `tasks/lessons.md`)
-- [ ] Substituir o pacote `xlsx` (prototype pollution/ReDoS sem correção),
-  usado em `/api/importar` — troca de biblioteca merece teste próprio
-  contra ficheiros reais antes de produção
+- [x] ~~Substituir o pacote `xlsx`~~ — desnecessário: 0.20.3 (CDN oficial,
+  já em uso) corrige os 2 CVEs, confirmado 2026-09-14
 - [ ] Multi-tenant, se decidir vender a app a outras empresas — 0%
   começado: `empresaId` no schema Prisma propagado a todas as queries,
   sessão a resolver a empresa, billing por cima, onboarding self-service

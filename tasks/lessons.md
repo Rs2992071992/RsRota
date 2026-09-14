@@ -2,6 +2,25 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-14] | O `xlsx` (`/api/importar`/`/api/exportar`) andava documentado
+  há um mês como "risco aceite: prototype pollution/ReDoS sem fix" (auditoria
+  2026-08-16, repetido em vários sítios do `todo.md`) — mas a troca para o
+  build oficial do CDN da SheetJS, 0.20.3 (feita NESSE MESMO dia, commit
+  `eb73407`), já resolvia os dois CVEs: CVE-2023-30533 (prototype pollution,
+  corrigido em 0.19.3+) e CVE-2024-22363 (ReDoS, corrigido em 0.20.2+) — ambos
+  antes da 0.20.3. Confirmado agora via as advisories oficiais da SheetJS e do
+  GitHub. O aviso "sem fix"/"Patched versions: None" que scanners como o Snyk
+  continuam a mostrar é sobre o pacote `xlsx` do REGISTO NPM (abandonado em
+  0.18.5) — não sobre o build do CDN oficial (`cdn.sheetjs.com`) que este
+  projeto usa; a própria equipa da SheetJS confirma que é um falso positivo do
+  Snyk e recomenda ignorar o aviso nesse caso. | Uma dependência trocada para
+  mitigar um CVE fica facilmente marcada como "risco aceite" para sempre sem
+  se voltar a confirmar se a versão nova já contém mesmo a correção — ao
+  reavaliar um risco de segurança antigo, verificar a advisory oficial da
+  versão EXATA instalada (não só repetir a nota de quando foi escrito),
+  sobretudo quando a fonte do pacote foge do registo padrão (aqui: CDN em vez
+  de npm) e os scanners automáticos não sabem distinguir as duas.
+
 - [2026-09-12] | O Ricardo reportou RIC-Percam ("numa volta com entrega e
   recolha, o sistema está a juntar tudo... a subir a média e a juntar as
   paletes"). Causa 1: a recolha do Tec-Percam (22 PL/3000kg) estava sem
