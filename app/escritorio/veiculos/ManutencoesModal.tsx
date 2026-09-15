@@ -120,14 +120,14 @@ export default function ManutencoesModal({
         </div>
 
         <div className="scroll-fade-x overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full table-fixed text-sm">
             <thead>
               <tr>
                 <th className="th">Descrição</th>
-                <th className="th">Data</th>
-                <th className="th">Valor (€)</th>
-                <th className="th">Dias parado</th>
-                <th className="th" />
+                <th className="th w-32">Data</th>
+                <th className="th w-24">Valor (€)</th>
+                <th className="th w-20">Dias parado</th>
+                <th className="th w-8" />
               </tr>
             </thead>
             <tbody>

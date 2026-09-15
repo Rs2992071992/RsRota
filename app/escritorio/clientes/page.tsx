@@ -4,6 +4,7 @@ import { carregarClientes, carregarCliente } from "@/lib/clientes-service";
 import { fmtEuro, fmtPct, fmtData } from "@/lib/format";
 import ContatoCliente from "@/components/ContatoCliente";
 import EditarNomeCliente from "@/components/EditarNomeCliente";
+import ApagarCliente from "@/components/ApagarCliente";
 import AdicionarCliente from "@/components/AdicionarCliente";
 import ClienteGrafico from "@/components/ClienteGrafico";
 import EstadoOrcamentoBadge from "@/components/orcamento/EstadoOrcamentoBadge";
@@ -85,12 +86,15 @@ export default async function ClientesPage(props: { searchParams: Promise<Search
                     }`}
                   >
                     <span className="truncate">{c.nome}</span>
-                    <span
-                      className={`shrink-0 text-xs font-medium ${
-                        c.lucro < 0 ? "text-red-600" : "text-green-600"
-                      }`}
-                    >
-                      {fmtEuro(c.lucro)}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`text-xs font-medium ${
+                          c.lucro < 0 ? "text-red-600" : "text-green-600"
+                        }`}
+                      >
+                        {fmtEuro(c.lucro)}
+                      </span>
+                      <ApagarCliente nome={c.nome} />
                     </span>
                   </Link>
                 </li>
