@@ -2,6 +2,44 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-16] | Ao migrar o projeto para a conta Vercel própria do Ricardo,
+  `APP_ORIGINS_PERMITIDAS` (CORS de `proxy.ts` para a app Motorista) ficou
+  vazia (`""`) no ambiente novo — assumi, sem confirmar, que o assistente de
+  import da Vercel pré-preenchia os valores de `.env.example` junto com os
+  nomes das 6 variáveis "detetadas"; só copia os nomes. Resultado:
+  `process.env.APP_ORIGINS_PERMITIDAS ?? default` nunca caía no fallback,
+  porque `""` não é `null`/`undefined` — só `??` trata isso como "falta".
+  `origensPermitidas()` ficava `[]`, bloqueando TODAS as origens. Sintoma no
+  telemóvel: "Failed to fetch" sem mais nenhuma pista; no browser funcionava
+  na mesma (mesma origem, nunca passa por CORS) — só apareceu ao testar a
+  app nativa a sério. Confirmado com `curl -X OPTIONS ... -H "Origin: ..."`
+  direto ao servidor (sem depender do telemóvel): sem cabeçalhos CORS antes,
+  `Access-Control-Allow-Origin` certo depois de preencher o valor a sério. |
+  (1) Uma env var vazia e uma em falta NÃO são a mesma coisa para `??` — ao
+  escrever `env ?? default`, se o valor puder legitimamente vir como string
+  vazia (formulário/import que só cria o campo, não o valor), trocar por
+  `env || default` ou validar explicitamente `env && env.length > 0`. (2) Ao
+  migrar variáveis de ambiente entre contas, nunca assumir que uma
+  ferramenta de import preenche VALORES a partir de `.env.example` — só
+  detecta NOMES; confirmar sempre o valor real de cada uma antes de dar como
+  certo. (3) Um bug de CORS nunca aparece testando no browser (mesma
+  origem) — só testando a app nativa a sério, ou simulando com `curl -X
+  OPTIONS` + cabeçalho `Origin`, que é mais rápido e não depende de
+  telemóvel nenhum.
+
+- [2026-09-16] | Mesma migração: o site novo (`rs-rota.vercel.app`) abria
+  bem no browser mas dava "Failed to fetch" na app do telemóvel — causa
+  DIFERENTE do CORS acima, apanhada primeiro: a Vercel tinha "Vercel
+  Authentication" (Deployment Protection → Require Log In) LIGADA por
+  defeito numa conta pessoal nova, exigindo sessão Vercel + acesso à equipa
+  para qualquer visitante. Funcionava no browser só porque o Ricardo já
+  tinha sessão Vercel aberta nesse separador — mascarava completamente o
+  problema, teria bloqueado qualquer utilizador real do site (não só a
+  app). | Ao criar um projeto novo numa conta Vercel (sobretudo pessoal/
+  Hobby), verificar sempre Settings → Deployment Protection ANTES de dar o
+  deploy como "pronto" — testar só no browser onde já se está autenticado
+  não deteta esta proteção, porque o próprio teste está "por dentro" dela.
+
 - [2026-09-15] | Guiei o Ricardo a mudar `connection_limit=1→3` na
   `DATABASE_URL` de produção (Vercel, sem CLI autenticado nesta máquina para
   fazer um ambiente de teste separado) diretamente via prints partilhados a

@@ -2,6 +2,70 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Migração completa para contas próprias do Ricardo — GitHub + Vercel + Neon (2026-09-15/16)
+
+Pedido do Ricardo ("como faço para mudar isto para outra conta vercel?"),
+depois de perceber que o código (GitHub `gocris78-cmyk`) e a hospedagem
+(Vercel "Miguel's projects") não eram dele. A base de dados (Neon) ficou
+deliberadamente por mexer numa 1ª fase ("é melhor estar quieto") — só depois,
+com tudo o resto validado, se avançou para uma cópia completa também.
+
+- [x] **GitHub**: código enviado para `Rs2992071992/RsRota` (conta nova do
+  Ricardo), como remote `novo` a par do `origin` antigo (não se mexeu no
+  antigo, o site do Miguel continuou a funcionar durante toda a migração)
+- [x] **Vercel**: projeto novo `rs-rota` na conta `rs2992071992`, importado do
+  repositório novo. 2 problemas reais no caminho, ambos por confirmação
+  visual antes de guardar (mesma disciplina de sempre):
+  - Ao importar, os 6 valores de `DATABASE_URL`/`DIRECT_URL` ficaram
+    trocados entre si (com `pgbouncer`/`connection_limit` no sítio errado) —
+    corrigido a copiar de novo, com cuidado, cada um para o campo certo
+  - Zero deployments chegaram a correr (import não disparou build
+    automático) — resolvido com "Deployments" → "..." → "Create Deployment"
+    → branch `main` → "Deploy to Production"
+- [x] **Base de dados**: copiada a sério para a conta Neon do Ricardo
+  ("Ricardo Project" → projeto "RsRotaOriginal", branch `import`), via o
+  "Import Data Assistant" (beta) da própria Neon — colar a connection string
+  antiga como origem, sem `pg_dump` manual. Verificado ponto a ponto antes de
+  trocar: `Paragem` 162 = 162 (nenhuma escrita perdida no intervalo),
+  `Cliente` 94, `ClienteAlias` 63, `Empresa` 5, `Utilizador` 3, `Veiculo` 3 —
+  tudo confirmado por contagem direta (`SELECT count(*)`), não só pela
+  estrutura das tabelas
+- [x] `rs-rota` apontado para a base de dados nova (`DATABASE_URL`/
+  `DIRECT_URL` da branch `import`) — **2 problemas reais apanhados só ao
+  testar a sério**, nenhum visível só a olhar para o ecrã:
+  1. **"Vercel Authentication" (Deployment Protection) vinha ligada por
+     defeito** numa conta nova — exige sessão Vercel para qualquer visitante,
+     por isso funcionava no browser (sessão já aberta) mas dava "Failed to
+     fetch" na app do telemóvel (e bloquearia qualquer utilizador real do
+     site). Desligada em Settings → Deployment Protection.
+  2. **`APP_ORIGINS_PERMITIDAS` ficou vazia** (assumi, errado, que o
+     assistente de import da Vercel pré-preenchia os valores de
+     `.env.example` — só copia os NOMES) — uma env var vazia (`""`) não é
+     `undefined`, por isso o fallback `env ?? default` em `proxy.ts` nunca
+     disparava, e `origensPermitidas()` ficava `[]` (bloqueia tudo). Só
+     visível testando o preflight CORS a sério (`curl -X OPTIONS` com
+     `Origin`), nunca por inspeção visual do código nem do ecrã. Corrigido
+     preenchendo o valor por defeito a sério
+  3. Verificado por `curl` direto ao servidor (sem depender do telemóvel):
+     confirmação de `403`/`Sem permissão.` sem CORS antes, `204` +
+     `Access-Control-Allow-Origin` correto depois
+- [x] **App Motorista Android**: `.env.production` → `VITE_API_BASE` para
+  `https://rs-rota.vercel.app`; `.apk` novo recompilado e assinado com o
+  MESMO certificado de sempre (`apksigner verify` confirmou, CN=Ricardo
+  Silva) — instala por cima da app já existente, sem desinstalar
+- [x] **Teste real de sincronização offline** (item em aberto desde
+  2026-09-08, nunca testado): rota "RIC-Ze manel", 1 paragem com rede + 1 em
+  modo avião, sincronização automática ao voltar a rede — confirmado na BD
+  (2 paragens, sem duplicados nem perdas), dados de teste apagados a seguir
+- [ ] **Decisão pendente**: o que fazer ao site antigo (Vercel do Miguel +
+  GitHub `gocris78-cmyk`) — deixar ligado sem mais updates, ou pedir para
+  desligarem. **Importante**: a partir de agora as duas bases de dados
+  (antiga e nova) estão desligadas uma da outra — usar as duas ao mesmo
+  tempo cria dados divergentes.
+- [ ] Domínio próprio para `rs-rota` — Ricardo ainda não tem domínio
+  registado, fica para quando decidir comprar um (não bloqueia nada, o
+  `rs-rota.vercel.app` funciona indefinidamente)
+
 ## ☑️ Revisão dos 2 riscos "aceites" (xlsx + connection_limit) (2026-09-14)
 
 Pedido do Ricardo ("avançamos"), depois de eu ter listado o estado geral do
@@ -2325,7 +2389,7 @@ reescrita, o offline entra por cima desta mesma base.
 - [ ] (Opcional) Logo/ícone próprio para a app Motorista, se não quiseres
   reaproveitar o camião da Administração
 
-### Fase 2, Entrega 2 — sincronização offline (2026-09-08) ✅ código, ⚠️ falta teste real
+### Fase 2, Entrega 2 — sincronização offline (2026-09-08) ✅ código, ✅ testado a sério (2026-09-15)
 
 Plano: `C:\Users\Ricardo\.claude\plans\elegant-discovering-tiger.md`. **Mudança de
 arquitetura face a este plano original**: em vez de `@capacitor-community/sqlite`,
@@ -2353,10 +2417,11 @@ Confirmado com o Ricardo antes de implementar.
   fila fica fora de âmbito, decisão de simplicidade)
 - [x] `npm install @capacitor/network`; `tsc -b`, `npm run build`, `oxlint`
   (só os 3 avisos pré-existentes) limpos
-- [ ] **Não testável por mim**: modo avião num telemóvel real, `npx cap sync
-  android && gradlew assembleRelease` + o teste combinado de agosto (3
-  paragens offline → sincronizar → conferir no escritório, sem duplicados
-  nem perdas) — ação do Ricardo
+- [x] **Testado a sério pelo Ricardo (2026-09-15)**: modo avião num telemóvel
+  real (rota "RIC-Ze manel", 2 paragens registadas — 1ª com rede, 2ª em modo
+  avião), sincronização automática ao voltar a rede. Confirmado na base de
+  dados: as 2 paragens chegaram, sem duplicados nem perdas. Dados de teste
+  apagados a seguir (`prisma.paragem.deleteMany` pelos ids).
 
 ### Fase 3 — Distribuição
 - [ ] Build de release assinado de cada app
