@@ -2,6 +2,26 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-15] | Guiei o Ricardo a mudar `connection_limit=1→3` na
+  `DATABASE_URL` de produção (Vercel, sem CLI autenticado nesta máquina para
+  fazer um ambiente de teste separado) diretamente via prints partilhados a
+  cada passo. Apanhados 2 erros reais ANTES de guardar, só porque pedi print
+  antes de cada "Save": (1) editou a variável errada — `DIRECT_URL` em vez de
+  `DATABASE_URL`, tinha feito scroll e não reparou na mudança de "Key"; (2)
+  colou a linha toda do `.env` (`DATABASE_URL="postgresql://...`, prefixo +
+  aspas) em vez de só o valor entre aspas — teria ficado uma connection
+  string inválida, partindo o site em todos os pedidos (ao contrário do
+  `DIRECT_URL`, que só é usado em migrações). Depois de corrigido e feito
+  redeploy, o Ricardo confirmou em produção: "acho que ficou melhor". | Ao
+  guiar alguém a editar um valor sensível numa consola de terceiros (Vercel/
+  Neon/etc.) que a IA não consegue ver diretamente, pedir sempre um print
+  ANTES de cada clique em "Save"/"Guardar" — nunca assumir que a instrução
+  foi seguida à letra só porque foi clara. Aqui os 2 erros eram invisíveis
+  para quem os cometeu (a diferença entre `DATABASE_URL` e `DIRECT_URL` no
+  topo do ecrã, ou o prefixo escondido no início de um campo de texto longo)
+  e só a verificação visual, passo a passo, os apanhou antes de causarem
+  dano.
+
 - [2026-09-14] | O `xlsx` (`/api/importar`/`/api/exportar`) andava documentado
   há um mês como "risco aceite: prototype pollution/ReDoS sem fix" (auditoria
   2026-08-16, repetido em vários sítios do `todo.md`) — mas a troca para o

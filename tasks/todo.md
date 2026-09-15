@@ -10,13 +10,20 @@ projeto e apontado estes 2 como "riscos aceites, não esquecidos".
 - [x] `xlsx`: investigado a sério (advisories oficiais SheetJS/GitHub) —
   **não é risco nenhum**, já resolvido desde 2026-08-16. Ver `lessons.md` e
   as 3 referências corrigidas mais abaixo neste ficheiro.
-- [ ] `connection_limit=1`: **não avançado** — subir isto só pode ser
-  testado com segurança contra uma Neon DB branch + Vercel Preview
-  Deployment separados (regra de ouro já usada no plano de venda, mais
-  abaixo), nunca direto em produção (foi baixado para 1 depois de um crash
-  real em 2026-08-27, ver lessons.md). Não tenho `vercel`/`neon` CLI
-  autenticado nesta máquina — preciso que o Ricardo crie a branch de teste
-  (ou me dê acesso) antes de eu poder testar isto com dados a sério.
+- [x] `connection_limit=1` → `3`: como não tinha `vercel`/`neon` CLI
+  autenticado nesta máquina para preparar um ambiente de teste separado, o
+  Ricardo fez a mudança ele próprio direto em produção (`DATABASE_URL` em
+  Vercel → Settings → Environments), guiado passo a passo (2 tentativas
+  erradas no caminho: colou a variável errada — `DIRECT_URL` em vez de
+  `DATABASE_URL` — e depois colou o valor com o prefixo `DATABASE_URL="..."`
+  a mais; ambas corrigidas antes de guardar). Redeploy feito, app testada em
+  produção pelo Ricardo: **"acho que ficou melhor"**. `DIRECT_URL` não foi
+  tocado (fica só com a ligação direta, sem `connection_limit`, como
+  sempre). Sem alteração de código — é só a env var em produção.
+- [ ] Continuar a acompanhar nos próximos dias (picos de uso, vários
+  motoristas ao mesmo tempo) — reverter para `connection_limit=1` da mesma
+  forma se aparecer algum erro tipo o de 2026-08-27 (`P2024`/"Application
+  error").
 
 ## ☑️ RIC-Percam: recolha "por atribuir" a inflacionar o aviso de sobrelotação (2026-09-12)
 
