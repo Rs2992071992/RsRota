@@ -67,16 +67,14 @@ const grupos: { titulo: string; campos: [keyof ParametrosCusto, string][] }[] = 
       ["capacidadeReboque", "Capacidade camião+reboque (kg)"],
     ],
   },
-  {
-    titulo: "Paletes (carga por Volume, 120×80 / 120×100)",
-    campos: [
-      ["capacidadePaleteA", "Capacidade paletes 120×80cm, camião+reboque (nº)"],
-      ["capacidadePaleteB", "Capacidade paletes 120×100cm, camião+reboque (nº)"],
-      ["capacidadePaleteACamiao", "Capacidade paletes 120×80cm, só camião (nº)"],
-      ["capacidadePaleteBCamiao", "Capacidade paletes 120×100cm, só camião (nº)"],
-    ],
-  },
 ];
+
+// capacidadePaleteA/B/ACamiao/BCamiao (⚠️ ver Paragem.volume em
+// prisma/schema.prisma) deixaram de ter grupo/inputs aqui: nenhuma paragem os
+// usa desde 2026-08-28 (confirmado por query em 2026-09-18: 0 registos em
+// modo "paletes-legado"). Ficam só no schema/estado (extrair/guardar), sem
+// migração, para o motor de cálculo continuar a suportar histórico antigo se
+// algum dia reaparecer.
 
 export default function ParametrosForm({
   paramsIniciais,
