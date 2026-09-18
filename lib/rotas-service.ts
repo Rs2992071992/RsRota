@@ -144,6 +144,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     horasExtra: p.horasExtra,
     recolha: p.recolha,
     faturarCliente: p.faturarCliente,
+    faturarClienteApenasRecolha: p.faturarClienteApenasRecolha,
     rateioManual: p.rateioManual as RateioManualItem[] | null,
     precoCombRefOverride: p.precoCombRefOverride,
     receitaPaga: p.receitaPaga,

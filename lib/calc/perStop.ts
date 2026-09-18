@@ -256,7 +256,7 @@ export function linhasPaleteEfetivas(p: {
  * `(nPaletes + nMeias×0,5) / capacidade`. Devolve 0 quando não há paletes nem
  * capacidade — o chamador decide se isso vira 1 (rateio) ou fica 0 (métrica).
  */
-function coefPaletesDimensao(
+export function coefPaletesDimensao(
   tipoVeiculo: string,
   linhas: PaleteLinha[],
   nMeiasPaletes: number,

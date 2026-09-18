@@ -232,6 +232,14 @@ export interface ParagemInput {
   recolha?: boolean;
   faturarCliente?: string | null;
   /**
+   * Só relevante numa paragem MISTA (linhas `paletes` com sentido ENTREGA e
+   * RECOLHA) com `faturarCliente` preenchido. false/ausente = comportamento
+   * de sempre: `faturarCliente` cobre TODO o coeficiente (entrega + recolha).
+   * true = a entrega fica com o próprio `cliente`, só a recolha vai para
+   * `faturarCliente` — ver `chaveClienteEntrega` em `lib/calc/perRoute.ts`.
+   */
+  faturarClienteApenasRecolha?: boolean | null;
+  /**
    * Atribuição manual do custo deste troço a clientes — só relevante quando
    * `tipoVeiculo = VAZIO`. Cada `km` converte-se em fração do troço
    * (`km/kmFeitos`) aplicada ao custo desse troço, entregue diretamente ao

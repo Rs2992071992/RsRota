@@ -106,6 +106,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       alimentacao: p.alimentacao,
       horasExtra: p.horasExtra,
       faturarCliente: p.faturarCliente,
+      faturarClienteApenasRecolha: p.faturarClienteApenasRecolha,
       litrosEspanha: p.litrosEspanha,
       custoEspanha: p.custoEspanha,
       receitaPaga: p.receitaPaga,

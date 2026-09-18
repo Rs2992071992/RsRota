@@ -1,5 +1,6 @@
 import {
   calcularParagem,
+  coefPaletesDimensao,
   coeficienteReal,
   efetivos,
   linhasPaleteEfetivas,
@@ -9,7 +10,7 @@ import {
   type ContextoCalculo,
 } from "./perStop";
 import { valorPortagem } from "./lookups";
-import type { ParagemInput, RateioCliente, RotaCalc } from "./types";
+import type { ParagemInput, ParagemSnapshot, RateioCliente, RotaCalc } from "./types";
 
 /** Chave de agrupamento: mesma direção (tipoViagem) e mesmo dia — idRota
  * pode ser reutilizado em rotas multi-dia, por isso o dia entra na chave
@@ -304,21 +305,77 @@ export function calcularRota(
   // soma-se à quota desse cliente, não à do próprio `cliente` — igual a
   // sempre).
   const chaveCliente = (p: ParagemInput): string => p.faturarCliente?.trim() || p.cliente || "(sem cliente)";
-  const coefPorIndice: number[] = paragens.map((p, i) => {
-    if (p.tipoVeiculo === "VAZIO") return 0;
-    return coeficienteReal(
-      p.tipoVeiculo,
-      pesoTransportado(p),
-      effs[i],
-      p.nPaletes || 0,
-      p.volume || false,
-      p.tipoPalete ?? null,
-      p.paleteComprimentoMm ?? null,
-      p.paleteLarguraMm ?? null,
-      p.nMeiasPaletes || 0,
-      p.paletes ?? null,
-    );
-  });
+  // Entrega vs. recolha da MESMA paragem podem pertencer a clientes
+  // diferentes (`faturarClienteApenasRecolha`, 2026-09-18) — por default
+  // (false/ausente) a entrega fica atada ao mesmo `chaveCliente` da recolha,
+  // preservando o comportamento de sempre (ex. RIC-Tec-mesnard, Tecfil
+  // contratou entrega+recolha, paga tudo). Só diverge quando o escritório
+  // marca explicitamente que a entrega NÃO faz parte do que o faturarCliente
+  // contratou.
+  const chaveClienteEntrega = (p: ParagemInput): string =>
+    p.faturarCliente?.trim() && p.faturarClienteApenasRecolha
+      ? p.cliente || "(sem cliente)"
+      : chaveCliente(p);
+
+  interface Contribuicao {
+    cliente: string;
+    coef: number;
+  }
+
+  /**
+   * Contribuições de coeficiente desta paragem, por cliente a faturar.
+   * Caso comum (chaveClienteEntrega === chaveCliente, sem split pedido):
+   * 1 contribuição só, com `coeficienteReal` de sempre — idêntico ao código
+   * anterior a esta função, zero risco de regressão para todo o histórico.
+   * Caso split: separa as linhas de `paletes` por `sentido` e calcula o
+   * coeficiente de cada lado com `coefPaletesDimensao` — só possível quando
+   * há linhas com dimensão própria (paragens legado/peso não têm "lados").
+   * Meias-paletes vão inteiras para o lado da entrega (assunção razoável:
+   * empilhadas em cima da carga principal, não da recolha).
+   */
+  const contribuicoesDaParagem = (p: ParagemInput, eff: ParagemSnapshot): Contribuicao[] => {
+    const clienteRecolha = chaveCliente(p);
+    const clienteEntrega = chaveClienteEntrega(p);
+    const coefTotalParagem = () =>
+      coeficienteReal(
+        p.tipoVeiculo,
+        pesoTransportado(p),
+        eff,
+        p.nPaletes || 0,
+        p.volume || false,
+        p.tipoPalete ?? null,
+        p.paleteComprimentoMm ?? null,
+        p.paleteLarguraMm ?? null,
+        p.nMeiasPaletes || 0,
+        p.paletes ?? null,
+      );
+    if (clienteEntrega === clienteRecolha) {
+      return [{ cliente: clienteRecolha, coef: coefTotalParagem() }];
+    }
+    const linhas = linhasPaleteEfetivas(p);
+    const sentidoDefault: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
+    const linhasEntrega = linhas.filter((l) => (l.sentido ?? sentidoDefault) === "ENTREGA");
+    const linhasRecolha = linhas.filter((l) => (l.sentido ?? sentidoDefault) === "RECOLHA");
+    const out: Contribuicao[] = [];
+    if (linhasEntrega.length > 0) {
+      out.push({
+        cliente: clienteEntrega,
+        coef: coefPaletesDimensao(p.tipoVeiculo, linhasEntrega, p.nMeiasPaletes || 0, eff),
+      });
+    }
+    if (linhasRecolha.length > 0) {
+      out.push({ cliente: clienteRecolha, coef: coefPaletesDimensao(p.tipoVeiculo, linhasRecolha, 0, eff) });
+    }
+    // Sem linhas com dimensão própria (paragem legado por peso/volume) -> não
+    // há como separar por sentido, cai no coeficiente único de sempre.
+    if (out.length === 0) return [{ cliente: clienteRecolha, coef: coefTotalParagem() }];
+    return out;
+  };
+
+  const contribuicoesPorIndice: Contribuicao[][] = paragens.map((p, i) =>
+    p.tipoVeiculo === "VAZIO" ? [] : contribuicoesDaParagem(p, effs[i]),
+  );
+  const coefPorIndice: number[] = contribuicoesPorIndice.map((cs) => cs.reduce((s, c) => s + c.coef, 0));
 
   const indicesPorSegmento = new Map<string, number[]>();
   paragens.forEach((p, i) => {
@@ -350,7 +407,9 @@ export function calcularRota(
       if (comoVazio) somaVazio(cliente, v);
     };
     if (coefTotal > 0) {
-      for (const i of idxs) aplicar(chaveCliente(paragens[i]), (coefPorIndice[i] / coefTotal) * valor);
+      for (const i of idxs) {
+        for (const c of contribuicoesPorIndice[i]) aplicar(c.cliente, (c.coef / coefTotal) * valor);
+      }
     } else {
       // Sem nenhum coeficiente no segmento (raro, ex. peso 0 mal registado) ->
       // reparte igualmente pelos clientes presentes.
@@ -416,7 +475,7 @@ export function calcularRota(
     if (coefTotalRota > 0) {
       paragens.forEach((p, i) => {
         if (p.tipoVeiculo === "VAZIO") return;
-        somaAuto(chaveCliente(p), (coefPorIndice[i] / coefTotalRota) * custosComuns);
+        for (const c of contribuicoesPorIndice[i]) somaAuto(c.cliente, (c.coef / coefTotalRota) * custosComuns);
       });
     } else if (clientesRota.size > 0) {
       for (const cliente of clientesRota) somaAuto(cliente, custosComuns / clientesRota.size);
@@ -457,11 +516,17 @@ export function calcularRota(
   // sobrecarga" continua a olhar para a rota toda, não só para um troço.
   for (let i = 0; i < paragens.length; i++) {
     if (paragens[i].tipoVeiculo === "VAZIO") continue;
-    const chave = chaveCliente(paragens[i]);
-    const atual = linha(chave);
-    atual.coefReal += coefPorIndice[i];
-    atual.receitaPaga += paragens[i].receitaPaga || 0;
-    porCliente.set(chave, atual);
+    for (const c of contribuicoesPorIndice[i]) {
+      const atual = linha(c.cliente);
+      atual.coefReal += c.coef;
+      porCliente.set(c.cliente, atual);
+    }
+    // receitaPaga não tem equivalente por linha (só existe ao nível da
+    // paragem) — fica sempre no cliente "principal", como sempre.
+    const chavePrincipal = chaveCliente(paragens[i]);
+    const atualPrincipal = linha(chavePrincipal);
+    atualPrincipal.receitaPaga += paragens[i].receitaPaga || 0;
+    porCliente.set(chavePrincipal, atualPrincipal);
   }
 
   // Quota final = fração real do custo total que este cliente paga (sempre

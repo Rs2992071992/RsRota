@@ -319,6 +319,14 @@ model Paragem {
   // preserva o rateio de toda a história existente.
   faturarCliente String?
 
+  // Só relevante numa paragem MISTA (entrega + recolha) com faturarCliente
+  // preenchido. null/false (default) = comportamento de sempre: faturarCliente
+  // cobre TUDO (entrega + recolha), preserva o rateio de toda a história
+  // existente. true = a entrega fica com o próprio `cliente` (quem a recebeu),
+  // só a recolha vai para faturarCliente — para o caso em que a entrega e a
+  // recolha no mesmo sítio pertencem a clientes diferentes.
+  faturarClienteApenasRecolha Boolean?
+
   // Atribuição manual do custo deste troço a clientes — só relevante quando
   // tipoVeiculo = VAZIO. Forma: [{ cliente, km }]. Os km atribuídos convertem-se
   // em fração do troço (km/kmFeitos) aplicada ao custoParagem; o que não for

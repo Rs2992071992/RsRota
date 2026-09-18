@@ -95,6 +95,7 @@ export async function POST(req: Request) {
       horasExtra: d.horasExtra,
       recolha: d.recolha,
       faturarCliente: d.faturarCliente?.trim() || null,
+      faturarClienteApenasRecolha: d.faturarClienteApenasRecolha ?? null,
       // Só faz sentido num troço VAZIO — defensivo, a UI de registo nunca envia isto.
       rateioManual:
         d.tipoVeiculo === "VAZIO" && d.rateioManual

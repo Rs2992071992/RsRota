@@ -1055,3 +1055,81 @@ describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra 
     expect(tecfil.consumoL100).toBe(25); // 3000 kg -> escalão mais baixo
   });
 });
+
+// faturarClienteApenasRecolha (2026-09-18) — paragem MISTA em que a entrega e
+// a recolha pertencem a clientes diferentes (ex.: Plasgal pede a entrega,
+// outro cliente pede a recolha no mesmo sítio). Por default (false/ausente)
+// o comportamento é o de sempre: faturarCliente cobre entrega + recolha
+// (caso real RIC-Tec-mesnard/Tecfil, coberto pelo teste RIC-Percam acima).
+describe("calcularRota — faturarClienteApenasRecolha (entrega e recolha a clientes diferentes)", () => {
+  const paletesMista = [
+    { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10, sentido: "ENTREGA" as const },
+    { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 5, sentido: "RECOLHA" as const },
+  ];
+  // capacidade de 1200×800mm neste snapshot = 38 (ver "rateio misto peso +
+  // paletes por dimensão" acima) -> coef entrega = 10/38, coef recolha = 5/38.
+  const capacidade = 38;
+
+  describe("default (sem faturarClienteApenasRecolha) — faturarCliente cobre tudo, como sempre", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Plasgal",
+        faturarCliente: "OutroCliente",
+        kmInicial: 0,
+        kmFinal: 100,
+        snapshot: snapshotDimensao,
+        paletes: paletesMista,
+        receitaPaga: 1000,
+      }),
+    ];
+    const r = calcularRota("SPLIT-off", paragens, ctx);
+
+    it("Plasgal (cliente da paragem) não aparece no rateio", () => {
+      expect(r.rateio.find((c) => c.cliente === "Plasgal")).toBeUndefined();
+      expect(r.rateio).toHaveLength(1);
+    });
+    it("OutroCliente paga 100% (entrega + recolha somadas)", () => {
+      const outro = r.rateio.find((c) => c.cliente === "OutroCliente")!;
+      expect(outro.coefReal).toBeCloseTo(15 / capacidade, 6);
+      expect(outro.custoAtribuido).toBeCloseTo(r.custoTotalRota, 6);
+    });
+  });
+
+  describe("faturarClienteApenasRecolha = true — entrega fica com Plasgal, só a recolha vai para OutroCliente", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Plasgal",
+        faturarCliente: "OutroCliente",
+        faturarClienteApenasRecolha: true,
+        kmInicial: 0,
+        kmFinal: 100,
+        snapshot: snapshotDimensao,
+        paletes: paletesMista,
+        receitaPaga: 1000,
+      }),
+    ];
+    const r = calcularRota("SPLIT-on", paragens, ctx);
+
+    it("Plasgal e OutroCliente aparecem os dois no rateio", () => {
+      expect(r.rateio).toHaveLength(2);
+    });
+    it("cada um paga proporcional ao seu coeficiente (10/38 vs. 5/38)", () => {
+      const plasgal = r.rateio.find((c) => c.cliente === "Plasgal")!;
+      const outro = r.rateio.find((c) => c.cliente === "OutroCliente")!;
+      expect(plasgal.coefReal).toBeCloseTo(10 / capacidade, 6);
+      expect(outro.coefReal).toBeCloseTo(5 / capacidade, 6);
+      expect(plasgal.custoAtribuido).toBeCloseTo((10 / 15) * r.custoTotalRota, 6);
+      expect(outro.custoAtribuido).toBeCloseTo((5 / 15) * r.custoTotalRota, 6);
+    });
+    it("Σ custo atribuído = custo total da rota", () => {
+      const soma = r.rateio.reduce((a, c) => a + c.custoAtribuido, 0);
+      expect(soma).toBeCloseTo(r.custoTotalRota, 6);
+    });
+    it("receitaPaga fica toda no cliente principal (OutroCliente) — sem equivalente por linha", () => {
+      const plasgal = r.rateio.find((c) => c.cliente === "Plasgal")!;
+      const outro = r.rateio.find((c) => c.cliente === "OutroCliente")!;
+      expect(plasgal.receitaPaga).toBe(0);
+      expect(outro.receitaPaga).toBe(1000);
+    });
+  });
+});

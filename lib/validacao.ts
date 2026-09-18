@@ -70,6 +70,11 @@ export const paragemSchema = z
     // normalmente ao próprio `cliente`).
     recolha: z.boolean().default(false),
     faturarCliente: z.string().trim().nullable().optional(),
+    // Só relevante numa paragem MISTA com faturarCliente preenchido: true =
+    // a entrega fica com o próprio cliente, só a recolha vai para
+    // faturarCliente. false/ausente = comportamento de sempre (tudo para
+    // faturarCliente).
+    faturarClienteApenasRecolha: z.boolean().nullable().optional(),
     // Atribuição manual do custo de um troço VAZIO a clientes (km, não %) —
     // ver Paragem.rateioManual no schema. Sem teto ao somatório aqui: o
     // motor de cálculo escala defensivamente se somar mais do que o troço

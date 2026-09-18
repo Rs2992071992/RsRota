@@ -59,6 +59,9 @@ export interface ParagemEditavel {
   horasExtra: number;
   /** Recolha para entregar a outro cliente — nome a faturar, ou null para faturar a este. */
   faturarCliente: string | null;
+  /** Numa paragem MISTA: true = a entrega fica com o próprio cliente, só a
+   * recolha vai para faturarCliente. false/null = faturarCliente cobre tudo. */
+  faturarClienteApenasRecolha: boolean | null;
   litrosEspanha: number | null;
   custoEspanha: number | null;
   receitaPaga: number;
@@ -310,6 +313,8 @@ export default function ParagemEditor({
         alimentacao: Number(f.alimentacao),
         horasExtra: Number(f.horasExtra),
         faturarCliente: f.faturarCliente?.trim() || null,
+        faturarClienteApenasRecolha:
+          tipoParagem === "MISTA" && f.faturarCliente?.trim() ? Boolean(f.faturarClienteApenasRecolha) : null,
         rateioManual:
           f.tipoVeiculo === "VAZIO"
             ? Object.entries(kmPorCliente)
@@ -414,6 +419,22 @@ export default function ParagemEditor({
                     </option>
                   ))}
               </select>
+            </div>
+          )}
+          {mostrarFaturarCliente && tipoParagem === "MISTA" && f.faturarCliente && (
+            <div className="col-span-2 flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="apenasRecolha"
+                className="mt-1"
+                checked={f.faturarClienteApenasRecolha ?? false}
+                onChange={(e) => set("faturarClienteApenasRecolha", e.target.checked as never)}
+              />
+              <label htmlFor="apenasRecolha" className="text-sm text-gray-600">
+                Faturar só a recolha a {f.faturarCliente} — a entrega local fica com{" "}
+                {f.cliente || "o cliente desta paragem"}. Por defeito (desmarcado), {f.faturarCliente}{" "}
+                paga tudo (entrega + recolha).
+              </label>
             </div>
           )}
           <div>

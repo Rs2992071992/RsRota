@@ -37,6 +37,7 @@ const CAMPOS_ESCRITORIO = [
   "dataPagamento",
   "receitaPaga",
   "faturarCliente",
+  "faturarClienteApenasRecolha",
   "rateioManual",
 ] as const;
 
