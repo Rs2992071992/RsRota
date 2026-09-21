@@ -79,6 +79,7 @@ export default async function VeiculosPage() {
     manutencoes: v.manutencoes.map((m) => ({
       id: m.id,
       descricao: m.descricao,
+      km: m.km,
       data: m.data.toISOString(),
       valor: m.valor,
       dias: m.dias,

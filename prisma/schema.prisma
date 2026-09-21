@@ -163,6 +163,7 @@ model Veiculo {
 model Manutencao {
   id        Int      @id @default(autoincrement())
   descricao String
+  km        Float?
   data      DateTime
   valor     Float?
   dias      Float?

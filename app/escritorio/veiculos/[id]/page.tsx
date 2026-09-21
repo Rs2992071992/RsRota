@@ -77,6 +77,7 @@ export default async function VeiculoDetalhePage(props: { params: Promise<{ id: 
         manutencoesIniciais={veiculo.manutencoes.map((m) => ({
           id: m.id,
           descricao: m.descricao,
+          km: m.km,
           data: m.data.toISOString(),
           valor: m.valor,
           dias: m.dias,

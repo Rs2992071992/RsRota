@@ -198,6 +198,7 @@ export type VeiculoForm = z.infer<typeof veiculoSchema>;
  * preencher até se saber o custo/tempo parado real. */
 export const manutencaoSchema = z.object({
   descricao: z.string().trim().max(300).default(""),
+  km: z.number().nonnegative().nullable().optional(),
   data: z.string().min(1, "Data obrigatória"),
   valor: z.number().nonnegative().nullable().optional(),
   dias: z.number().nonnegative().nullable().optional(),

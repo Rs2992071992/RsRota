@@ -25,11 +25,12 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
   const existe = await prisma.manutencao.findUnique({ where: { id } });
   if (!existe) return NextResponse.json({ erro: "Manutenção não encontrada." }, { status: 404 });
 
-  const { descricao, data, valor, dias } = parsed.data;
+  const { descricao, km, data, valor, dias } = parsed.data;
   const manutencao = await prisma.manutencao.update({
     where: { id },
     data: {
       ...(descricao !== undefined && { descricao }),
+      ...(km !== undefined && { km }),
       ...(data !== undefined && { data: new Date(data) }),
       ...(valor !== undefined && { valor }),
       ...(dias !== undefined && { dias }),

@@ -24,9 +24,9 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
   const existe = await prisma.veiculo.findUnique({ where: { id: veiculoId } });
   if (!existe) return NextResponse.json({ erro: "Veículo não encontrado." }, { status: 404 });
 
-  const { descricao, data, valor, dias } = parsed.data;
+  const { descricao, km, data, valor, dias } = parsed.data;
   const manutencao = await prisma.manutencao.create({
-    data: { veiculoId, descricao, data: new Date(data), valor: valor ?? null, dias: dias ?? null },
+    data: { veiculoId, descricao, km: km ?? null, data: new Date(data), valor: valor ?? null, dias: dias ?? null },
   });
   return NextResponse.json({ ok: true, manutencao }, { status: 201 });
 }

@@ -6,6 +6,7 @@ import { fmtEuro, fmtNum } from "@/lib/format";
 export interface ManutencaoBD {
   id: number;
   descricao: string;
+  km: number | null;
   data: string;
   valor: number | null;
   dias: number | null;
@@ -35,7 +36,7 @@ export default function ManutencoesModal({
     setLinhas((ls) => ls.map((l) => (l.id === id ? { ...l, [campo]: valor } : l)));
   }
 
-  async function guardarCampo(id: number, campo: "descricao" | "data" | "valor" | "dias", valor: string | number | null) {
+  async function guardarCampo(id: number, campo: "descricao" | "km" | "data" | "valor" | "dias", valor: string | number | null) {
     setErro("");
     try {
       const res = await fetch(`/api/manutencoes/${id}`, {
@@ -70,7 +71,7 @@ export default function ManutencoesModal({
       }
       const { manutencao } = await res.json();
       setLinhas((ls) => [
-        { id: manutencao.id, descricao: manutencao.descricao, data: manutencao.data, valor: manutencao.valor, dias: manutencao.dias },
+        { id: manutencao.id, descricao: manutencao.descricao, km: manutencao.km, data: manutencao.data, valor: manutencao.valor, dias: manutencao.dias },
         ...ls,
       ]);
       onChanged();
@@ -124,6 +125,7 @@ export default function ManutencoesModal({
             <thead>
               <tr>
                 <th className="th">Descrição</th>
+                <th className="th w-24">Km</th>
                 <th className="th w-32">Data</th>
                 <th className="th w-24">Valor (€)</th>
                 <th className="th w-20">Dias parado</th>
@@ -139,6 +141,17 @@ export default function ManutencoesModal({
                       value={l.descricao}
                       onChange={(e) => updLocal(l.id, "descricao", e.target.value)}
                       onBlur={(e) => guardarCampo(l.id, "descricao", e.target.value)}
+                    />
+                  </td>
+                  <td className="td">
+                    <input
+                      type="number"
+                      step="any"
+                      className="input"
+                      value={l.km ?? ""}
+                      placeholder="—"
+                      onChange={(e) => updLocal(l.id, "km", e.target.value === "" ? null : Number(e.target.value))}
+                      onBlur={(e) => guardarCampo(l.id, "km", e.target.value === "" ? null : Number(e.target.value))}
                     />
                   </td>
                   <td className="td">
