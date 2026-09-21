@@ -14,8 +14,12 @@ export async function GET() {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 
-  const [portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha, tiposPalete] =
+  const [utilizador, portagens, params, rotasRecentes, veiculos, clientesParagens, clientesFicha, tiposPalete] =
     await Promise.all([
+      prisma.utilizador.findUnique({
+        where: { id: sessao.id },
+        select: { mostraNoitesFora: true, mostraAlimentacao: true, mostraHorasExtra: true },
+      }),
       prisma.tabelaPortagem.findMany({ orderBy: { zona: "asc" } }),
       prisma.parametros.findUnique({ where: { id: 1 } }),
       // distinct + orderBy devolve, por idRota, a paragem mais recente — dá
@@ -61,6 +65,9 @@ export async function GET() {
     .sort((a, b) => a.localeCompare(b, "pt"));
 
   return NextResponse.json({
+    mostraNoitesFora: utilizador?.mostraNoitesFora ?? true,
+    mostraAlimentacao: utilizador?.mostraAlimentacao ?? true,
+    mostraHorasExtra: utilizador?.mostraHorasExtra ?? true,
     zonas: portagens.map((p) => p.zona),
     veiculos: veiculos.map(({ reboqueHabitual, ...v }) => ({
       ...v,
