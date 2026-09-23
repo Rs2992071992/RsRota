@@ -181,7 +181,6 @@ export default function RegistoForm({
 
   const num = (s: string) => (s.trim() === "" ? 0 : Number(s));
   const veiculoSel = veiculos.find((v) => String(v.id) === f.veiculoId);
-  const ehReboque = f.tipoVeiculo === "CAMIAO+REBOQUE";
   const mostrarPaletes = f.tipoVeiculo !== "VAZIO";
   const tipoPaleteSel = tiposPalete.find((t) => String(t.id) === f.tipoPaleteId);
   // Todas as linhas de palete desta paragem: a 1.ª (f) + as adicionais.
@@ -242,23 +241,24 @@ export default function RegistoForm({
   // real (o mesmo das Cargas do escritório). null = sem veículo escolhido.
   const espacoCargaRota = useMemo(() => {
     if (!veiculoSel) return null;
-    const caixas: CaixaInput[] = [];
+    const caixasBase: CaixaInput[] = [];
     if (veiculoSel.caixaComprimentoMm && veiculoSel.caixaLarguraMm) {
-      caixas.push({
+      caixasBase.push({
         id: "veiculo",
         label: veiculoSel.nome,
         comprimentoMm: veiculoSel.caixaComprimentoMm,
         larguraMm: veiculoSel.caixaLarguraMm,
       });
     }
-    if (ehReboque && veiculoSel.caixaReboqueComprimentoMm && veiculoSel.caixaReboqueLarguraMm) {
-      caixas.push({
-        id: "reboque",
-        label: "Reboque",
-        comprimentoMm: veiculoSel.caixaReboqueComprimentoMm,
-        larguraMm: veiculoSel.caixaReboqueLarguraMm,
-      });
-    }
+    // A caixa do reboque entra sempre que o veículo a tiver configurada — é o
+    // motor (`verificarEspacoCarga`) que decide, momento a momento, se se
+    // aplica com base no `tipoVeiculo` de cada paragem (a atual e as já
+    // registadas em `paragensRota`), não com o `tipoVeiculo` só desta
+    // paragem: um reboque largado a meio da rota deixa de contar a partir daí.
+    const caixaReboque: CaixaInput | null =
+      veiculoSel.caixaReboqueComprimentoMm && veiculoSel.caixaReboqueLarguraMm
+        ? { id: "reboque", label: "Reboque", comprimentoMm: veiculoSel.caixaReboqueComprimentoMm, larguraMm: veiculoSel.caixaReboqueLarguraMm }
+        : null;
     const linhaCarga = (l: { comprimentoMm: number; larguraMm: number; nPaletes: number }, clienteNome?: string) => ({
       tipoPaleteId: 0,
       comprimentoMm: l.comprimentoMm,
@@ -278,11 +278,10 @@ export default function RegistoForm({
       const { entregues, recolhidas } = linhasParagemForm();
       paragensCarga.push({ entregues, recolhidas, tipoVeiculo: f.tipoVeiculo, kmInicial: num(f.kmInicial) });
     }
-    return verificarEspacoCarga(caixas, paragensCarga);
+    return verificarEspacoCarga(caixasBase, caixaReboque, paragensCarga);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     veiculoSel,
-    ehReboque,
     paragensRota,
     mostrarPaletes,
     tipoParagem,

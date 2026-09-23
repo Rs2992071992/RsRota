@@ -212,11 +212,35 @@ const pior = (a: EstadoArrumado, b: EstadoArrumado): EstadoArrumado =>
     : a;
 
 /**
- * Verifica se as paletes cabem no veículo (+ reboque) SIMULANDO a ocupação ao
- * longo da rota — não a soma de tudo. Cada entrega vem a bordo desde o início do
- * segmento e sai na sua paragem; cada recolha entra na sua paragem e fica até ao
- * fim do segmento. Um trajeto `VAZIO` corta a rota em segmentos que nunca
- * coexistem (mesma lógica de `pesosEmTransito`).
+ * Caixas aplicáveis no corte `j` (ver `estadosDaRota`): `caixasBase` está
+ * sempre presente; `caixaReboque` só entra quando a paragem desse corte
+ * (mesmo critério de indexação de `piorDoTroco` abaixo, `ordenadas[Math.min(j,
+ * n-1)]`) tem `tipoVeiculo === "CAMIAO+REBOQUE"` — reboque largado a meio da
+ * rota (ex. descarrega e deixa o reboque no 1º cliente, segue só de camião)
+ * deixa de estar disponível a partir do corte seguinte, mesmo sem nenhum
+ * `VAZIO` a separar (2026-09-23, rota real RIC-Tec-A25).
+ */
+function caixasNoCorte(
+  caixasBase: CaixaInput[],
+  caixaReboque: CaixaInput | null,
+  ordenadas: ReturnType<typeof filtrarLinhasValidas>,
+  j: number,
+): CaixaInput[] {
+  const n = ordenadas.length;
+  const comReboque = caixaReboque && ordenadas[Math.min(j, n - 1)]?.tipoVeiculo === "CAMIAO+REBOQUE";
+  return comReboque ? [...caixasBase, caixaReboque] : caixasBase;
+}
+
+/**
+ * Verifica se as paletes cabem no veículo (+ reboque, quando atrelado) SIMULANDO
+ * a ocupação ao longo da rota — não a soma de tudo. Cada entrega vem a bordo
+ * desde o início do segmento e sai na sua paragem; cada recolha entra na sua
+ * paragem e fica até ao fim do segmento. Um trajeto `VAZIO` corta a rota em
+ * segmentos que nunca coexistem (mesma lógica de `pesosEmTransito`).
+ *
+ * `caixaReboque` só se aplica aos momentos cuja paragem é CAMIAO+REBOQUE — ver
+ * `caixasNoCorte`. `caixasBase` é o que está sempre presente (tipicamente só o
+ * veículo).
  *
  * EXCEÇÃO (2026-09-04): uma recolha para entregar a outro cliente
  * (`faturarCliente` preenchido, ex. recolhida na Ida e só entregue na Volta)
@@ -238,20 +262,25 @@ const pior = (a: EstadoArrumado, b: EstadoArrumado): EstadoArrumado =>
  * `empacotarEstado`) — a ordem física de carga. Partilhada com as plantas para
  * o aviso e o desenho baterem certo.
  */
-export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarga[]): EspacoCarga {
+export function verificarEspacoCarga(
+  caixasBase: CaixaInput[],
+  caixaReboque: CaixaInput | null,
+  paragens: ParagemCarga[],
+): EspacoCarga {
   const comLinhas = filtrarLinhasValidas(paragens);
   const totalGeral = totalDeLinhas(comLinhas);
 
-  if (caixas.length === 0) {
+  if (caixasBase.length === 0 && !caixaReboque) {
     return { totalPaletes: totalGeral, colocadas: totalGeral, semEspaco: 0, cabemTodas: true, verificavel: false };
   }
   if (totalGeral === 0) {
     return { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
   }
 
+  const { estados, ordenadas } = estadosDaRota(comLinhas);
   let resultado: EstadoArrumado | null = null;
-  for (const aBordo of estadosDaRota(comLinhas).estados) {
-    const estado = empacotarEstado(caixas, aBordo);
+  for (let j = 0; j < estados.length; j++) {
+    const estado = empacotarEstado(caixasNoCorte(caixasBase, caixaReboque, ordenadas, j), estados[j]);
     resultado = resultado ? pior(resultado, estado) : estado;
   }
   return resultado?.espaco ?? { totalPaletes: 0, colocadas: 0, semEspaco: 0, cabemTodas: true, verificavel: true };
@@ -270,16 +299,18 @@ export function verificarEspacoCarga(caixas: CaixaInput[], paragens: ParagemCarg
  * carga.
  */
 export function gerarPlantaCargaRota(
-  caixas: CaixaInput[],
+  caixasBase: CaixaInput[],
+  caixaReboque: CaixaInput | null,
   paragens: ParagemCarga[],
 ): ResultadoPacking | null {
-  if (caixas.length === 0) return null;
+  if (caixasBase.length === 0 && !caixaReboque) return null;
   const comLinhas = filtrarLinhasValidas(paragens);
   if (totalDeLinhas(comLinhas) === 0) return null;
 
+  const { estados, ordenadas } = estadosDaRota(comLinhas);
   let resultado: EstadoArrumado | null = null;
-  for (const aBordo of estadosDaRota(comLinhas).estados) {
-    const estado = empacotarEstado(caixas, aBordo);
+  for (let j = 0; j < estados.length; j++) {
+    const estado = empacotarEstado(caixasNoCorte(caixasBase, caixaReboque, ordenadas, j), estados[j]);
     resultado = resultado ? pior(resultado, estado) : estado;
   }
   return resultado?.packing ?? null;
@@ -307,10 +338,11 @@ export interface PlantaCargaPorTroco {
  * null }` — nunca um erro.
  */
 export function gerarPlantaCargaPorTroco(
-  caixas: CaixaInput[],
+  caixasBase: CaixaInput[],
+  caixaReboque: CaixaInput | null,
   paragens: ParagemCarga[],
 ): PlantaCargaPorTroco {
-  if (caixas.length === 0) return { ida: null, volta: null };
+  if (caixasBase.length === 0 && !caixaReboque) return { ida: null, volta: null };
   const comLinhas = filtrarLinhasValidas(paragens);
   if (totalDeLinhas(comLinhas) === 0) return { ida: null, volta: null };
 
@@ -320,7 +352,7 @@ export function gerarPlantaCargaPorTroco(
     let resultado: EstadoArrumado | null = null;
     for (let j = 0; j < estados.length; j++) {
       if (ordenadas[Math.min(j, n - 1)]?.tipoViagem !== alvo) continue;
-      const estado = empacotarEstado(caixas, estados[j]);
+      const estado = empacotarEstado(caixasNoCorte(caixasBase, caixaReboque, ordenadas, j), estados[j]);
       resultado = resultado ? pior(resultado, estado) : estado;
     }
     return resultado?.packing ?? null;

@@ -25,21 +25,21 @@ function entrega(nPaletes: number, kmInicial: number, tipoVeiculo = "CAMIAO"): P
 }
 
 /** Atalho: paragem de recolha pura (entra aqui, fica a bordo). */
-function recolha(nPaletes: number, kmInicial: number): ParagemCarga {
+function recolha(nPaletes: number, kmInicial: number, tipoVeiculo = "CAMIAO"): ParagemCarga {
   return {
     entregues: [],
     recolhidas: nPaletes > 0 ? [{ ...P1300, nPaletes, clienteNome: "R" }] : [],
-    tipoVeiculo: "CAMIAO",
+    tipoVeiculo,
     kmInicial,
   };
 }
 
 /** Atalho: paragem mista (descarrega umas, carrega outras). */
-function mista(nEntregues: number, nRecolhidas: number, kmInicial: number): ParagemCarga {
+function mista(nEntregues: number, nRecolhidas: number, kmInicial: number, tipoVeiculo = "CAMIAO"): ParagemCarga {
   return {
     entregues: nEntregues > 0 ? [{ ...P1300, nPaletes: nEntregues, clienteNome: "M" }] : [],
     recolhidas: nRecolhidas > 0 ? [{ ...P1300, nPaletes: nRecolhidas, clienteNome: "M" }] : [],
-    tipoVeiculo: "CAMIAO",
+    tipoVeiculo,
     kmInicial,
   };
 }
@@ -51,33 +51,37 @@ function vazio(kmInicial: number): ParagemCarga {
 
 describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", () => {
   it("entrega única que cabe → cabemTodas", () => {
-    const r = verificarEspacoCarga([CAMIAO], [entrega(6, 0)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(6, 0)]);
     expect(r.cabemTodas).toBe(true);
     expect(r.verificavel).toBe(true);
     expect(r.totalPaletes).toBe(6);
   });
 
   it("entregas puras que não cabem → avisa (comportamento de sempre)", () => {
-    const r = verificarEspacoCarga([CAMIAO], [entrega(8, 0), entrega(8, 50)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(8, 0), entrega(8, 50)]);
     expect(r.cabemTodas).toBe(false);
     expect(r.totalPaletes).toBe(16); // as 16 estão a bordo desde o início
     expect(r.colocadas + r.semEspaco).toBe(16);
   });
 
   it("reboque anexado absorve o overflow de entregas", () => {
-    const r = verificarEspacoCarga([CAMIAO, REBOQUE], [entrega(8, 0), entrega(8, 50)]);
+    const r = verificarEspacoCarga(
+      [CAMIAO],
+      REBOQUE,
+      [entrega(8, 0, "CAMIAO+REBOQUE"), entrega(8, 50, "CAMIAO+REBOQUE")],
+    );
     expect(r.cabemTodas).toBe(true);
   });
 
   it("entregar 10 (enche) e SÓ DEPOIS recolher 10 → pico 10, cabe", () => {
-    const r = verificarEspacoCarga([CAMIAO], [entrega(10, 0), recolha(10, 100)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(10, 0), recolha(10, 100)]);
     expect(r.cabemTodas).toBe(true);
     expect(r.totalPaletes).toBe(10); // nunca houve 20 a bordo
   });
 
   it("entrega + recolha sobrepostas: o pico é um estado misto", () => {
     // ordem por km: entrega6@0, recolha6@50, entrega6@100
-    const r = verificarEspacoCarga([CAMIAO], [entrega(6, 0), recolha(6, 50), entrega(6, 100)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(6, 0), recolha(6, 50), entrega(6, 100)]);
     // estado após a recolha: entrega6@100 (ainda a bordo) + recolha6@50 = 12
     // paletes a bordo ao mesmo tempo — mais do que cabem no camião.
     expect(r.cabemTodas).toBe(false);
@@ -86,24 +90,24 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
   });
 
   it("VAZIO corta em segmentos que nunca coexistem", () => {
-    const r = verificarEspacoCarga([CAMIAO], [entrega(10, 0), vazio(50), recolha(10, 100)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(10, 0), vazio(50), recolha(10, 100)]);
     expect(r.cabemTodas).toBe(true); // 10 num segmento, 10 no outro
   });
 
   it("segmento só de recolhas que não cabe → avisa", () => {
-    const r = verificarEspacoCarga([CAMIAO], [recolha(12, 0)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [recolha(12, 0)]);
     expect(r.cabemTodas).toBe(false);
     expect(r.totalPaletes).toBe(12);
   });
 
   it("sem caixas → não verificável, não avisa", () => {
-    const r = verificarEspacoCarga([], [entrega(999, 0)]);
+    const r = verificarEspacoCarga([], null, [entrega(999, 0)]);
     expect(r.verificavel).toBe(false);
     expect(r.cabemTodas).toBe(true);
   });
 
   it("rota sem paletes → verificável, cabe (nada)", () => {
-    const r = verificarEspacoCarga([CAMIAO], [entrega(0, 0)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(0, 0)]);
     expect(r.verificavel).toBe(true);
     expect(r.cabemTodas).toBe(true);
     expect(r.totalPaletes).toBe(0);
@@ -112,6 +116,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
   it("tamanhos diferentes entre entrega e recolha", () => {
     const r = verificarEspacoCarga(
       [CAMIAO],
+      null,
       [
         { entregues: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 4 }], recolhidas: [], tipoVeiculo: "CAMIAO", kmInicial: 0 },
         { entregues: [], recolhidas: [{ tipoPaleteId: 2, comprimentoMm: 1150, larguraMm: 1150, nPaletes: 3 }], tipoVeiculo: "CAMIAO", kmInicial: 100 },
@@ -122,14 +127,14 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
 
   it("paragem mista: descarrega 6 + carrega 4 no mesmo stop → pico não é a soma", () => {
     // Antes de mais nada a bordo: 6 (entregues aqui). Depois: 4 (recolhidas aqui).
-    const r = verificarEspacoCarga([CAMIAO], [mista(6, 4, 0)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [mista(6, 4, 0)]);
     expect(r.cabemTodas).toBe(true);
     expect(r.totalPaletes).toBe(6); // pico = max(6, 4), nunca 10
   });
 
   it("paragem mista no meio de uma rota: pico é o estado antes/depois do sítio misto", () => {
     // entrega3@0, mista(descarrega 2, carrega 8)@50
-    const r = verificarEspacoCarga([CAMIAO], [entrega(3, 0), mista(2, 8, 50)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(3, 0), mista(2, 8, 50)]);
     // Início do segmento: 3 (entrega0) + 2 (entregues da mista) = 5 a bordo.
     // Entre as 2 paragens: só os 2 da mista (a de 3 já saiu) = 2.
     // Fim: as 8 carregadas na mista ficam a bordo = 8. Pico = 8, nunca 3+2+8=13.
@@ -173,7 +178,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         entregaCliente(4, 800, "Cliente A"),
         entregaCliente(10, 800, "Cliente B"),
       ];
-      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE], REBOQUE2, paragens);
       expect(r.totalPaletes).toBe(16); // pico real: as 8 entregas da ida, todas a bordo
     });
 
@@ -189,7 +194,8 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         kmInicial: 400,
       };
       const r = verificarEspacoCarga(
-        [CAMIAO_REBOQUE, REBOQUE2],
+        [CAMIAO_REBOQUE],
+        REBOQUE2,
         [entrega(10, 0), semLinha, entregaCliente(2, 800, "Cliente X")],
       );
       // entrega10 (índice0) + entregaCliente2 (índice2) contam-se ambas desde
@@ -206,7 +212,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         entrega(5, 150, "CAMIAO+REBOQUE"), // novo segmento, sem relação com a linha
         entregaCliente(4, 200, "Cliente A"),
       ];
-      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE], REBOQUE2, paragens);
       // 1º segmento: pico 6 (entrega) — a recolha (4, linha) não se soma aqui.
       // 2º segmento isolado: pico 5 (entrega) + 4 (linha ainda a bordo) = 9,
       // depois cai para 4 (só a linha) até à entrega final.
@@ -218,7 +224,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         { entregues: [], recolhidas: [{ ...P1300, nPaletes: 8, clienteNome: "Ges-thc" }], tipoVeiculo: "CAMIAO", kmInicial: 0, cliente: "Ges-thc" },
         { entregues: [{ ...P1300, nPaletes: 8, clienteNome: "Ges-thc" }], recolhidas: [], tipoVeiculo: "CAMIAO", kmInicial: 100, cliente: "Ges-thc" },
       ];
-      const r = verificarEspacoCarga([CAMIAO], paragens);
+      const r = verificarEspacoCarga([CAMIAO], null, paragens);
       // Sem a ligação, o pico seria 16 (recolhidas em 0 + "entregues desde o
       // início" em 1) — mais do que cabe no camião (10). Com a ligação, o
       // pico é 8 (nunca há 16 a bordo ao mesmo tempo) — cabe.
@@ -228,7 +234,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
 
     it("paragem MISTA (entrega ≠ recolha) não liga pelo próprio cliente — comportamento normal de mista", () => {
       const paragens: ParagemCarga[] = [mista(6, 4, 0)];
-      const r = verificarEspacoCarga([CAMIAO], paragens);
+      const r = verificarEspacoCarga([CAMIAO], null, paragens);
       expect(r.totalPaletes).toBe(6); // pico = max(6, 4), como qualquer mista
     });
 
@@ -249,7 +255,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         },
         entregaCliente(2, 100, "Tecfil"),
       ];
-      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE], REBOQUE2, paragens);
       expect(r.totalPaletes).toBe(25);
     });
 
@@ -259,7 +265,7 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
         entregaCliente(3, 50, "Cliente A"),
         entregaCliente(2, 100, "Cliente A"),
       ];
-      const r = verificarEspacoCarga([CAMIAO_REBOQUE, REBOQUE2], paragens);
+      const r = verificarEspacoCarga([CAMIAO_REBOQUE], REBOQUE2, paragens);
       // Fecha na 1ª entrega (índice1): a 2ª entrega (índice2) já não tem
       // nenhuma carga de linha "aberta" para si -> conta como entrega normal,
       // fora de qualquer linha (segmento próprio, a bordo desde o início dele).
@@ -268,6 +274,56 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
       expect(r.totalPaletes).toBe(7);
       expect(r.cabemTodas).toBe(true);
     });
+  });
+});
+
+describe("reboque largado a meio da rota (sem VAZIO a separar) — caso real RIC-Tec-A25", () => {
+  // Camião+reboque no 1º cliente (larga o reboque ali), depois só camião —
+  // exatamente como a rota real, registada em 2026-09-23: paragem 1 com
+  // CAMIAO+REBOQUE, paragens seguintes com CAMIAO, sem nenhum VAZIO entre elas.
+  const rota = [
+    entrega(4, 0, "CAMIAO+REBOQUE"),
+    entrega(6, 50, "CAMIAO"),
+    entrega(6, 100, "CAMIAO"),
+  ];
+  // Mesmos números, mas o reboque nunca é largado — serve de contraprova.
+  const rotaComReboqueSempre = [
+    entrega(4, 0, "CAMIAO+REBOQUE"),
+    entrega(6, 50, "CAMIAO+REBOQUE"),
+    entrega(6, 100, "CAMIAO+REBOQUE"),
+  ];
+
+  it("avisa de sobrecarga depois de largar o reboque (12 > 10, capacidade só do camião)", () => {
+    const r = verificarEspacoCarga([CAMIAO], REBOQUE, rota);
+    expect(r.cabemTodas).toBe(false);
+    expect(r.totalPaletes).toBe(12); // pico: as 2 entregas depois de largar o reboque
+    expect(r.semEspaco).toBeGreaterThan(0);
+  });
+
+  it("regressão: com reboque do início ao fim, os mesmos números continuam a caber", () => {
+    const r = verificarEspacoCarga([CAMIAO], REBOQUE, rotaComReboqueSempre);
+    expect(r.cabemTodas).toBe(true);
+  });
+
+  it("a planta do pior momento já não desenha a caixa do reboque, quando esse momento é só de camião", () => {
+    const p = gerarPlantaCargaRota([CAMIAO], REBOQUE, rota);
+    expect(p).not.toBeNull();
+    expect(p!.caixas.map((c) => c.caixa.id)).toEqual(["veiculo"]);
+    expect(p!.naoColocados.length).toBeGreaterThan(0);
+  });
+
+  it("a planta do pior momento continua a incluir o reboque quando é esse o momento pior", () => {
+    const p = gerarPlantaCargaRota([CAMIAO], REBOQUE, rotaComReboqueSempre);
+    expect(p).not.toBeNull();
+    expect(p!.caixas.map((c) => c.caixa.id)).toContain("reboque");
+  });
+
+  it("gerarPlantaCargaPorTroco: o troço Ida também deixa de contar com o reboque depois de o largar", () => {
+    const paragensIda: ParagemCarga[] = rota.map((p) => ({ ...p, tipoViagem: "Ida" }));
+    const r = gerarPlantaCargaPorTroco([CAMIAO], REBOQUE, paragensIda);
+    expect(r.ida).not.toBeNull();
+    expect(r.ida!.naoColocados.length).toBeGreaterThan(0);
+    expect(r.ida!.caixas.map((c) => c.caixa.id)).not.toContain("reboque");
   });
 });
 
@@ -374,15 +430,15 @@ describe("linhasCargaParagem", () => {
 
 describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", () => {
   it("sem caixa configurada → null", () => {
-    expect(gerarPlantaCargaRota([], [entrega(6, 0)])).toBeNull();
+    expect(gerarPlantaCargaRota([], null, [entrega(6, 0)])).toBeNull();
   });
 
   it("nada a bordo em rota nenhuma → null", () => {
-    expect(gerarPlantaCargaRota([CAMIAO], [entrega(0, 0)])).toBeNull();
+    expect(gerarPlantaCargaRota([CAMIAO], null, [entrega(0, 0)])).toBeNull();
   });
 
   it("entrega única que cabe → devolve a geometria com todas colocadas", () => {
-    const p = gerarPlantaCargaRota([CAMIAO], [entrega(6, 0)]);
+    const p = gerarPlantaCargaRota([CAMIAO], null, [entrega(6, 0)]);
     expect(p).not.toBeNull();
     expect(p!.colocados).toHaveLength(6);
     expect(p!.naoColocados).toHaveLength(0);
@@ -391,8 +447,8 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
 
   it("mesmo pior momento que verificarEspacoCarga (recolha fica a bordo, entrega depois)", () => {
     const paragens = [recolha(4, 0), entrega(4, 50)];
-    const espaco = verificarEspacoCarga([CAMIAO], paragens);
-    const p = gerarPlantaCargaRota([CAMIAO], paragens);
+    const espaco = verificarEspacoCarga([CAMIAO], null, paragens);
+    const p = gerarPlantaCargaRota([CAMIAO], null, paragens);
     expect(p).not.toBeNull();
     expect(p!.colocados.length + p!.naoColocados.length).toBe(espaco.totalPaletes);
     expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
@@ -400,8 +456,8 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
 
   it("pior momento com paletes a mais → naoColocados reflete o mesmo semEspaco", () => {
     const paragens = [entrega(8, 0), entrega(8, 50)];
-    const espaco = verificarEspacoCarga([CAMIAO], paragens);
-    const p = gerarPlantaCargaRota([CAMIAO], paragens);
+    const espaco = verificarEspacoCarga([CAMIAO], null, paragens);
+    const p = gerarPlantaCargaRota([CAMIAO], null, paragens);
     expect(espaco.cabemTodas).toBe(false);
     expect(p!.naoColocados).toHaveLength(espaco.semEspaco);
   });
@@ -414,7 +470,7 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
       kmInicial: km,
     });
     // Ordem das paragens: A (km 0) → B (km 50) → C (km 100).
-    const p = gerarPlantaCargaRota([CAMIAO], [stop("A", 0), stop("B", 50), stop("C", 100)]);
+    const p = gerarPlantaCargaRota([CAMIAO], null, [stop("A", 0), stop("B", 50), stop("C", 100)]);
     expect(p!.colocados).toHaveLength(6);
     const frente = p!.colocados.reduce((m, it) => (it.y < m.y ? it : m));
     const portas = p!.colocados.reduce((m, it) => (it.y > m.y ? it : m));
@@ -425,18 +481,18 @@ describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", 
 
 describe("gerarPlantaCargaPorTroco — planta separada por Ida/Volta", () => {
   it("sem caixa configurada → { ida: null, volta: null }", () => {
-    expect(gerarPlantaCargaPorTroco([], [{ ...entrega(6, 0), tipoViagem: "Ida" }])).toEqual({
+    expect(gerarPlantaCargaPorTroco([], null, [{ ...entrega(6, 0), tipoViagem: "Ida" }])).toEqual({
       ida: null,
       volta: null,
     });
   });
 
   it("paragens sem tipoViagem preenchido → { ida: null, volta: null } (nunca um erro)", () => {
-    expect(gerarPlantaCargaPorTroco([CAMIAO], [entrega(6, 0)])).toEqual({ ida: null, volta: null });
+    expect(gerarPlantaCargaPorTroco([CAMIAO], null, [entrega(6, 0)])).toEqual({ ida: null, volta: null });
   });
 
   it("só há Ida → volta fica null", () => {
-    const r = gerarPlantaCargaPorTroco([CAMIAO], [{ ...entrega(6, 0), tipoViagem: "Ida" }]);
+    const r = gerarPlantaCargaPorTroco([CAMIAO], null, [{ ...entrega(6, 0), tipoViagem: "Ida" }]);
     expect(r.ida).not.toBeNull();
     expect(r.ida!.colocados).toHaveLength(6);
     expect(r.volta).toBeNull();
@@ -452,10 +508,10 @@ describe("gerarPlantaCargaPorTroco — planta separada por Ida/Volta", () => {
     // Pico da rota inteira (sem separar) seria 9 (as 2 entregas da Ida, ambas
     // pré-carregadas desde o início do segmento) — a Volta sozinha nunca
     // atinge esse pico.
-    const rota = gerarPlantaCargaRota([CAMIAO], paragens);
+    const rota = gerarPlantaCargaRota([CAMIAO], null, paragens);
     expect(rota!.colocados).toHaveLength(9);
 
-    const porTroco = gerarPlantaCargaPorTroco([CAMIAO], paragens);
+    const porTroco = gerarPlantaCargaPorTroco([CAMIAO], null, paragens);
     expect(porTroco.ida!.colocados).toHaveLength(9);
     expect(porTroco.volta!.colocados).toHaveLength(4);
   });
@@ -479,7 +535,7 @@ describe("gerarPlantaCargaPorTroco — planta separada por Ida/Volta", () => {
       tipoViagem: "Volta",
     };
     const paragens = [recolhaParaVolta, { ...vazio(50), tipoViagem: "Ida" }, entregaNaVolta];
-    const r = gerarPlantaCargaPorTroco([CAMIAO], paragens);
+    const r = gerarPlantaCargaPorTroco([CAMIAO], null, paragens);
     // As mesmas 4 paletes estiveram fisicamente a bordo em ambos os troços
     // (recolhidas na Ida, só descarregadas na Volta) — não é dupla contagem,
     // é o comportamento correto.

@@ -117,24 +117,25 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
 
   // Sobreocupação: as paletes registadas na rota cabem no veículo (+ reboque)?
   const veicRota = paragensRaw.find((p) => p.tipoVeiculo !== "VAZIO" && p.veiculo)?.veiculo ?? null;
-  const rotaTemReboque = paragensRaw.some((p) => p.tipoVeiculo === "CAMIAO+REBOQUE");
-  const caixasRota: CaixaInput[] = [];
-  if (veicRota?.caixaComprimentoMm && veicRota.caixaLarguraMm) {
-    caixasRota.push({
-      id: "veiculo",
-      label: veicRota.nome,
-      comprimentoMm: veicRota.caixaComprimentoMm,
-      larguraMm: veicRota.caixaLarguraMm,
-    });
-  }
-  if (rotaTemReboque && veicRota?.reboqueHabitual) {
-    caixasRota.push({
-      id: "reboque",
-      label: veicRota.reboqueHabitual.nome,
-      comprimentoMm: veicRota.reboqueHabitual.comprimentoMm,
-      larguraMm: veicRota.reboqueHabitual.larguraMm,
-    });
-  }
+  // Só para o texto do aviso abaixo ("+ reboque") — a caixa que entra de
+  // facto na simulação (`caixaReboqueRota`) só se aplica aos momentos cuja
+  // paragem é CAMIAO+REBOQUE (ver `caixasNoCorte` em lib/calc/cargaRota.ts);
+  // um reboque largado a meio da rota (ex. descarrega e deixa-o no 1º
+  // cliente, segue só de camião) deixa de contar a partir daí, mesmo sem
+  // nenhum "Vazio" a separar.
+  const algumaParagemComReboque = paragensRaw.some((p) => p.tipoVeiculo === "CAMIAO+REBOQUE");
+  const caixaVeiculo: CaixaInput[] =
+    veicRota?.caixaComprimentoMm && veicRota.caixaLarguraMm
+      ? [{ id: "veiculo", label: veicRota.nome, comprimentoMm: veicRota.caixaComprimentoMm, larguraMm: veicRota.caixaLarguraMm }]
+      : [];
+  const caixaReboqueRota: CaixaInput | null = veicRota?.reboqueHabitual
+    ? {
+        id: "reboque",
+        label: veicRota.reboqueHabitual.nome,
+        comprimentoMm: veicRota.reboqueHabitual.comprimentoMm,
+        larguraMm: veicRota.reboqueHabitual.larguraMm,
+      }
+    : null;
   const paragensCarga = paragensRaw.map((p) => ({
     ...linhasCargaParagem(p),
     tipoVeiculo: p.tipoVeiculo,
@@ -143,12 +144,12 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
     faturarCliente: p.faturarCliente,
     tipoViagem: p.tipoViagem,
   }));
-  const espacoCarga = verificarEspacoCarga(caixasRota, paragensCarga);
+  const espacoCarga = verificarEspacoCarga(caixaVeiculo, caixaReboqueRota, paragensCarga);
   // Planta de carga do pior momento de cada troço (Ida/Volta) — mesma
   // simulação do aviso acima, gerada a partir das paragens já registadas
   // (sem recriar pedidos à mão), mas separada por sentido em vez de um único
   // pior momento da rota inteira.
-  const packingPorTroco = gerarPlantaCargaPorTroco(caixasRota, paragensCarga);
+  const packingPorTroco = gerarPlantaCargaPorTroco(caixaVeiculo, caixaReboqueRota, paragensCarga);
 
   return (
     <div className="space-y-5">
@@ -169,7 +170,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
         <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
           ⚠ As paletes registadas não cabem todas
           {veicRota ? ` no ${veicRota.nome}` : " no veículo"}
-          {rotaTemReboque ? " + reboque" : ""}: no momento de maior carga da rota cabem{" "}
+          {algumaParagemComReboque ? " + reboque" : ""}: no momento de maior carga da rota cabem{" "}
           {espacoCarga.colocadas} de {espacoCarga.totalPaletes} ({espacoCarga.semEspaco} sem
           espaço). Simulação da ocupação ao longo da rota (entregas saem, recolhas entram).
         </div>
