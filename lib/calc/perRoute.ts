@@ -320,6 +320,13 @@ export function calcularRota(
   interface Contribuicao {
     cliente: string;
     coef: number;
+    /** Sentido desta contribuição — só usado para o indicador `coefReal`
+     * agregado abaixo (nunca no cálculo de custo/quota): permite excluir uma
+     * recolha já "ligada" a uma entrega do mesmo cliente noutra paragem desta
+     * rota, para não contar o mesmo lote físico 2× no indicador (mesmo
+     * critério de `jaContadaNaEntrega`, já usado para `totalPaletes` mais
+     * abaixo). */
+    sentido: "ENTREGA" | "RECOLHA";
   }
 
   /**
@@ -350,7 +357,7 @@ export function calcularRota(
         p.paletes ?? null,
       );
     if (clienteEntrega === clienteRecolha) {
-      return [{ cliente: clienteRecolha, coef: coefTotalParagem() }];
+      return [{ cliente: clienteRecolha, coef: coefTotalParagem(), sentido: p.recolha ? "RECOLHA" : "ENTREGA" }];
     }
     const linhas = linhasPaleteEfetivas(p);
     const sentidoDefault: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
@@ -361,14 +368,21 @@ export function calcularRota(
       out.push({
         cliente: clienteEntrega,
         coef: coefPaletesDimensao(p.tipoVeiculo, linhasEntrega, p.nMeiasPaletes || 0, eff),
+        sentido: "ENTREGA",
       });
     }
     if (linhasRecolha.length > 0) {
-      out.push({ cliente: clienteRecolha, coef: coefPaletesDimensao(p.tipoVeiculo, linhasRecolha, 0, eff) });
+      out.push({
+        cliente: clienteRecolha,
+        coef: coefPaletesDimensao(p.tipoVeiculo, linhasRecolha, 0, eff),
+        sentido: "RECOLHA",
+      });
     }
     // Sem linhas com dimensão própria (paragem legado por peso/volume) -> não
     // há como separar por sentido, cai no coeficiente único de sempre.
-    if (out.length === 0) return [{ cliente: clienteRecolha, coef: coefTotalParagem() }];
+    if (out.length === 0) {
+      return [{ cliente: clienteRecolha, coef: coefTotalParagem(), sentido: p.recolha ? "RECOLHA" : "ENTREGA" }];
+    }
     return out;
   };
 
@@ -511,38 +525,10 @@ export function calcularRota(
     porCliente.set(cliente, atual);
   }
 
-  // coefReal (indicador, não entra no cálculo de custo acima) e receitaPaga:
-  // somados globalmente por cliente, como sempre — "acima de 1 indica
-  // sobrecarga" continua a olhar para a rota toda, não só para um troço.
-  for (let i = 0; i < paragens.length; i++) {
-    if (paragens[i].tipoVeiculo === "VAZIO") continue;
-    for (const c of contribuicoesPorIndice[i]) {
-      const atual = linha(c.cliente);
-      atual.coefReal += c.coef;
-      porCliente.set(c.cliente, atual);
-    }
-    // receitaPaga não tem equivalente por linha (só existe ao nível da
-    // paragem) — fica sempre no cliente "principal", como sempre.
-    const chavePrincipal = chaveCliente(paragens[i]);
-    const atualPrincipal = linha(chavePrincipal);
-    atualPrincipal.receitaPaga += paragens[i].receitaPaga || 0;
-    porCliente.set(chavePrincipal, atualPrincipal);
-  }
-
-  // Quota final = fração real do custo total que este cliente paga (sempre
-  // verdadeiro, com ou sem segmentação/atribuição manual) — Σquota = 1.
-  const clientes = Array.from(porCliente.values());
-  for (const c of clientes) {
-    if (custoTotalRota > 0) c.quota = c.custoAtribuido / custoTotalRota;
-  }
-
-  const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
-  const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
-  const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
-
-  // Recolha cujo lote também é entregue nesta rota: as SUAS paletes não entram
-  // nos totais da recolha — já são contadas na paragem de entrega (senão o
-  // mesmo lote soma-se a dobra). Dois casos:
+  // Recolha cujo lote também é entregue nesta rota: identificado aqui (antes
+  // do `coefReal` abaixo) porque também é reaproveitado por `totalPaletes`
+  // mais à frente — a mesma paragem nunca deve entrar a dobra em nenhum dos
+  // dois. Dois casos:
   //  a) `faturarCliente` = X: recolha faturada a outro cliente que também tem
   //     uma paragem nesta rota (regra de sempre, mesma de `pesosEmTransito`).
   //  b) recolha PURA (sem entrega própria) cujo próprio `cliente` recebe uma
@@ -586,6 +572,48 @@ export function calcularRota(
     }
   });
 
+  // coefReal (indicador, não entra no cálculo de custo acima) e receitaPaga:
+  // somados globalmente por cliente, como sempre — "acima de 1 indica
+  // sobrecarga" continua a olhar para a rota toda, não só para um troço.
+  for (let i = 0; i < paragens.length; i++) {
+    if (paragens[i].tipoVeiculo === "VAZIO") continue;
+    for (const c of contribuicoesPorIndice[i]) {
+      // Recolha já ligada a uma entrega real do mesmo cliente noutra
+      // paragem (`jaContadaNaEntrega`, ver acima): essa entrega já
+      // representa este lote no indicador, não soma outra vez (2026-09-23,
+      // casos reais Ges-thc/RIC-Tec-A24 e RIC-Tec-A2 — sem isto o indicador
+      // dava 2,00 para um camião que nunca teve mais do que 1× essa carga a
+      // bordo ao mesmo tempo).
+      if (c.sentido === "RECOLHA" && jaContadaNaEntrega.has(i)) continue;
+      const atual = linha(c.cliente);
+      atual.coefReal += c.coef;
+      porCliente.set(c.cliente, atual);
+    }
+    // receitaPaga não tem equivalente por linha (só existe ao nível da
+    // paragem) — fica sempre no cliente "principal", como sempre.
+    const chavePrincipal = chaveCliente(paragens[i]);
+    const atualPrincipal = linha(chavePrincipal);
+    atualPrincipal.receitaPaga += paragens[i].receitaPaga || 0;
+    porCliente.set(chavePrincipal, atualPrincipal);
+  }
+
+  // Quota final = fração real do custo total que este cliente paga (sempre
+  // verdadeiro, com ou sem segmentação/atribuição manual) — Σquota = 1.
+  const clientes = Array.from(porCliente.values());
+  for (const c of clientes) {
+    if (custoTotalRota > 0) c.quota = c.custoAtribuido / custoTotalRota;
+  }
+
+  const kmTotais = calc.reduce((a, c) => a + c.kmFeitos, 0);
+  const totalKgCarregados = paragens.reduce((a, p) => a + (p.kgCarregados || 0), 0);
+  const totalKgDescarregados = paragens.reduce((a, p) => a + (p.kgDescarregados || 0), 0);
+
+  // `jaContadaNaEntrega` (calculado mais acima, antes do `coefReal`, porque é
+  // reaproveitado ali também) identifica as recolhas cujo lote também é
+  // entregue nesta rota — as SUAS paletes não entram nos totais da recolha
+  // abaixo, já são contadas na paragem de entrega (senão o mesmo lote
+  // soma-se a dobra).
+  //
   // Cobre os 2 estilos de palete: legado (volume=true ou tipoVeiculo literal
   // pré-migração) e novo (dimensão própria, 2026-08-28+ — p.volume fica
   // false/vestigial nesse caso, por isso não basta olhar para p.volume).

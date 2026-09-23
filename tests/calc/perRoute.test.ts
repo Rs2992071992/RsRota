@@ -1056,6 +1056,161 @@ describe("calcularRota — totalPaletes/totalPesoAproximado não contam a dobra 
   });
 });
 
+// coefReal (indicador de sobrecarga) não pode contar o mesmo lote 2× quando
+// uma recolha está "ligada" a uma entrega do mesmo cliente noutra paragem
+// (mesmo critério de `jaContadaNaEntrega`, já validado acima para
+// totalPaletes) — casos reais Ges-thc/RIC-Tec-A24 e RIC-Tec-A2 (2026-09-23):
+// o indicador dava 2,00 para um camião que nunca teve mais do que 1× essa
+// carga a bordo ao mesmo tempo (a recolha e a entrega nunca coexistem).
+describe("calcularRota — coefReal não conta a dobra em backhauls (2026-09-23)", () => {
+  const capacidade = 38; // 1200×800mm neste snapshot (ver describe acima)
+
+  it("recolha PURA e entrega do MESMO cliente, sem faturarCliente (reposicionamento, RIC-Tec-A24)", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Tec-A2",
+        kmInicial: 0,
+        kmFinal: 100,
+        nPaletes: 15,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+      // Recolhe 22 em Ges-thc (sem faturarCliente)...
+      paragemBase({
+        cliente: "Ges-thc",
+        recolha: true,
+        kmInicial: 200,
+        kmFinal: 300,
+        nPaletes: 22,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+      // ...e entrega essas MESMAS 22 no fim, ao próprio Ges-thc.
+      paragemBase({
+        cliente: "Ges-thc",
+        kmInicial: 300,
+        kmFinal: 400,
+        nPaletes: 22,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+    ];
+    const r = calcularRota("RIC-Tec-A24-coef", paragens, ctx);
+    const gesThc = r.rateio.find((c) => c.cliente === "Ges-thc")!;
+    // Sem a correção seria 22/38 (recolha) + 22/38 (entrega) = 44/38 (~1,16,
+    // sobrecarga falsa). Só a entrega conta — o mesmo lote não soma 2×.
+    expect(gesThc.coefReal).toBeCloseTo(22 / capacidade, 6);
+    const tecA2 = r.rateio.find((c) => c.cliente === "Tec-A2")!;
+    expect(tecA2.coefReal).toBeCloseTo(15 / capacidade, 6); // inalterado
+  });
+
+  it("recolha faturada a um cliente que também tem entrega nesta rota", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "A",
+        kmInicial: 0,
+        kmFinal: 50,
+        nPaletes: 5,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+      paragemBase({
+        cliente: "Fornecedor",
+        recolha: true,
+        faturarCliente: "Tecfil",
+        kmInicial: 50,
+        kmFinal: 100,
+        nPaletes: 3,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+      paragemBase({
+        cliente: "Tecfil",
+        kmInicial: 100,
+        kmFinal: 150,
+        nPaletes: 3,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+    ];
+    const r = calcularRota("T4-coef", paragens, ctx);
+    const tecfil = r.rateio.find((c) => c.cliente === "Tecfil")!;
+    expect(tecfil.coefReal).toBeCloseTo(3 / capacidade, 6); // só a entrega, não 6/38
+    const a = r.rateio.find((c) => c.cliente === "A")!;
+    expect(a.coefReal).toBeCloseTo(5 / capacidade, 6);
+  });
+
+  it("recolha faturada a um cliente SEM entrega nesta rota: continua a contar (não há entrega para a representar)", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "A",
+        kmInicial: 0,
+        kmFinal: 50,
+        nPaletes: 5,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+      paragemBase({
+        cliente: "Fornecedor",
+        recolha: true,
+        faturarCliente: "Tecfil", // Tecfil não aparece mais nesta rota
+        kmInicial: 50,
+        kmFinal: 100,
+        nPaletes: 3,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+    ];
+    const r = calcularRota("T5-coef", paragens, ctx);
+    const tecfil = r.rateio.find((c) => c.cliente === "Tecfil")!;
+    expect(tecfil.coefReal).toBeCloseTo(3 / capacidade, 6);
+  });
+
+  it("paragem MISTA (faturarClienteApenasRecolha): a entrega própria nunca é excluída, só o lado recolha já ligado (caso real RIC-Percam)", () => {
+    const paletesMista = [
+      { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 10, sentido: "ENTREGA" as const },
+      { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 5, sentido: "RECOLHA" as const },
+    ];
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Plasgal",
+        faturarCliente: "OutroCliente",
+        faturarClienteApenasRecolha: true,
+        kmInicial: 0,
+        kmFinal: 100,
+        snapshot: snapshotDimensao,
+        paletes: paletesMista,
+      }),
+      // OutroCliente tem a SUA PRÓPRIA entrega, separada, mais à frente na rota.
+      paragemBase({
+        cliente: "OutroCliente",
+        kmInicial: 100,
+        kmFinal: 150,
+        nPaletes: 5,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        snapshot: snapshotDimensao,
+      }),
+    ];
+    const r = calcularRota("RIC-Percam-coef", paragens, ctx);
+    const plasgal = r.rateio.find((c) => c.cliente === "Plasgal")!;
+    // A entrega PRÓPRIA de Plasgal (10) nunca é tocada — não é uma recolha.
+    expect(plasgal.coefReal).toBeCloseTo(10 / capacidade, 6);
+    const outro = r.rateio.find((c) => c.cliente === "OutroCliente")!;
+    // Sem a correção seria 5/38 (recolha ligada, vinda de Plasgal) + 5/38
+    // (a sua própria entrega) = 10/38. Só a entrega própria conta.
+    expect(outro.coefReal).toBeCloseTo(5 / capacidade, 6);
+  });
+});
+
 // faturarClienteApenasRecolha (2026-09-18) — paragem MISTA em que a entrega e
 // a recolha pertencem a clientes diferentes (ex.: Plasgal pede a entrega,
 // outro cliente pede a recolha no mesmo sítio). Por default (false/ausente)
