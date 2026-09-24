@@ -1,5 +1,5 @@
 import React from "react";
-import { Document, Page, View, Text, Svg, Rect, Line, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Svg, Rect, Circle, G, StyleSheet } from "@react-pdf/renderer";
 import { EMPRESA } from "@/lib/pdf/empresa";
 import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
 
@@ -87,6 +87,53 @@ function raioCanto(comprimento: number, largura: number): number {
   return Math.min(Math.min(comprimento, largura) * 0.12, 60);
 }
 
+/** Espaço (mm) reservado à esquerda do x=0 da caixa para o desenho da frente —
+ * mesmos valores/critério do ecrã (components/CarregamentoFloorPlan.tsx). */
+function espacoFrenteMm(souReboque: boolean): number {
+  return souReboque ? 1500 : 1900;
+}
+
+/** Desenho esquemático (vista de cima) da frente da caixa — mesmo desenho do
+ * ecrã (components/CarregamentoFloorPlan.tsx::DesenhoFrente), em primitivas do
+ * react-pdf. Cabine para o veículo trator; trem de rodas + barra de tração do
+ * dolly para o reboque (não tem cabine própria). Puramente decorativo. */
+function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
+  const meio = larguraMm / 2;
+  const metal = "#b8bcc4";
+  const metalEscuro = "#8b909b";
+  const vidro = "#9fb8cc";
+
+  if (souReboque) {
+    const eixo1 = meio - larguraMm * 0.32;
+    const eixo2 = meio + larguraMm * 0.32;
+    const raioRoda = Math.min(larguraMm * 0.12, 220);
+    return (
+      <G opacity={0.85}>
+        <Rect x={-1500} y={meio - 45} width={1180} height={90} rx={40} fill={metal} />
+        <Circle cx={-1460} cy={meio} r={70} fill="none" stroke={metalEscuro} strokeWidth={22} />
+        <Rect x={-420} y={40} width={420} height={larguraMm - 80} rx={24} fill={metal} />
+        {[eixo1, eixo2].map((cy) => (
+          <React.Fragment key={cy}>
+            <Circle cx={-260} cy={cy} r={raioRoda} fill={metalEscuro} />
+            <Circle cx={-140} cy={cy} r={raioRoda} fill={metalEscuro} />
+          </React.Fragment>
+        ))}
+      </G>
+    );
+  }
+
+  return (
+    <G opacity={0.85}>
+      <Rect x={-1900} y={60} width={1750} height={larguraMm - 120} rx={220} fill={metal} />
+      <Rect x={-380} y={140} width={260} height={larguraMm - 280} rx={40} fill={vidro} />
+      <Rect x={-260} y={-30} width={70} height={140} rx={20} fill={metalEscuro} />
+      <Rect x={-260} y={larguraMm - 110} width={70} height={140} rx={20} fill={metalEscuro} />
+      <Circle cx={-1500} cy={20} r={130} fill={metalEscuro} />
+      <Circle cx={-1500} cy={larguraMm - 20} r={130} fill={metalEscuro} />
+    </G>
+  );
+}
+
 /** Documento PDF da planta de carga de um Carregamento — para dar ao motorista
  * e a quem carrega o camião. Mesma leitura visual do ecrã
  * (components/CarregamentoFloorPlan.tsx), em papel. */
@@ -142,25 +189,30 @@ export function PlantaCargaDocument({ detalhe }: { detalhe: CarregamentoDetalhe 
         )}
 
         {detalhe.packing.caixas.map((cx) => {
+          const souReboque = cx.caixa.id.startsWith("reboque-");
+          const frenteMm = espacoFrenteMm(souReboque);
+          const comprimentoTotalMm = cx.caixa.comprimentoMm + frenteMm;
           const larguraPt = Math.min(
             LARGURA_DISPONIVEL_PT,
-            ALTURA_MAX_CAIXA_PT * (cx.caixa.comprimentoMm / cx.caixa.larguraMm),
+            ALTURA_MAX_CAIXA_PT * (comprimentoTotalMm / cx.caixa.larguraMm),
           );
-          const alturaPt = larguraPt * (cx.caixa.larguraMm / cx.caixa.comprimentoMm);
+          const alturaPt = larguraPt * (cx.caixa.larguraMm / comprimentoTotalMm);
           const pct = cx.areaTotalMm2 > 0 ? Math.round((cx.areaUsadaMm2 / cx.areaTotalMm2) * 100) : 0;
           return (
             <View key={cx.caixa.id} style={styles.caixaBloco} wrap={false}>
               <View style={styles.caixaHeader}>
                 <Text style={styles.caixaLabel}>{cx.caixa.label}</Text>
                 <Text style={styles.caixaMeta}>
-                  {Math.round(cx.comprimentoUsadoMm)} / {cx.caixa.comprimentoMm} mm — {pct}% ocupado
+                  ◄ Frente ({souReboque ? "engate" : "cabine"}) — {Math.round(cx.comprimentoUsadoMm)} /{" "}
+                  {cx.caixa.comprimentoMm} mm — {pct}% ocupado — Portas ►
                 </Text>
               </View>
               <Svg
                 width={larguraPt}
                 height={alturaPt}
-                viewBox={`0 0 ${cx.caixa.comprimentoMm} ${cx.caixa.larguraMm}`}
+                viewBox={`${-frenteMm} 0 ${comprimentoTotalMm} ${cx.caixa.larguraMm}`}
               >
+                <DesenhoFrentePdf larguraMm={cx.caixa.larguraMm} souReboque={souReboque} />
                 <Rect
                   x={4}
                   y={4}
