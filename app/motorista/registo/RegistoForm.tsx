@@ -495,10 +495,11 @@ export default function RegistoForm({
             ? `Rota ${novoId} criada — pode adicionar mais paragens.`
             : "Paragem registada! Pode adicionar outra na mesma rota.",
       });
-      // Mantém a rota ativa, tipo veículo e KM Final -> KM Inicial para a próxima paragem.
+      // Mantém a rota ativa, tipo viagem, tipo veículo e KM Final -> KM Inicial para a próxima paragem.
       setF({
         ...estadoBase,
         data: f.data,
+        tipoViagem: f.tipoViagem,
         tipoVeiculo: f.tipoVeiculo,
         veiculoId: f.veiculoId,
         kmInicial: f.kmFinal,
