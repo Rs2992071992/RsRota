@@ -211,6 +211,14 @@ export default function CarregamentoDetalheEditor({
       setClienteNome("");
       setQuantidade(1);
       setSimulacao(null);
+      // Reaproveita a arrumação mais compacta a cada palete nova, em vez de
+      // esperar por um clique manual em "Otimizar disposição" — melhor esforço,
+      // não bloqueia o sucesso do pedido se falhar.
+      await fetch(`/api/carregamentos/${detalhe.id}/otimizar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aplicar: true }),
+      }).catch(() => {});
       router.refresh();
     } catch {
       setErro("Erro de ligação.");
