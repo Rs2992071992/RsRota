@@ -90,7 +90,7 @@ function raioCanto(comprimento: number, largura: number): number {
 /** Espaço (mm) reservado à esquerda do x=0 da caixa para o desenho da frente —
  * mesmos valores/critério do ecrã (components/CarregamentoFloorPlan.tsx). */
 function espacoFrenteMm(souReboque: boolean): number {
-  return souReboque ? 400 : 480;
+  return souReboque ? 500 : 600;
 }
 
 /** Desenho esquemático (vista de cima) da frente da caixa — mesmo desenho do
@@ -111,20 +111,20 @@ function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReb
   if (souReboque) {
     const eixo1 = meio - larguraMm * 0.32;
     const eixo2 = meio + larguraMm * 0.32;
-    const raioPneu = Math.min(larguraMm * 0.03, 55);
+    const raioPneu = Math.min(larguraMm * 0.0375, 69);
     const raioAro = raioPneu * 0.5;
     return (
       <G>
-        <Rect x={-375} y={meio - 11} width={295} height={22} rx={10} fill={corpo} stroke={contorno} strokeWidth={3} />
-        <Circle cx={-365} cy={meio} r={18} fill="none" stroke={corpoClaro} strokeWidth={6} />
-        <Circle cx={-365} cy={meio} r={5} fill={farol} />
-        <Rect x={-105} y={40} width={105} height={larguraMm - 80} rx={6} fill={corpo} stroke={contorno} strokeWidth={3} />
+        <Rect x={-469} y={meio - 14} width={369} height={28} rx={13} fill={corpo} stroke={contorno} strokeWidth={3} />
+        <Circle cx={-456} cy={meio} r={23} fill="none" stroke={corpoClaro} strokeWidth={8} />
+        <Circle cx={-456} cy={meio} r={6} fill={farol} />
+        <Rect x={-131} y={40} width={131} height={larguraMm - 80} rx={8} fill={corpo} stroke={contorno} strokeWidth={3} />
         {[eixo1, eixo2].map((cy) => (
           <React.Fragment key={cy}>
-            <Circle cx={-65} cy={cy} r={raioPneu} fill={pneu} />
-            <Circle cx={-65} cy={cy} r={raioAro} fill={aro} />
-            <Circle cx={-35} cy={cy} r={raioPneu} fill={pneu} />
-            <Circle cx={-35} cy={cy} r={raioAro} fill={aro} />
+            <Circle cx={-81} cy={cy} r={raioPneu} fill={pneu} />
+            <Circle cx={-81} cy={cy} r={raioAro} fill={aro} />
+            <Circle cx={-44} cy={cy} r={raioPneu} fill={pneu} />
+            <Circle cx={-44} cy={cy} r={raioAro} fill={aro} />
           </React.Fragment>
         ))}
       </G>
@@ -133,16 +133,16 @@ function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReb
 
   return (
     <G>
-      <Rect x={-475} y={60} width={440} height={larguraMm - 120} rx={70} fill={corpo} stroke={contorno} strokeWidth={4} />
-      <Rect x={-95} y={140} width={65} height={larguraMm - 280} rx={16} fill={vidro} stroke={corpoClaro} strokeWidth={3} />
-      <Rect x={-65} y={-30} width={18} height={140} rx={6} fill={corpoClaro} />
-      <Rect x={-65} y={larguraMm - 110} width={18} height={140} rx={6} fill={corpoClaro} />
-      <Circle cx={-460} cy={110} r={16} fill={farol} />
-      <Circle cx={-460} cy={larguraMm - 110} r={16} fill={farol} />
-      <Circle cx={-375} cy={20} r={33} fill={pneu} />
-      <Circle cx={-375} cy={20} r={16} fill={aro} />
-      <Circle cx={-375} cy={larguraMm - 20} r={33} fill={pneu} />
-      <Circle cx={-375} cy={larguraMm - 20} r={16} fill={aro} />
+      <Rect x={-595} y={60} width={550} height={larguraMm - 120} rx={88} fill={corpo} stroke={contorno} strokeWidth={4} />
+      <Rect x={-119} y={140} width={81} height={larguraMm - 280} rx={20} fill={vidro} stroke={corpoClaro} strokeWidth={3} />
+      <Rect x={-81} y={-30} width={23} height={140} rx={8} fill={corpoClaro} />
+      <Rect x={-81} y={larguraMm - 110} width={23} height={140} rx={8} fill={corpoClaro} />
+      <Circle cx={-575} cy={110} r={20} fill={farol} />
+      <Circle cx={-575} cy={larguraMm - 110} r={20} fill={farol} />
+      <Circle cx={-469} cy={20} r={41} fill={pneu} />
+      <Circle cx={-469} cy={20} r={20} fill={aro} />
+      <Circle cx={-469} cy={larguraMm - 20} r={41} fill={pneu} />
+      <Circle cx={-469} cy={larguraMm - 20} r={20} fill={aro} />
     </G>
   );
 }
