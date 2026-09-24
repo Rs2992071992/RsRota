@@ -29,35 +29,44 @@ function raioCanto(comprimento: number, largura: number): number {
  * Lecitrailer/Schmitz: barra de tração + rodado próprio). Só cosmético, não
  * entra em nenhum cálculo de espaço/packing. */
 function espacoFrenteMm(souReboque: boolean): number {
-  return souReboque ? 1500 : 1900;
+  return souReboque ? 400 : 480;
 }
 
 /** Desenho esquemático (vista de cima) da frente da caixa, à esquerda de x=0.
  * Cabine para o veículo trator; para o reboque, o trem de rodas + barra de
- * tração do dolly (não tem cabine própria). Puramente decorativo — cores
- * neutras para não competir com as cores dos clientes nas paletes. */
+ * tração do dolly (não tem cabine própria). Puramente decorativo — cores da
+ * marca (ver tailwind.config.ts::brand) em vez de cinza genérico, pneus a
+ * duas cores (pneu + jante) para um estilo mais "flat icon". */
 function DesenhoFrente({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
   const meio = larguraMm / 2;
-  const metal = "#b8bcc4";
-  const metalEscuro = "#8b909b";
-  const vidro = "#9fb8cc";
+  const corpo = "#1e3a5f";
+  const corpoClaro = "#2c5282";
+  const vidro = "#bfe0f0";
+  const pneu = "#1f2937";
+  const aro = "#e5e7eb";
+  const farol = "#fbbf24";
+  const contorno = "#ffffff";
 
   if (souReboque) {
     const eixo1 = meio - larguraMm * 0.32;
     const eixo2 = meio + larguraMm * 0.32;
-    const raioRoda = Math.min(larguraMm * 0.12, 220);
+    const raioPneu = Math.min(larguraMm * 0.03, 55);
+    const raioAro = raioPneu * 0.5;
     return (
-      <g opacity={0.85}>
+      <g>
         {/* Barra de tração até ao engate (olhal) */}
-        <rect x={-1500} y={meio - 45} width={1180} height={90} rx={40} fill={metal} />
-        <circle cx={-1460} cy={meio} r={70} fill="none" stroke={metalEscuro} strokeWidth={22} />
+        <rect x={-375} y={meio - 11} width={295} height={22} rx={10} fill={corpo} stroke={contorno} strokeWidth={3} />
+        <circle cx={-365} cy={meio} r={18} fill="none" stroke={corpoClaro} strokeWidth={6} />
+        <circle cx={-365} cy={meio} r={5} fill={farol} />
         {/* Chassis do dolly */}
-        <rect x={-420} y={40} width={420} height={larguraMm - 80} rx={24} fill={metal} />
-        {/* Rodado (2 eixos) */}
+        <rect x={-105} y={40} width={105} height={larguraMm - 80} rx={6} fill={corpo} stroke={contorno} strokeWidth={3} />
+        {/* Rodado (2 eixos), pneu + jante */}
         {[eixo1, eixo2].map((cy) => (
           <g key={cy}>
-            <circle cx={-260} cy={cy} r={raioRoda} fill={metalEscuro} />
-            <circle cx={-140} cy={cy} r={raioRoda} fill={metalEscuro} />
+            <circle cx={-65} cy={cy} r={raioPneu} fill={pneu} />
+            <circle cx={-65} cy={cy} r={raioAro} fill={aro} />
+            <circle cx={-35} cy={cy} r={raioPneu} fill={pneu} />
+            <circle cx={-35} cy={cy} r={raioAro} fill={aro} />
           </g>
         ))}
       </g>
@@ -65,17 +74,22 @@ function DesenhoFrente({ larguraMm, souReboque }: { larguraMm: number; souReboqu
   }
 
   return (
-    <g opacity={0.85}>
+    <g>
       {/* Corpo da cabine */}
-      <rect x={-1900} y={60} width={1750} height={larguraMm - 120} rx={220} fill={metal} />
+      <rect x={-475} y={60} width={440} height={larguraMm - 120} rx={70} fill={corpo} stroke={contorno} strokeWidth={4} />
       {/* Para-brisas */}
-      <rect x={-380} y={140} width={260} height={larguraMm - 280} rx={40} fill={vidro} />
+      <rect x={-95} y={140} width={65} height={larguraMm - 280} rx={16} fill={vidro} stroke={corpoClaro} strokeWidth={3} />
       {/* Espelhos */}
-      <rect x={-260} y={-30} width={70} height={140} rx={20} fill={metalEscuro} />
-      <rect x={-260} y={larguraMm - 110} width={70} height={140} rx={20} fill={metalEscuro} />
-      {/* Rodado dianteiro */}
-      <circle cx={-1500} cy={20} r={130} fill={metalEscuro} />
-      <circle cx={-1500} cy={larguraMm - 20} r={130} fill={metalEscuro} />
+      <rect x={-65} y={-30} width={18} height={140} rx={6} fill={corpoClaro} />
+      <rect x={-65} y={larguraMm - 110} width={18} height={140} rx={6} fill={corpoClaro} />
+      {/* Faróis */}
+      <circle cx={-460} cy={110} r={16} fill={farol} />
+      <circle cx={-460} cy={larguraMm - 110} r={16} fill={farol} />
+      {/* Rodado dianteiro, pneu + jante */}
+      <circle cx={-375} cy={20} r={33} fill={pneu} />
+      <circle cx={-375} cy={20} r={16} fill={aro} />
+      <circle cx={-375} cy={larguraMm - 20} r={33} fill={pneu} />
+      <circle cx={-375} cy={larguraMm - 20} r={16} fill={aro} />
     </g>
   );
 }

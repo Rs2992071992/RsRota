@@ -90,32 +90,41 @@ function raioCanto(comprimento: number, largura: number): number {
 /** Espaço (mm) reservado à esquerda do x=0 da caixa para o desenho da frente —
  * mesmos valores/critério do ecrã (components/CarregamentoFloorPlan.tsx). */
 function espacoFrenteMm(souReboque: boolean): number {
-  return souReboque ? 1500 : 1900;
+  return souReboque ? 400 : 480;
 }
 
 /** Desenho esquemático (vista de cima) da frente da caixa — mesmo desenho do
  * ecrã (components/CarregamentoFloorPlan.tsx::DesenhoFrente), em primitivas do
  * react-pdf. Cabine para o veículo trator; trem de rodas + barra de tração do
- * dolly para o reboque (não tem cabine própria). Puramente decorativo. */
+ * dolly para o reboque (não tem cabine própria). Cores da marca (ver
+ * tailwind.config.ts::brand), pneus a duas cores (pneu + jante). */
 function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
   const meio = larguraMm / 2;
-  const metal = "#b8bcc4";
-  const metalEscuro = "#8b909b";
-  const vidro = "#9fb8cc";
+  const corpo = "#1e3a5f";
+  const corpoClaro = "#2c5282";
+  const vidro = "#bfe0f0";
+  const pneu = "#1f2937";
+  const aro = "#e5e7eb";
+  const farol = "#fbbf24";
+  const contorno = "#ffffff";
 
   if (souReboque) {
     const eixo1 = meio - larguraMm * 0.32;
     const eixo2 = meio + larguraMm * 0.32;
-    const raioRoda = Math.min(larguraMm * 0.12, 220);
+    const raioPneu = Math.min(larguraMm * 0.03, 55);
+    const raioAro = raioPneu * 0.5;
     return (
-      <G opacity={0.85}>
-        <Rect x={-1500} y={meio - 45} width={1180} height={90} rx={40} fill={metal} />
-        <Circle cx={-1460} cy={meio} r={70} fill="none" stroke={metalEscuro} strokeWidth={22} />
-        <Rect x={-420} y={40} width={420} height={larguraMm - 80} rx={24} fill={metal} />
+      <G>
+        <Rect x={-375} y={meio - 11} width={295} height={22} rx={10} fill={corpo} stroke={contorno} strokeWidth={3} />
+        <Circle cx={-365} cy={meio} r={18} fill="none" stroke={corpoClaro} strokeWidth={6} />
+        <Circle cx={-365} cy={meio} r={5} fill={farol} />
+        <Rect x={-105} y={40} width={105} height={larguraMm - 80} rx={6} fill={corpo} stroke={contorno} strokeWidth={3} />
         {[eixo1, eixo2].map((cy) => (
           <React.Fragment key={cy}>
-            <Circle cx={-260} cy={cy} r={raioRoda} fill={metalEscuro} />
-            <Circle cx={-140} cy={cy} r={raioRoda} fill={metalEscuro} />
+            <Circle cx={-65} cy={cy} r={raioPneu} fill={pneu} />
+            <Circle cx={-65} cy={cy} r={raioAro} fill={aro} />
+            <Circle cx={-35} cy={cy} r={raioPneu} fill={pneu} />
+            <Circle cx={-35} cy={cy} r={raioAro} fill={aro} />
           </React.Fragment>
         ))}
       </G>
@@ -123,13 +132,17 @@ function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReb
   }
 
   return (
-    <G opacity={0.85}>
-      <Rect x={-1900} y={60} width={1750} height={larguraMm - 120} rx={220} fill={metal} />
-      <Rect x={-380} y={140} width={260} height={larguraMm - 280} rx={40} fill={vidro} />
-      <Rect x={-260} y={-30} width={70} height={140} rx={20} fill={metalEscuro} />
-      <Rect x={-260} y={larguraMm - 110} width={70} height={140} rx={20} fill={metalEscuro} />
-      <Circle cx={-1500} cy={20} r={130} fill={metalEscuro} />
-      <Circle cx={-1500} cy={larguraMm - 20} r={130} fill={metalEscuro} />
+    <G>
+      <Rect x={-475} y={60} width={440} height={larguraMm - 120} rx={70} fill={corpo} stroke={contorno} strokeWidth={4} />
+      <Rect x={-95} y={140} width={65} height={larguraMm - 280} rx={16} fill={vidro} stroke={corpoClaro} strokeWidth={3} />
+      <Rect x={-65} y={-30} width={18} height={140} rx={6} fill={corpoClaro} />
+      <Rect x={-65} y={larguraMm - 110} width={18} height={140} rx={6} fill={corpoClaro} />
+      <Circle cx={-460} cy={110} r={16} fill={farol} />
+      <Circle cx={-460} cy={larguraMm - 110} r={16} fill={farol} />
+      <Circle cx={-375} cy={20} r={33} fill={pneu} />
+      <Circle cx={-375} cy={20} r={16} fill={aro} />
+      <Circle cx={-375} cy={larguraMm - 20} r={33} fill={pneu} />
+      <Circle cx={-375} cy={larguraMm - 20} r={16} fill={aro} />
     </G>
   );
 }
