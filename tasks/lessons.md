@@ -2,6 +2,23 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-28] | No modo "Descarga + Recolha" (MISTA), registar uma paragem
+  **só com meias-paletes** (0 inteiras) ficava bloqueado — mesmo já tendo
+  corrigido este caso para os modos simples (Descarga só / Recolha só) em
+  2026-09-02. Causa: a validação do modo MISTA tinha uma regra à parte,
+  esquecida na correção anterior — em `RegistoForm.tsx::validar()`, `if
+  (f.tipoPaleteId && num(f.nPaletes) <= 0) e.nPaletes = "Indique o nº de
+  paletes"` disparava sempre que se escolhia um tipo de palete e se deixava
+  "Nº de paletes inteiras" a 0, ignorando que `nMeiasPaletes` estava
+  preenchido; em `ParagemEditor.tsx::guardar()` não havia sequer validação a
+  exigir o tipo de palete quando só havia meias, o que deixava passar no
+  cliente e rebentava com um erro genérico do servidor ("Escolha o tipo de
+  palete", `lib/validacao.ts`) sem indicar o campo. | Ao corrigir uma regra
+  de validação que existe em modos/variantes irmãs (aqui: Descarga só /
+  Recolha só / MISTA), replicar a correção em TODAS as variantes na mesma
+  alteração — não assumir que uma validação "óbvia" já está espelhada nos
+  outros ramos só porque parecem semelhantes.
+
 - [2026-09-16] | Ao migrar o projeto para a conta Vercel própria do Ricardo,
   `APP_ORIGINS_PERMITIDAS` (CORS de `proxy.ts` para a app Motorista) ficou
   vazia (`""`) no ambiente novo — assumi, sem confirmar, que o assistente de

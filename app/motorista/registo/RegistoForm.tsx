@@ -373,9 +373,11 @@ export default function RegistoForm({
     if (mostrarPaletes) {
       if (tipoParagem === "MISTA") {
         // Descarregadas e carregadas são cada uma opcional isoladamente — só é
-        // preciso ter algo num dos dois lados (ou meias-paletes).
-        if (f.tipoPaleteId && num(f.nPaletes) <= 0) e.nPaletes = "Indique o nº de paletes";
-        if (!f.tipoPaleteId && num(f.nPaletes) > 0) e.tipoPaleteId = "Escolha o tipo de palete";
+        // preciso ter algo num dos dois lados (paletes inteiras OU meias-paletes;
+        // uma meia sozinha, sem base por baixo, é válida — igual ao modo simples).
+        if ((num(f.nPaletes) > 0 || num(f.nMeiasPaletes) > 0) && !f.tipoPaleteId) {
+          e.tipoPaleteId = "Escolha o tipo de palete";
+        }
         linhasExtra.forEach((l, i) => {
           if (!l.tipoPaleteId) e[`linhaExtra${i}Tipo`] = "Escolha o tipo de palete";
           if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";

@@ -235,6 +235,12 @@ export default function ParagemEditor({
           setErro("Cada linha de palete carregada precisa de tipo e nº de paletes.");
           return;
         }
+        // Uma meia-palete sozinha (0 inteiras) precisa mesmo assim de um tipo
+        // de palete escolhido, para saber as dimensões — igual ao modo simples.
+        if ((Number(f.nPaletes) > 0 || Number(f.nMeiasPaletes) > 0) && !f.tipoPaleteId) {
+          setErro("Escolha o tipo de palete.");
+          return;
+        }
         const temAlgo =
           (f.tipoPaleteId && Number(f.nPaletes) > 0) ||
           Number(f.nMeiasPaletes) > 0 ||
