@@ -13,11 +13,25 @@ Formato: [data] | o que correu mal | regra para evitar
   preenchido; em `ParagemEditor.tsx::guardar()` não havia sequer validação a
   exigir o tipo de palete quando só havia meias, o que deixava passar no
   cliente e rebentava com um erro genérico do servidor ("Escolha o tipo de
-  palete", `lib/validacao.ts`) sem indicar o campo. | Ao corrigir uma regra
-  de validação que existe em modos/variantes irmãs (aqui: Descarga só /
-  Recolha só / MISTA), replicar a correção em TODAS as variantes na mesma
-  alteração — não assumir que uma validação "óbvia" já está espelhada nos
-  outros ramos só porque parecem semelhantes.
+  palete", `lib/validacao.ts`) sem indicar o campo. Depois desta 1ª correção
+  o Ricardo continuou a ver o MESMO tipo de bloqueio numa paragem já
+  existente ("Cada linha de palete carregada precisa de tipo e nº de
+  paletes"): a "linha carregada" (`linhasCarregadas[0]`) tinha
+  `tipoPaleteId: ""` e `nPaletes: "0"` (placeholder por preencher, valor
+  vindo de dados antigos), e a deteção de "linha tocada" era
+  `l.tipoPaleteId || l.nPaletes` — em JS a STRING `"0"` é truthy (só `""` é
+  falsy), por isso uma linha visualmente vazia contava como "começada a
+  preencher" e disparava o erro. Mesmo padrão em
+  `RegistoForm.tsx::validar()` (`!l.tipoPaleteId && !l.nPaletes`). | (1) Ao
+  corrigir uma regra de validação que existe em modos/variantes irmãs (aqui:
+  Descarga só / Recolha só / MISTA), replicar a correção em TODAS as
+  variantes na mesma alteração — não assumir que uma validação "óbvia" já
+  está espelhada nos outros ramos só porque parecem semelhantes. (2) Quando
+  um campo numérico é guardado como STRING no estado do formulário (ex.:
+  `nPaletes: string` nas linhas de `linhasExtra`/`linhasCarregadas`), nunca
+  testar "tem valor?" com `!campo` ou `campo ||` — `"0"` é truthy como
+  string. Comparar sempre `Number(campo) > 0` (ou `campo !== ""` quando o
+  que importa é só "foi escrito algo").
 
 - [2026-09-16] | Ao migrar o projeto para a conta Vercel própria do Ricardo,
   `APP_ORIGINS_PERMITIDAS` (CORS de `proxy.ts` para a app Motorista) ficou

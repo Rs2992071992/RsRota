@@ -383,7 +383,9 @@ export default function RegistoForm({
           if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaExtra${i}N`] = "Indique o nº de paletes";
         });
         linhasCarregadas.forEach((l, i) => {
-          if (!l.tipoPaleteId && !l.nPaletes) return; // linha vazia, por preencher — ignora
+          // "0" é uma string truthy — comparar Number() para não travar numa
+          // linha efetivamente vazia (tipo por escolher, nº a "0").
+          if (!l.tipoPaleteId && num(l.nPaletes) <= 0) return; // linha vazia, por preencher — ignora
           if (!l.tipoPaleteId) e[`linhaCarregada${i}Tipo`] = "Escolha o tipo de palete";
           if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaCarregada${i}N`] = "Indique o nº de paletes";
         });

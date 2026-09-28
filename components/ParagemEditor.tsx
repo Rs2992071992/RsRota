@@ -231,7 +231,13 @@ export default function ParagemEditor({
         return;
       }
       if (tipoParagem === "MISTA") {
-        if (linhasCarregadas.some((l) => (l.tipoPaleteId || l.nPaletes) && (!l.tipoPaleteId || Number(l.nPaletes) <= 0))) {
+        // "Tocada" = tem tipo escolhido OU nº > 0 — comparar Number(), não a
+        // string em si ("0" é uma string truthy e não podia contar como vazia.
+        if (
+          linhasCarregadas.some(
+            (l) => (l.tipoPaleteId !== "" || Number(l.nPaletes) > 0) && (!l.tipoPaleteId || Number(l.nPaletes) <= 0),
+          )
+        ) {
           setErro("Cada linha de palete carregada precisa de tipo e nº de paletes.");
           return;
         }
