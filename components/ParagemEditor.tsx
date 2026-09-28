@@ -378,7 +378,7 @@ export default function ParagemEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
-      <div className="my-8 w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+      <div className="my-8 w-full max-w-lg rounded-xl bg-gray-50 p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Editar paragem — {f.cliente || "(sem cliente)"}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
@@ -388,12 +388,54 @@ export default function ParagemEditor({
 
         {erro && <p className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{erro}</p>}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">ID Rota</label>
-            <input className="input" value={f.idRota} onChange={(e) => set("idRota", e.target.value)} />
+        <div className="space-y-4">
+        <div className="card space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">ID Rota</label>
+              <input className="input" value={f.idRota} onChange={(e) => set("idRota", e.target.value)} />
+            </div>
+            {campo("data", "Data", "date")}
           </div>
-          {campo("data", "Data", "date")}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Tipo Viagem</label>
+              <select className="input" value={f.tipoViagem} onChange={(e) => set("tipoViagem", e.target.value)}>
+                {TIPOS_VIAGEM.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Tipo Veículo</label>
+              <select className="input" value={f.tipoVeiculo} onChange={(e) => setTipoVeiculo(e.target.value)}>
+                {/* Inclui o valor atual mesmo que já não esteja na lista (ex.: dados antigos). */}
+                {Array.from(new Set([f.tipoVeiculo, ...TIPOS_VEICULO])).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Veículo (camião)</label>
+            <select
+              className="input"
+              value={f.veiculoId}
+              onChange={(e) => set("veiculoId", e.target.value as never)}
+            >
+              <option value="">— sem veículo —</option>
+              {veiculos.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                  {v.matricula ? ` (${v.matricula})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="label">Cliente / Local</label>
             {f.tipoVeiculo === "VAZIO" ? (
@@ -403,7 +445,7 @@ export default function ParagemEditor({
             )}
           </div>
           {mostrarFaturarCliente && (
-            <div className="col-span-2">
+            <div>
               <label className="label">Faturar esta recolha a</label>
               <select
                 className="input"
@@ -422,7 +464,7 @@ export default function ParagemEditor({
             </div>
           )}
           {mostrarFaturarCliente && tipoParagem === "MISTA" && f.faturarCliente && (
-            <div className="col-span-2 flex items-start gap-2">
+            <div className="flex items-start gap-2">
               <input
                 type="checkbox"
                 id="apenasRecolha"
@@ -437,43 +479,9 @@ export default function ParagemEditor({
               </label>
             </div>
           )}
-          <div>
-            <label className="label">Tipo Viagem</label>
-            <select className="input" value={f.tipoViagem} onChange={(e) => set("tipoViagem", e.target.value)}>
-              {TIPOS_VIAGEM.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Tipo Veículo</label>
-            <select className="input" value={f.tipoVeiculo} onChange={(e) => setTipoVeiculo(e.target.value)}>
-              {/* Inclui o valor atual mesmo que já não esteja na lista (ex.: dados antigos). */}
-              {Array.from(new Set([f.tipoVeiculo, ...TIPOS_VEICULO])).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Veículo (camião)</label>
-            <select
-              className="input"
-              value={f.veiculoId}
-              onChange={(e) => set("veiculoId", e.target.value as never)}
-            >
-              <option value="">— sem veículo —</option>
-              {veiculos.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                  {v.matricula ? ` (${v.matricula})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+        </div>
+
+        <div className="card grid grid-cols-2 gap-3">
           {campo("kmInicial", "KM Inicial")}
           {campo("kmFinal", "KM Final")}
           {f.tipoVeiculo !== "VAZIO" && modo !== "paletes" && (
@@ -789,7 +797,10 @@ export default function ParagemEditor({
               {campo("kgDescarregados", "KG Descarregados")}
             </>
           )}
-          <div className="col-span-2">
+        </div>
+
+        <div className="card space-y-3">
+          <div>
             <label className="label">Zona Portagem</label>
             <input
               list="zonas-editor"
@@ -803,30 +814,38 @@ export default function ParagemEditor({
               ))}
             </datalist>
           </div>
-          {campo("portagensExtra", "Portagens Extra (€)")}
-          {campo("alimentacao", "Alimentação (€)")}
-          <div>
-            <label className="label">Noites fora (nº)</label>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              className="input"
-              value={f.noitesFora}
-              onChange={(e) => set("noitesFora", e.target.value as never)}
-            />
-            {mostrarDetalheEuroNoites && (
-              <p className="mt-1 text-xs text-gray-500">
-                {Number(f.noitesFora) > 0
-                  ? `${Number(f.noitesFora)} × ${valorNoite.toFixed(2)} € = ${(Number(f.noitesFora) * valorNoite).toFixed(2)} €`
-                  : `Valor por noite: ${valorNoite.toFixed(2)} €`}
-              </p>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            {campo("portagensExtra", "Portagens Extra (€)")}
+            {campo("alimentacao", "Alimentação (€)")}
           </div>
-          {campo("horasExtra", "Horas Extra")}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Noites fora (nº)</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                className="input"
+                value={f.noitesFora}
+                onChange={(e) => set("noitesFora", e.target.value as never)}
+              />
+              {mostrarDetalheEuroNoites && (
+                <p className="mt-1 text-xs text-gray-500">
+                  {Number(f.noitesFora) > 0
+                    ? `${Number(f.noitesFora)} × ${valorNoite.toFixed(2)} € = ${(Number(f.noitesFora) * valorNoite).toFixed(2)} €`
+                    : `Valor por noite: ${valorNoite.toFixed(2)} €`}
+                </p>
+              )}
+            </div>
+            {campo("horasExtra", "Horas Extra")}
+          </div>
+        </div>
+
+        <div className="card grid grid-cols-2 gap-3">
           {campo("litrosEspanha", "Litros Espanha")}
           {campo("custoEspanha", "Custo Espanha (€)")}
           {mostrarReceita && campo("receitaPaga", "Valor a cobrar (€)")}
+        </div>
         </div>
 
         <div className="mt-5 flex items-center justify-between">
