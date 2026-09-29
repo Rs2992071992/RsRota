@@ -72,6 +72,7 @@ export default async function RegistoPage(
               alimentacao: true,
               nPaletes: true,
               nMeiasPaletes: true,
+              nMeiasPaletesCarregadas: true,
               paleteComprimentoMm: true,
               paleteLarguraMm: true,
               tipoPalete: true,

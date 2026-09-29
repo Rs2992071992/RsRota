@@ -37,6 +37,10 @@ export const paragemSchema = z
     // Meias-paletes empilhadas em cima das de base (nPaletes) — não ocupam
     // base própria, só valem metade no rateio (lib/calc/perStop.ts).
     nMeiasPaletes: numNaoNeg.default(0),
+    // Meias-paletes RECOLHIDAS — só relevante em Descarga+Recolha (MISTA);
+    // nMeiasPaletes acima passa a significar só as descarregadas. null =
+    // não preenchido (ver fallback em lib/calc/cargaRota.ts).
+    nMeiasPaletesCarregadas: numOpcional,
     // Palete desta paragem (2026-08-28 em diante) — catálogo TipoPalete, único
     // modo para paragens novas exceto VAZIO (ver superRefine abaixo).
     tipoPaleteId: z.number().int().positive().nullable().optional(),
@@ -126,9 +130,14 @@ export const paragemSchema = z
           message: "Escolha o tipo de palete",
           path: ["tipoPaleteId"],
         });
-      } else if ((!d.nPaletes || d.nPaletes <= 0) && (!d.nMeiasPaletes || d.nMeiasPaletes <= 0)) {
-        // Basta ter paletes inteiras OU meias-paletes (uma meia sozinha, sem
-        // base por baixo, é uma carga válida — ocupa chão no camião).
+      } else if (
+        (!d.nPaletes || d.nPaletes <= 0) &&
+        (!d.nMeiasPaletes || d.nMeiasPaletes <= 0) &&
+        (!d.nMeiasPaletesCarregadas || d.nMeiasPaletesCarregadas <= 0)
+      ) {
+        // Basta ter paletes inteiras OU meias-paletes (descarregadas ou
+        // recolhidas — uma meia sozinha, sem base por baixo, é uma carga
+        // válida — ocupa chão no camião).
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Indique o nº de paletes ou de meias-paletes",

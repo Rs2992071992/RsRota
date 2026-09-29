@@ -65,10 +65,12 @@ export interface LinhasCargaParagem {
  * uma linha só a partir dos campos escalares / do mapa legado. Cada linha sem
  * `sentido` próprio segue o da paragem (`recolha` -> RECOLHA, senão ENTREGA).
  *
- * Meias-paletes: as que cabem em cima das paletes de base (≤ Σ bases) não
- * ocupam chão; as que sobram vão para o chão a **2 por lugar** (ceil), como uma
- * linha extra da mesma dimensão, no lado das entregas (ou recolhas, se a
- * paragem só recolher). Uma paragem só de meias (0 bases) conta na mesma.
+ * Meias-paletes: `nMeiasPaletes` = descarregadas, `nMeiasPaletesCarregadas` =
+ * recolhidas (só relevante em MISTA — ver fallback de RECOLHA pura antiga
+ * abaixo). Cada lado empilha as suas próprias meias em cima das suas
+ * próprias bases (≤ Σ bases desse lado não ocupam chão; as que sobram vão
+ * para o chão a **2 por lugar**, ceil, como uma linha extra da mesma
+ * dimensão). Uma paragem só de meias (0 bases) conta na mesma.
  */
 export function linhasCargaParagem(p: {
   paletes?: unknown;
@@ -78,6 +80,7 @@ export function linhasCargaParagem(p: {
   tipoPaleteId?: number | null;
   nPaletes: number;
   nMeiasPaletes?: number;
+  nMeiasPaletesCarregadas?: number | null;
   recolha?: boolean;
   cliente?: string;
 }): LinhasCargaParagem {
@@ -85,7 +88,9 @@ export function linhasCargaParagem(p: {
   const sentidoParagem: "ENTREGA" | "RECOLHA" = p.recolha ? "RECOLHA" : "ENTREGA";
   const entregues: LinhaCarga[] = [];
   const recolhidas: LinhaCarga[] = [];
-  let dimRef: { comprimentoMm: number; larguraMm: number; tipoPaleteId: number } | null = null;
+  // Fallback de dimensão quando um lado não tem nenhuma linha própria —
+  // usado também por alocarMeias() abaixo.
+  let dimRefFallback: { comprimentoMm: number; larguraMm: number; tipoPaleteId: number } | null = null;
 
   if (arr && arr.length > 0) {
     for (const l of arr) {
@@ -98,26 +103,48 @@ export function linhasCargaParagem(p: {
         clienteNome: p.cliente,
       };
       ((l.sentido ?? sentidoParagem) === "RECOLHA" ? recolhidas : entregues).push(linha);
-      if (!dimRef) dimRef = { comprimentoMm: l.comprimentoMm, larguraMm: l.larguraMm, tipoPaleteId: l.tipoPaleteId ?? 0 };
+      if (!dimRefFallback) dimRefFallback = { comprimentoMm: l.comprimentoMm, larguraMm: l.larguraMm, tipoPaleteId: l.tipoPaleteId ?? 0 };
     }
   } else {
     const dims = dimensoesPaleteParagem(p);
     if (dims) {
-      dimRef = { comprimentoMm: dims.comprimentoMm, larguraMm: dims.larguraMm, tipoPaleteId: p.tipoPaleteId ?? 0 };
+      dimRefFallback = { comprimentoMm: dims.comprimentoMm, larguraMm: dims.larguraMm, tipoPaleteId: p.tipoPaleteId ?? 0 };
       if (p.nPaletes > 0) {
-        (sentidoParagem === "RECOLHA" ? recolhidas : entregues).push({ ...dimRef, nPaletes: p.nPaletes, clienteNome: p.cliente });
+        (sentidoParagem === "RECOLHA" ? recolhidas : entregues).push({ ...dimRefFallback, nPaletes: p.nPaletes, clienteNome: p.cliente });
       }
     }
   }
 
-  const meias = Math.floor(p.nMeiasPaletes ?? 0);
-  if (meias > 0 && dimRef) {
-    const alvo = sentidoParagem === "RECOLHA" ? recolhidas : entregues;
-    const totalBases = [...entregues, ...recolhidas].reduce((s, l) => s + l.nPaletes, 0);
-    const noChao = Math.max(0, meias - totalBases);
+  // RECOLHA pura antiga (sem nenhuma linha ENTREGA), registada antes de
+  // nMeiasPaletesCarregadas existir: o valor recolhido ficou no único campo
+  // que existia (nMeiasPaletes) — mesma regra de pesoAproximado/
+  // pesoAproximadoCarregado em lib/calc/perStop.ts. `== null`, não `<= 0`:
+  // um `0` explícito numa MISTA nova significa "sem meias recolhidas", não
+  // "dado antigo".
+  const legadoRecolhaPura = p.recolha === true && entregues.length === 0 && p.nMeiasPaletesCarregadas == null;
+  const meiasEntrega = legadoRecolhaPura ? 0 : Math.floor(p.nMeiasPaletes ?? 0);
+  const meiasRecolha = legadoRecolhaPura
+    ? Math.floor(p.nMeiasPaletes ?? 0)
+    : Math.floor(p.nMeiasPaletesCarregadas ?? 0);
+
+  // ⚠️ Quando um lado não tem nenhuma linha própria (ex.: recolha só com
+  // meias), a dimensão cai no fallback escalar da paragem — que, havendo
+  // também uma linha ENTREGA, reflete o tipo de palete DA ENTREGA (os
+  // escalares guardam sempre a 1.ª linha). Numa MISTA em que os dois lados
+  // usam tipos de palete fisicamente diferentes E o lado recolhido é só
+  // meias, a meia recolhida herda a dimensão da entrega — limitação
+  // assumida, sem seletor de tipo dedicado ao lado recolhido.
+  function alocarMeias(meias: number, linhas: LinhaCarga[]) {
+    if (meias <= 0) return;
+    const dimRef = linhas[0] ?? dimRefFallback;
+    if (!dimRef) return;
+    const bases = linhas.reduce((s, l) => s + l.nPaletes, 0);
+    const noChao = Math.max(0, meias - bases);
     const slots = Math.ceil(noChao / 2);
-    if (slots > 0) alvo.push({ ...dimRef, nPaletes: slots, clienteNome: p.cliente });
+    if (slots > 0) linhas.push({ ...dimRef, nPaletes: slots, clienteNome: p.cliente });
   }
+  alocarMeias(meiasEntrega, entregues);
+  alocarMeias(meiasRecolha, recolhidas);
 
   return { entregues, recolhidas };
 }

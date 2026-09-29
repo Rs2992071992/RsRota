@@ -34,8 +34,11 @@ export interface ParagemEditavel {
   volume: boolean;
   tipoPalete: string | null;
   nPaletes: number;
-  // Meias-paletes empilhadas — não ocupam base própria, valem metade no rateio.
+  // Meias-paletes DESCARREGADAS — não ocupam base própria, valem metade no rateio.
   nMeiasPaletes: number;
+  // Meias-paletes RECOLHIDAS — só relevante em Descarga+Recolha (MISTA).
+  // null = não preenchido (paragem antiga, ou sem meias recolhidas ainda).
+  nMeiasPaletesCarregadas: number | null;
   // Palete desta paragem (2026-08-28 em diante).
   tipoPaleteId: number | null;
   // Várias linhas de palete na mesma paragem (2026-09+) — tamanhos diferentes.
@@ -247,9 +250,21 @@ export default function ParagemEditor({
           setErro("Escolha o tipo de palete.");
           return;
         }
+        // Idem para as meias recolhidas: precisam de alguma referência de
+        // dimensão — o tipo de palete geral, OU uma linha carregada com tipo
+        // escolhido (a sua própria dimensão).
+        if (
+          Number(f.nMeiasPaletesCarregadas) > 0 &&
+          !f.tipoPaleteId &&
+          !linhasCarregadas.some((l) => l.tipoPaleteId && Number(l.nPaletes) > 0)
+        ) {
+          setErro("Escolha o tipo de palete (para saber a dimensão das meias recolhidas).");
+          return;
+        }
         const temAlgo =
           (f.tipoPaleteId && Number(f.nPaletes) > 0) ||
           Number(f.nMeiasPaletes) > 0 ||
+          Number(f.nMeiasPaletesCarregadas) > 0 ||
           linhasCarregadas.some((l) => l.tipoPaleteId && Number(l.nPaletes) > 0);
         if (!temAlgo) {
           setErro("Indique paletes descarregadas ou carregadas.");
@@ -277,6 +292,10 @@ export default function ParagemEditor({
         tipoPalete: modo === "paletes-legado" ? f.tipoPalete : null,
         nPaletes: modo === "kg" ? 0 : Number(f.nPaletes),
         nMeiasPaletes: modo === "paletes" ? Number(f.nMeiasPaletes) || 0 : 0,
+        // Preservar null quando não se aplica (fora de MISTA, ou vazio) —
+        // um `0` explícito colidiria com o fallback de paragens antigas em
+        // lib/calc/cargaRota.ts (ver comentário no schema).
+        nMeiasPaletesCarregadas: modo === "paletes" && tipoParagem === "MISTA" ? f.nMeiasPaletesCarregadas : null,
         tipoPaleteId: modo === "paletes" && f.tipoPaleteId ? Number(f.tipoPaleteId) : null,
         // `paletes`: em MISTA, sempre (precisa do `sentido` por linha); fora
         // disso, só quando há (ou havia) mais do que uma linha, ou a paragem
@@ -732,7 +751,9 @@ export default function ParagemEditor({
               )}
 
               <div>
-                <label className="label">Nº de meias-paletes — opcional</label>
+                <label className="label">
+                  {tipoParagem === "MISTA" ? "Nº de meias-paletes descarregadas" : "Nº de meias-paletes"} — opcional
+                </label>
                 <input
                   type="number"
                   step="1"
@@ -743,6 +764,22 @@ export default function ParagemEditor({
                   onChange={(e) => set("nMeiasPaletes", (e.target.value === "" ? 0 : Number(e.target.value)) as never)}
                 />
               </div>
+              {tipoParagem === "MISTA" && (
+                <div>
+                  <label className="label">Nº de meias-paletes recolhidas — opcional</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="Em cima de outras, não ocupam base"
+                    className="input"
+                    value={f.nMeiasPaletesCarregadas ?? ""}
+                    onChange={(e) =>
+                      set("nMeiasPaletesCarregadas", (e.target.value === "" ? null : Number(e.target.value)) as never)
+                    }
+                  />
+                </div>
+              )}
               {tipoParagem !== "RECOLHA" && (
                 <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
                   <label className="label">

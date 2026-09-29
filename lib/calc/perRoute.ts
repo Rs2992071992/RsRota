@@ -337,8 +337,9 @@ export function calcularRota(
    * Caso split: separa as linhas de `paletes` por `sentido` e calcula o
    * coeficiente de cada lado com `coefPaletesDimensao` — só possível quando
    * há linhas com dimensão própria (paragens legado/peso não têm "lados").
-   * Meias-paletes vão inteiras para o lado da entrega (assunção razoável:
-   * empilhadas em cima da carga principal, não da recolha).
+   * Meias-paletes: nMeiasPaletes vai para o lado da entrega,
+   * nMeiasPaletesCarregadas para o lado da recolha (par de campos, ver
+   * Paragem.nMeiasPaletesCarregadas no schema).
    */
   const contribuicoesDaParagem = (p: ParagemInput, eff: ParagemSnapshot): Contribuicao[] => {
     const clienteRecolha = chaveCliente(p);
@@ -353,7 +354,7 @@ export function calcularRota(
         p.tipoPalete ?? null,
         p.paleteComprimentoMm ?? null,
         p.paleteLarguraMm ?? null,
-        p.nMeiasPaletes || 0,
+        (p.nMeiasPaletes || 0) + (p.nMeiasPaletesCarregadas || 0),
         p.paletes ?? null,
       );
     if (clienteEntrega === clienteRecolha) {
@@ -364,17 +365,17 @@ export function calcularRota(
     const linhasEntrega = linhas.filter((l) => (l.sentido ?? sentidoDefault) === "ENTREGA");
     const linhasRecolha = linhas.filter((l) => (l.sentido ?? sentidoDefault) === "RECOLHA");
     const out: Contribuicao[] = [];
-    if (linhasEntrega.length > 0) {
+    if (linhasEntrega.length > 0 || (p.nMeiasPaletes || 0) > 0) {
       out.push({
         cliente: clienteEntrega,
-        coef: coefPaletesDimensao(p.tipoVeiculo, linhasEntrega, p.nMeiasPaletes || 0, eff),
+        coef: coefPaletesDimensao(p.tipoVeiculo, linhasEntrega, p.nMeiasPaletes || 0, eff, p),
         sentido: "ENTREGA",
       });
     }
-    if (linhasRecolha.length > 0) {
+    if (linhasRecolha.length > 0 || (p.nMeiasPaletesCarregadas || 0) > 0) {
       out.push({
         cliente: clienteRecolha,
-        coef: coefPaletesDimensao(p.tipoVeiculo, linhasRecolha, 0, eff),
+        coef: coefPaletesDimensao(p.tipoVeiculo, linhasRecolha, p.nMeiasPaletesCarregadas || 0, eff, p),
         sentido: "RECOLHA",
       });
     }
@@ -645,7 +646,7 @@ export function calcularRota(
       if (jaContadaNaEntrega.has(i)) return a;
       nBase = p.nPaletes || 0;
     }
-    return a + nBase + (p.nMeiasPaletes || 0) * 0.5;
+    return a + nBase + ((p.nMeiasPaletes || 0) + (p.nMeiasPaletesCarregadas || 0)) * 0.5;
   }, 0);
   // Peso aproximado descarregado/recolhido (informativo — nunca entra no
   // rateio). Usa os helpers de fallback (não o campo cru) para que uma

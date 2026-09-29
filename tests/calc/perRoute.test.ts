@@ -1287,4 +1287,33 @@ describe("calcularRota — faturarClienteApenasRecolha (entrega e recolha a clie
       expect(outro.receitaPaga).toBe(1000);
     });
   });
+
+  // nMeiasPaletesCarregadas (2026-09-29) — meias-paletes separadas por
+  // sentido: nMeiasPaletes vai para a entrega, nMeiasPaletesCarregadas para
+  // a recolha, cada uma faturada ao cliente certo quando os dois lados têm
+  // clientes diferentes (mesmo cenário acima, com split de cliente ligado).
+  describe("meias-paletes separadas por sentido (nMeiasPaletesCarregadas), split de cliente", () => {
+    const paragens: ParagemInput[] = [
+      paragemBase({
+        cliente: "Plasgal",
+        faturarCliente: "OutroCliente",
+        faturarClienteApenasRecolha: true,
+        kmInicial: 0,
+        kmFinal: 100,
+        snapshot: snapshotDimensao,
+        paletes: paletesMista,
+        nMeiasPaletes: 1,
+        nMeiasPaletesCarregadas: 1,
+        receitaPaga: 1000,
+      }),
+    ];
+    const r = calcularRota("SPLIT-meias", paragens, ctx);
+
+    it("cada cliente paga a sua meia-palete (0,5/capacidade) além das inteiras", () => {
+      const plasgal = r.rateio.find((c) => c.cliente === "Plasgal")!;
+      const outro = r.rateio.find((c) => c.cliente === "OutroCliente")!;
+      expect(plasgal.coefReal).toBeCloseTo((10 + 0.5) / capacidade, 6);
+      expect(outro.coefReal).toBeCloseTo((5 + 0.5) / capacidade, 6);
+    });
+  });
 });

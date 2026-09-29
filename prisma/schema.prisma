@@ -266,6 +266,16 @@ model Paragem {
   // uma palete inteira no rateio (lib/calc/perStop.ts).
   nMeiasPaletes Float @default(0)
 
+  // Meias-paletes RECOLHIDAS (carregadas) nesta paragem — só relevante em
+  // Descarga+Recolha (MISTA); nMeiasPaletes acima passa a significar só as
+  // DESCARREGADAS. null = não preenchido (paragem sem lado recolhido em
+  // meias, OU paragem antiga anterior a este campo) — ver o fallback em
+  // lib/calc/cargaRota.ts (mesma regra de pesoAproximado/
+  // pesoAproximadoCarregado abaixo, incluindo o `Float?` nullable: é o que
+  // distingue "nunca preenchido" de "preenchido a zero", ESSENCIAL aqui
+  // porque `0` é o valor normal de uma MISTA que não recolhe meias).
+  nMeiasPaletesCarregadas Float?
+
   // Peso aproximado DESCARREGADO nesta paragem (kg) — opcional, só para alimentar a
   // tabela de consumos (TabelaConsumo); nunca entra no rateio/coeficienteCarga, que
   // é sempre por dimensão de palete. Sem valor -> consumo trata como vazio (0 kg).

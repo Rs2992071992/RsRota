@@ -77,6 +77,7 @@ export async function POST(req: Request) {
       volume: d.volume,
       tipoPalete: d.volume ? (d.tipoPalete ?? null) : null,
       nMeiasPaletes: d.nMeiasPaletes,
+      nMeiasPaletesCarregadas: d.nMeiasPaletesCarregadas ?? null,
       nPaletes: agregado.nPaletes,
       tipoPaleteId: agregado.tipoPaleteId,
       paleteComprimentoMm: agregado.paleteComprimentoMm,

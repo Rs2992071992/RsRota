@@ -252,15 +252,19 @@ export function linhasPaleteEfetivas(p: {
  * Coeficiente de carga da parte "paletes por dimensão": soma, por linha,
  * nº paletes / capacidade dessa dimensão (fração do camião que cada linha
  * ocupa). As meias-paletes (0,5 cada, sem dimensão própria) usam a capacidade
- * da 1.ª linha. Com uma só linha é matematicamente idêntico ao cálculo antigo
- * `(nPaletes + nMeias×0,5) / capacidade`. Devolve 0 quando não há paletes nem
- * capacidade — o chamador decide se isso vira 1 (rateio) ou fica 0 (métrica).
+ * da 1.ª linha ou, na falta de linhas (ex.: um lado só com meias, sem
+ * paletes inteiras próprias), o fallback escalar `dimRefFallback`
+ * (`paleteComprimentoMm`/`paleteLarguraMm` da paragem). Com uma só linha é
+ * matematicamente idêntico ao cálculo antigo `(nPaletes + nMeias×0,5) /
+ * capacidade`. Devolve 0 quando não há paletes nem capacidade — o chamador
+ * decide se isso vira 1 (rateio) ou fica 0 (métrica).
  */
 export function coefPaletesDimensao(
   tipoVeiculo: string,
   linhas: PaleteLinha[],
   nMeiasPaletes: number,
   cap: ComCapacidadesArea,
+  dimRefFallback?: { paleteComprimentoMm?: number | null; paleteLarguraMm?: number | null } | null,
 ): number {
   let coef = 0;
   for (const l of linhas) {
@@ -268,7 +272,12 @@ export function coefPaletesDimensao(
     if (c > 0) coef += (l.nPaletes || 0) / c;
   }
   if (nMeiasPaletes > 0) {
-    const capRef = capacidadePaleteDimensoes(tipoVeiculo, linhas[0].comprimentoMm, linhas[0].larguraMm, cap);
+    const ref =
+      linhas[0] ??
+      (dimRefFallback?.paleteComprimentoMm && dimRefFallback?.paleteLarguraMm
+        ? { comprimentoMm: dimRefFallback.paleteComprimentoMm, larguraMm: dimRefFallback.paleteLarguraMm }
+        : null);
+    const capRef = ref ? capacidadePaleteDimensoes(tipoVeiculo, ref.comprimentoMm, ref.larguraMm, cap) : 0;
     if (capRef > 0) coef += (nMeiasPaletes * 0.5) / capRef;
   }
   return coef;
@@ -375,6 +384,7 @@ export function calcularParagem(p: ParagemInput, ctx: ContextoCalculo): ParagemC
     tipoPalete: !paleteNova && legado.ehPalete ? legado.tipo : null,
     nPaletes,
     nMeiasPaletes: p.nMeiasPaletes || 0,
+    nMeiasPaletesCarregadas: p.nMeiasPaletesCarregadas ?? null,
     tipoPaleteId: p.tipoPaleteId ?? null,
     paleteComprimentoMm: p.paleteComprimentoMm ?? null,
     paleteLarguraMm: p.paleteLarguraMm ?? null,

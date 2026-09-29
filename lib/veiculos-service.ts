@@ -33,6 +33,7 @@ type ParagemVeiculo = {
   kgDescarregados: number;
   nPaletes: number;
   nMeiasPaletes: number;
+  nMeiasPaletesCarregadas: number | null;
   volume: boolean;
   tipoPaleteId: number | null;
   paleteComprimentoMm: number | null;
@@ -50,7 +51,7 @@ function nPaletesParagem(p: ParagemVeiculo): number {
   const ehPaleteLegado = p.volume || p.tipoVeiculo === "PALETE_120X80" || p.tipoVeiculo === "PALETE_120X100";
   if (linhas.length === 0 && !ehPaleteLegado) return 0;
   const nBase = linhas.length > 0 ? linhas.reduce((s, l) => s + (l.nPaletes || 0), 0) : p.nPaletes || 0;
-  return nBase + (p.nMeiasPaletes || 0) * 0.5;
+  return nBase + ((p.nMeiasPaletes || 0) + (p.nMeiasPaletesCarregadas || 0)) * 0.5;
 }
 
 /**
@@ -100,6 +101,7 @@ export async function carregarEstatisticasVeiculo(veiculoId: number): Promise<Es
         kgDescarregados: true,
         nPaletes: true,
         nMeiasPaletes: true,
+        nMeiasPaletesCarregadas: true,
         volume: true,
         tipoPaleteId: true,
         paleteComprimentoMm: true,

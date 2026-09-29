@@ -184,6 +184,12 @@ export interface ParagemInput {
    * numerador do coeficiente de carga.
    */
   nMeiasPaletes?: number;
+  /**
+   * Meias-paletes RECOLHIDAS (carregadas) — só relevante em Descarga+Recolha
+   * (MISTA); nMeiasPaletes acima passa a significar só as descarregadas.
+   * null = não preenchido (ver fallback em lib/calc/cargaRota.ts).
+   */
+  nMeiasPaletesCarregadas?: number | null;
   /** Referência ao catálogo TipoPalete (label/relatórios) — nunca fonte de verdade. */
   tipoPaleteId?: number | null;
   /**
@@ -272,6 +278,8 @@ export interface ParagemCalc {
   nPaletes: number;
   /** Passthrough — ver ParagemInput.nMeiasPaletes. */
   nMeiasPaletes: number;
+  /** Passthrough — ver ParagemInput.nMeiasPaletesCarregadas. */
+  nMeiasPaletesCarregadas: number | null;
   /** Passthrough — ver ParagemInput.tipoPaleteId/paleteComprimentoMm/paleteLarguraMm. */
   tipoPaleteId: number | null;
   paleteComprimentoMm: number | null;

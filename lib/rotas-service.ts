@@ -131,6 +131,7 @@ export function paragemToInput(p: ParagemComRelacoes, baseSnap: BaseSnapshot): P
     tipoPalete: p.tipoPalete,
     nPaletes: p.nPaletes,
     nMeiasPaletes: p.nMeiasPaletes,
+    nMeiasPaletesCarregadas: p.nMeiasPaletesCarregadas,
     tipoPaleteId: p.tipoPaleteId,
     paleteComprimentoMm: p.paleteComprimentoMm,
     paleteLarguraMm: p.paleteLarguraMm,

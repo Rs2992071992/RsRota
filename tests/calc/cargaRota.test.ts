@@ -426,6 +426,85 @@ describe("linhasCargaParagem", () => {
     expect(r).toHaveLength(2);
     expect(r.reduce((s, l) => s + l.nPaletes, 0)).toBe(7);
   });
+
+  describe("MISTA — meias separadas por sentido (nMeiasPaletesCarregadas)", () => {
+    it("3 meias descarregadas + 3 meias recolhidas, cada lado com só 1 base → 1 slot de chão em cada lado", () => {
+      const { entregues, recolhidas } = linhasCargaParagem({
+        paletes: [
+          { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 1, sentido: "ENTREGA" },
+          { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 1, sentido: "RECOLHA" },
+        ],
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        tipoPalete: null,
+        nPaletes: 1,
+        nMeiasPaletes: 3,
+        nMeiasPaletesCarregadas: 3,
+        recolha: true,
+        cliente: "Cli",
+      });
+      // cada lado: 1 base + ceil((3-1)/2)=1 slot => 2
+      expect(entregues.reduce((s, l) => s + l.nPaletes, 0)).toBe(2);
+      expect(recolhidas.reduce((s, l) => s + l.nPaletes, 0)).toBe(2);
+    });
+
+    it("RECOLHA pura antiga (sem linha ENTREGA, nMeiasPaletesCarregadas nulo) → meias vão para recolhidas (fallback)", () => {
+      const { entregues, recolhidas } = linhasCargaParagem({
+        paletes: null,
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        tipoPalete: null,
+        tipoPaleteId: 5,
+        nPaletes: 2,
+        nMeiasPaletes: 3, // valor antigo, guardado no único campo que existia
+        nMeiasPaletesCarregadas: null,
+        recolha: true,
+        cliente: "Cli",
+      });
+      expect(entregues).toHaveLength(0);
+      // bases 2 + ceil((3-2)/2)=1 => 3
+      expect(recolhidas.reduce((s, l) => s + l.nPaletes, 0)).toBe(3);
+    });
+
+    it("MISTA nova com nMeiasPaletesCarregadas explicitamente 0 → não cai no fallback antigo (fica só do lado entrega)", () => {
+      // Sem linha ENTREGA própria (só RECOLHA) — se caísse no fallback
+      // antigo (legadoRecolhaPura), a meia iria para recolhidas; um 0
+      // explícito tem de impedir isso e manter a meia do lado entrega.
+      const { entregues, recolhidas } = linhasCargaParagem({
+        paletes: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 1, sentido: "RECOLHA" }],
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        tipoPalete: null,
+        nPaletes: 0,
+        nMeiasPaletes: 1,
+        nMeiasPaletesCarregadas: 0,
+        recolha: true,
+        cliente: "Cli",
+      });
+      // 0 bases próprias + ceil((1-0)/2)=1 slot, dimensão do fallback (1.ª linha encontrada)
+      expect(entregues.reduce((s, l) => s + l.nPaletes, 0)).toBe(1);
+      expect(recolhidas.reduce((s, l) => s + l.nPaletes, 0)).toBe(1); // só a base própria, sem meia
+    });
+
+    it("lado recolhido só com meias (sem linha própria) → usa o fallback escalar da paragem", () => {
+      const { entregues, recolhidas } = linhasCargaParagem({
+        paletes: [{ tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 2, sentido: "ENTREGA" }],
+        paleteComprimentoMm: 1200,
+        paleteLarguraMm: 800,
+        tipoPaleteId: 1,
+        tipoPalete: null,
+        nPaletes: 2,
+        nMeiasPaletes: 0,
+        nMeiasPaletesCarregadas: 1,
+        recolha: true,
+        cliente: "Cli",
+      });
+      expect(entregues.reduce((s, l) => s + l.nPaletes, 0)).toBe(2);
+      expect(recolhidas).toEqual([
+        { tipoPaleteId: 1, comprimentoMm: 1200, larguraMm: 800, nPaletes: 1, clienteNome: "Cli" },
+      ]);
+    });
+  });
 });
 
 describe("gerarPlantaCargaRota — planta (geometria) do pior momento da rota", () => {

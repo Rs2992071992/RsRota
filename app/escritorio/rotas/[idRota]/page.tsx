@@ -87,6 +87,7 @@ export default async function RotaDetalhe(props: { params: Promise<{ idRota: str
       tipoPalete: p.tipoPalete,
       nPaletes: p.nPaletes,
       nMeiasPaletes: p.nMeiasPaletes,
+      nMeiasPaletesCarregadas: p.nMeiasPaletesCarregadas,
       tipoPaleteId: p.tipoPaleteId,
       paletes: Array.isArray(p.paletes)
         ? (p.paletes as {
