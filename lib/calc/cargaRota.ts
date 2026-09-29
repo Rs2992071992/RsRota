@@ -387,12 +387,22 @@ export function gerarPlantaCargaPorTroco(
   return { ida: piorDoTroco("Ida"), volta: piorDoTroco("Volta") };
 }
 
+// Maior área primeiro ("first-fit decreasing", heurística conhecida para
+// melhorar o aproveitamento de packing 2D) — só ORDENA as linhas da MESMA
+// paragem entre si, nunca move a paragem em relação às outras (a ordem
+// entre paragens continua a ser a sequência física real/LIFO, ver
+// empacotarEstado). Seguro: várias linhas da mesma paragem saem todas
+// juntas nessa paragem, não há restrição física de ordem entre elas.
+function porAreaDecrescente(a: LinhaCarga, b: LinhaCarga): number {
+  return b.comprimentoMm * b.larguraMm - a.comprimentoMm * a.larguraMm;
+}
+
 function filtrarLinhasValidas(paragens: ParagemCarga[]) {
   const valida = (l: LinhaCarga) => l.nPaletes > 0 && l.comprimentoMm > 0 && l.larguraMm > 0;
   return paragens.map((p) => ({
     ...p,
-    entregues: p.entregues.filter(valida),
-    recolhidas: p.recolhidas.filter(valida),
+    entregues: p.entregues.filter(valida).sort(porAreaDecrescente),
+    recolhidas: p.recolhidas.filter(valida).sort(porAreaDecrescente),
   }));
 }
 
