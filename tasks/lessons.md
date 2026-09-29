@@ -2,6 +2,45 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-09-29] | O modelo de dados de `nMeiasPaletes` (campo único) já tinha
+  DUAS heurísticas divergentes no código para decidir a que sentido as
+  meias pertenciam numa paragem MISTA: `cargaRota.ts::linhasCargaParagem`
+  seguia `p.recolha` (sempre "recolhidas"), `perRoute.ts::
+  contribuicoesDaParagem` assumia sempre "entrega" (0 hardcoded do lado
+  recolha). Nenhuma das duas deixava o Ricardo escolher, e nenhuma das duas
+  fora notada antes — só apareceu ao investigar a fundo o pedido de meias
+  separadas por lado. Corrigido com um 2.º campo
+  (`nMeiasPaletesCarregadas`), replicando o padrão já existente de
+  `pesoAproximado`/`pesoAproximadoCarregado`. Um agente de revisão do plano
+  (antes de implementar) apanhou 3 problemas bloqueantes que eu tinha
+  deixado passar: (1) o campo novo tinha de ser `Float?` nullable, não
+  `Float @default(0)` — com default, "paragem antiga" e "MISTA nova sem
+  meias recolhidas" colapsavam ambas para `0`, fazendo o fallback
+  reinterpretar dados NOVOS como antigos (bug ao contrário do que estava a
+  corrigir); (2) esqueci-me de somar o campo novo em
+  `perRoute.ts::calcularRota` (`totalPaletes`, linha 648) — só corrigi o
+  cálculo análogo em `veiculos-service.ts`, no mesmo tipo de descuido; (3)
+  esqueci o `superRefine` de `lib/validacao.ts` (só corrigi a validação
+  client-side dos formulários) — o servidor continuava a rejeitar
+  exatamente o caso que motivou a correção. | (1) Quando um campo novo
+  "substitui" um valor que já existia e podia legitimamente ser `0`, usar
+  sempre `Float?`/nullable — nunca `@default(0)` — e a heurística de
+  fallback tem de comparar `== null`, não `<= 0`, senão "nunca preenchido"
+  e "preenchido a zero" ficam indistinguíveis. (2) Antes de mexer num campo
+  usado em vários motores de cálculo (espaço, rateio por cliente, métricas
+  agregadas), fazer grep exaustivo a TODAS as ocorrências — a mesma
+  informação (sentido das meias) pode já ter regras divergentes escritas
+  por mim ou por outra sessão, sem nenhuma delas estar "certa" por
+  omissão. (3) Depois de escrever um plano sozinho, vale a pena passá-lo
+  por um segundo agente antes de implementar — apanhou bugs bloqueantes
+  reais que a primeira leitura não viu, mesmo com investigação prévia
+  extensa. (4) Ao adicionar um campo a um formulário de validação
+  client+server, mudar as DUAS pontas na mesma sessão — corrigir só o
+  cliente dá uma falsa sensação de resolvido até alguém bater no `POST`.
+  Auditoria a dados reais antes de publicar (lição de 2026-09-02) também se
+  aplicou aqui: 2 paragens MISTA antigas tinham `nMeiasPaletes>0` e foram
+  migradas manualmente para preservar o rateio já faturado.
+
 - [2026-09-28] | No modo "Descarga + Recolha" (MISTA), registar uma paragem
   **só com meias-paletes** (0 inteiras) ficava bloqueado — mesmo já tendo
   corrigido este caso para os modos simples (Descarga só / Recolha só) em
