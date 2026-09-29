@@ -97,6 +97,7 @@ const estadoBase = {
   tipoPaleteId: "",
   nPaletes: "",
   nMeiasPaletes: "",
+  nMeiasPaletesCarregadas: "",
   pesoAproximado: "",
   pesoAproximadoCarregado: "",
   zonaPortagem: "",
@@ -203,7 +204,8 @@ export default function RegistoForm({
   const totalCarregadasForm = linhasCarregadasResolvidas.reduce((s, l) => s + l.n, 0);
 
   /** Linhas desta paragem separadas por sentido — usadas na simulação de
-   * espaço (memo abaixo) e no resumo guardado após o registo. */
+   * espaço (memo abaixo) e no resumo guardado após o registo. Espelha
+   * lib/calc/cargaRota.ts::linhasCargaParagem (servidor). */
   function linhasParagemForm(): { entregues: LinhaSimples[]; recolhidas: LinhaSimples[] } {
     const nome = f.cliente.trim() || "esta paragem";
     const paraLinha = (l: { tipo: TipoPaleteOpcao; n: number }): LinhaSimples => ({
@@ -218,21 +220,30 @@ export default function RegistoForm({
     const entregues = tipoParagem === "RECOLHA" ? [] : base;
     const recolhidas = tipoParagem === "DESCARGA" ? [] : tipoParagem === "RECOLHA" ? base : carregadas;
 
-    // Meias-paletes sem base por baixo -> chão, 2 por lugar; seguem o mesmo
-    // sentido da paragem (recolha => recolhidas, senão entregues — igual ao
-    // fallback do servidor em linhasCargaParagem).
-    const dimRef =
-      entregues[0] ??
-      recolhidas[0] ??
-      (tipoPaleteSel
-        ? { tipoPaleteId: tipoPaleteSel.id, comprimentoMm: tipoPaleteSel.comprimentoMm, larguraMm: tipoPaleteSel.larguraMm, nPaletes: 0, clienteNome: nome }
-        : null);
-    const totalBase = totalPaletesForm + totalCarregadasForm;
-    const noChao = Math.max(0, Math.floor(num(f.nMeiasPaletes)) - totalBase);
-    const slots = Math.ceil(noChao / 2);
-    if (slots > 0 && dimRef) {
-      (recolha ? recolhidas : entregues).push({ ...dimRef, nPaletes: slots });
+    // Fallback de dimensão quando um lado não tem nenhuma linha própria —
+    // o tipo de palete geral escolhido no formulário.
+    const dimRefFallback = tipoPaleteSel
+      ? { tipoPaleteId: tipoPaleteSel.id, comprimentoMm: tipoPaleteSel.comprimentoMm, larguraMm: tipoPaleteSel.larguraMm }
+      : null;
+    // Cada lado empilha as suas próprias meias em cima das suas próprias
+    // bases — meias sem base por baixo vão a chão, 2 por lugar.
+    function alocarMeias(meias: number, linhas: LinhaSimples[]) {
+      if (meias <= 0) return;
+      const dimRef = linhas[0] ?? dimRefFallback;
+      if (!dimRef) return;
+      const bases = linhas.reduce((s, l) => s + l.nPaletes, 0);
+      const noChao = Math.max(0, meias - bases);
+      const slots = Math.ceil(noChao / 2);
+      if (slots > 0) linhas.push({ ...dimRef, nPaletes: slots, clienteNome: nome });
     }
+    // Em RECOLHA pura, nMeiasPaletes é o único bloco (o campo de meias
+    // recolhidas nem aparece no formulário nesse modo).
+    const meiasEntrega = tipoParagem === "RECOLHA" ? 0 : Math.floor(num(f.nMeiasPaletes));
+    const meiasRecolha =
+      tipoParagem === "RECOLHA" ? Math.floor(num(f.nMeiasPaletes)) : Math.floor(num(f.nMeiasPaletesCarregadas));
+    alocarMeias(meiasEntrega, entregues);
+    alocarMeias(meiasRecolha, recolhidas);
+
     return { entregues, recolhidas };
   }
 
@@ -290,6 +301,7 @@ export default function RegistoForm({
     f.kmInicial,
     f.tipoPaleteId,
     f.nMeiasPaletes,
+    f.nMeiasPaletesCarregadas,
     totalPaletesForm,
     totalCarregadasForm,
     JSON.stringify(linhasPaleteResolvidas),
@@ -313,6 +325,7 @@ export default function RegistoForm({
       tipoPaleteId: v === "VAZIO" ? "" : prev.tipoPaleteId,
       nPaletes: v === "VAZIO" ? "" : prev.nPaletes,
       nMeiasPaletes: v === "VAZIO" ? "" : prev.nMeiasPaletes,
+      nMeiasPaletesCarregadas: v === "VAZIO" ? "" : prev.nMeiasPaletesCarregadas,
       pesoAproximado: v === "VAZIO" ? "" : prev.pesoAproximado,
       pesoAproximadoCarregado: v === "VAZIO" ? "" : prev.pesoAproximadoCarregado,
       cliente:
@@ -365,6 +378,7 @@ export default function RegistoForm({
       "kmFinal",
       "nPaletes",
       "nMeiasPaletes",
+      "nMeiasPaletesCarregadas",
       "pesoAproximado",
       "pesoAproximadoCarregado",
     ] as const) {
@@ -389,8 +403,21 @@ export default function RegistoForm({
           if (!l.tipoPaleteId) e[`linhaCarregada${i}Tipo`] = "Escolha o tipo de palete";
           if (!l.nPaletes || num(l.nPaletes) <= 0) e[`linhaCarregada${i}N`] = "Indique o nº de paletes";
         });
+        // Idem para as meias recolhidas: precisam de alguma referência de
+        // dimensão — o tipo de palete geral, OU uma linha carregada com tipo
+        // escolhido (a sua própria dimensão).
+        if (
+          num(f.nMeiasPaletesCarregadas) > 0 &&
+          !f.tipoPaleteId &&
+          !linhasCarregadas.some((l) => l.tipoPaleteId && num(l.nPaletes) > 0)
+        ) {
+          e.nMeiasPaletesCarregadas = "Escolha o tipo de palete (para saber a dimensão das meias recolhidas)";
+        }
         const temAlgo =
-          num(f.nPaletes) > 0 || num(f.nMeiasPaletes) > 0 || linhasCarregadas.some((l) => num(l.nPaletes) > 0);
+          num(f.nPaletes) > 0 ||
+          num(f.nMeiasPaletes) > 0 ||
+          num(f.nMeiasPaletesCarregadas) > 0 ||
+          linhasCarregadas.some((l) => num(l.nPaletes) > 0);
         if (!temAlgo) e.nPaletes = "Indique paletes descarregadas ou carregadas";
       } else {
         if (!f.tipoPaleteId) e.tipoPaleteId = "Escolha o tipo de palete";
@@ -440,6 +467,12 @@ export default function RegistoForm({
               ? linhasPaleteResolvidas.map((l) => ({ tipoPaleteId: l.tipo.id, nPaletes: l.n }))
               : undefined,
         nMeiasPaletes: mostrarPaletes ? num(f.nMeiasPaletes) : 0,
+        // Preservar null quando não se aplica (fora de MISTA, ou vazio) —
+        // ver comentário no schema (Paragem.nMeiasPaletesCarregadas).
+        nMeiasPaletesCarregadas:
+          mostrarPaletes && tipoParagem === "MISTA" && f.nMeiasPaletesCarregadas !== ""
+            ? num(f.nMeiasPaletesCarregadas)
+            : null,
         // Descarregado só faz sentido em DESCARGA/MISTA; recolhido só em RECOLHA/MISTA.
         pesoAproximado:
           tipoParagem === "RECOLHA" || f.pesoAproximado === "" ? null : num(f.pesoAproximado),
@@ -892,7 +925,9 @@ export default function RegistoForm({
             )}
 
             <div>
-              <label className="label">Nº de meias-paletes</label>
+              <label className="label">
+                {tipoParagem === "MISTA" ? "Nº de meias-paletes descarregadas" : "Nº de meias-paletes"}
+              </label>
               <input
                 type="number"
                 inputMode="numeric"
@@ -905,6 +940,24 @@ export default function RegistoForm({
               />
               {erros.nMeiasPaletes && <p className="mt-1 text-xs text-red-600">{erros.nMeiasPaletes}</p>}
             </div>
+            {tipoParagem === "MISTA" && (
+              <div>
+                <label className="label">Nº de meias-paletes recolhidas</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min="0"
+                  placeholder="Em cima de outras ou sozinhas no chão"
+                  className="input"
+                  value={f.nMeiasPaletesCarregadas}
+                  onChange={(e) => set("nMeiasPaletesCarregadas", e.target.value)}
+                />
+                {erros.nMeiasPaletesCarregadas && (
+                  <p className="mt-1 text-xs text-red-600">{erros.nMeiasPaletesCarregadas}</p>
+                )}
+              </div>
+            )}
             {tipoParagem !== "RECOLHA" && (
               <div className={tipoParagem === "MISTA" ? "" : "col-span-2"}>
                 <label className="label">
