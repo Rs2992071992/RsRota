@@ -7,13 +7,19 @@
 
 import { prisma } from "@/lib/db";
 import { carregarContexto } from "@/lib/contexto";
-import { efetivos } from "@/lib/calc/perStop";
+import { efetivos, pesoAproximadoCarregadoEfetivo, pesoAproximadoDescarregado } from "@/lib/calc/perStop";
 import { paragemToInput, includeRelacoes } from "@/lib/rotas-service";
 import { carregarBaseSnapshot } from "@/lib/snapshot-service";
 
 export interface EstatisticasMotorista {
   kmAnoAtual: number;
-  /** Kg carregados + descarregados no ano corrente (soma das duas colunas). */
+  /** Kg carregados + descarregados no ano corrente — soma kgCarregados/
+   * kgDescarregados (modo legado, paragens anteriores a 2026-08-28) com
+   * pesoAproximado/pesoAproximadoCarregado (modo paletes por dimensão,
+   * campo opcional informativo). Os dois pares são mutuamente exclusivos por
+   * construção (uma paragem só preenche o par do seu próprio modo), por
+   * isso somar sempre os quatro é seguro — sem isto, o total ficava a zero
+   * para qualquer motorista que só tivesse paragens no modo novo. */
   kgAnoAtual: number;
   horasExtraAnoAtual: number;
   noitesForaAnoAtual: number;
@@ -47,7 +53,8 @@ export async function carregarEstatisticasMotorista(
     const eff = efetivos(input, ctx);
 
     kmAnoAtual += p.kmFinal - p.kmInicial;
-    kgAnoAtual += p.kgCarregados + p.kgDescarregados;
+    kgAnoAtual +=
+      p.kgCarregados + p.kgDescarregados + pesoAproximadoDescarregado(input) + pesoAproximadoCarregadoEfetivo(input);
     horasExtraAnoAtual += p.horasExtra;
     noitesForaAnoAtual += p.noitesFora;
     custoTotalAnoAtual +=
