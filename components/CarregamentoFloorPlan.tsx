@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CaixaResultado } from "@/lib/calc/paletePacking";
+import { CABINE_FORMAS, transformCabine } from "@/lib/cabine-desenho";
 
 // Paleta categórica fixa (8 cores) — atribuída por ordem de 1ª aparição do
 // cliente no carregamento (nunca reordenada por tamanho/frequência). Nunca
@@ -33,15 +34,13 @@ function espacoFrenteMm(souReboque: boolean): number {
 }
 
 /** Desenho esquemático (vista de cima) da frente da caixa, à esquerda de x=0.
- * Cabine para o veículo trator (minimalista: corpo + nariz + para-brisas
- * panorâmico, sem rodas); para o reboque, o trem de rodas + barra de tração
- * do dolly (não tem cabine própria). Cores da marca (ver
- * tailwind.config.ts::brand). */
+ * Cabine para o veículo trator (formas em lib/cabine-desenho.ts, partilhadas
+ * com o PDF); para o reboque, o trem de rodas + barra de tração do dolly
+ * (não tem cabine própria). */
 function DesenhoFrente({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
   const meio = larguraMm / 2;
   const corpo = "#1e3a5f";
   const corpoClaro = "#2c5282";
-  const vidro = "#bfe0f0";
   const pneu = "#1f2937";
   const aro = "#e5e7eb";
   const farol = "#fbbf24";
@@ -73,14 +72,42 @@ function DesenhoFrente({ larguraMm, souReboque }: { larguraMm: number; souReboqu
     );
   }
 
+  // Cabine: ocupa de x=-1450 a x=-100 (1350 mm), centrada na largura da caixa.
+  const { escala, tx, ty } = transformCabine(larguraMm, 1350, -100);
   return (
-    <g>
-      {/* Corpo da cabine */}
-      <rect x={-1450} y={60} width={1350} height={larguraMm - 120} rx={160} fill={corpo} />
-      {/* Nariz — capa mais clara na ponta, dá o ar "bicudo"/aerodinâmico */}
-      <rect x={-1450} y={100} width={200} height={larguraMm - 200} rx={100} fill={corpoClaro} />
-      {/* Para-brisas panorâmico */}
-      <rect x={-1100} y={140} width={280} height={larguraMm - 280} rx={70} fill={vidro} />
+    <g transform={`translate(${tx} ${ty}) scale(${escala})`}>
+      {CABINE_FORMAS.map((f, i) => {
+        switch (f.t) {
+          case "rect":
+            return <rect key={i} x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} fill={f.fill} />;
+          case "circle":
+            return <circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill} />;
+          case "path":
+            return (
+              <path
+                key={i}
+                d={f.d}
+                fill={f.fill ?? "none"}
+                stroke={f.stroke}
+                strokeWidth={f.sw}
+                strokeLinecap="round"
+              />
+            );
+          case "line":
+            return (
+              <line
+                key={i}
+                x1={f.x1}
+                y1={f.y1}
+                x2={f.x2}
+                y2={f.y2}
+                stroke={f.stroke}
+                strokeWidth={f.sw}
+                strokeLinecap="round"
+              />
+            );
+        }
+      })}
     </g>
   );
 }

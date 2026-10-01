@@ -1,5 +1,6 @@
 import React from "react";
-import { Document, Page, View, Text, Svg, Rect, Circle, G, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Svg, Rect, Circle, Path, Line, G, StyleSheet } from "@react-pdf/renderer";
+import { CABINE_FORMAS, transformCabine } from "@/lib/cabine-desenho";
 import { EMPRESA } from "@/lib/pdf/empresa";
 import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
 
@@ -103,7 +104,6 @@ function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReb
   const meio = larguraMm / 2;
   const corpo = "#1e3a5f";
   const corpoClaro = "#2c5282";
-  const vidro = "#bfe0f0";
   const pneu = "#1f2937";
   const aro = "#e5e7eb";
   const farol = "#fbbf24";
@@ -132,14 +132,42 @@ function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReb
     );
   }
 
+  // Cabine: ocupa de x=-1450 a x=-100 (1350 mm), centrada na largura da caixa.
+  const { escala, tx, ty } = transformCabine(larguraMm, 1350, -100);
   return (
-    <G>
-      {/* Corpo da cabine */}
-      <Rect x={-1450} y={60} width={1350} height={larguraMm - 120} rx={160} fill={corpo} />
-      {/* Nariz — capa mais clara na ponta */}
-      <Rect x={-1450} y={100} width={200} height={larguraMm - 200} rx={100} fill={corpoClaro} />
-      {/* Para-brisas panorâmico */}
-      <Rect x={-1100} y={140} width={280} height={larguraMm - 280} rx={70} fill={vidro} />
+    <G transform={`translate(${tx} ${ty}) scale(${escala})`}>
+      {CABINE_FORMAS.map((f, i) => {
+        switch (f.t) {
+          case "rect":
+            return <Rect key={i} x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} fill={f.fill} />;
+          case "circle":
+            return <Circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill} />;
+          case "path":
+            return (
+              <Path
+                key={i}
+                d={f.d}
+                fill={f.fill ?? "none"}
+                stroke={f.stroke}
+                strokeWidth={f.sw}
+                strokeLinecap="round"
+              />
+            );
+          case "line":
+            return (
+              <Line
+                key={i}
+                x1={f.x1}
+                y1={f.y1}
+                x2={f.x2}
+                y2={f.y2}
+                stroke={f.stroke}
+                strokeWidth={f.sw}
+                strokeLinecap="round"
+              />
+            );
+        }
+      })}
     </G>
   );
 }
