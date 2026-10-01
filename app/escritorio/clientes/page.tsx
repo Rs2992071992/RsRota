@@ -105,10 +105,25 @@ export default async function ClientesPage(props: { searchParams: Promise<Search
 
         {/* Detalhe */}
         <div className="space-y-4">
-          {!detalhe ? (
+          {!selecionado ? (
             <div className="card flex h-40 items-center justify-center text-gray-400">
-              {selecionado ? "Cliente sem dados." : "Selecione um cliente à esquerda."}
+              Selecione um cliente à esquerda.
             </div>
+          ) : !detalhe ? (
+            // Sem rateio nem ficha de contacto (ex.: nome só usado numa
+            // paragem já redirecionada via "Faturar a" para outro cliente) —
+            // mesmo "sem dados", continua a precisar do cabeçalho com
+            // Editar nome/Apagar, senão não há forma de o corrigir/fundir a
+            // partir daqui (só pela lista da esquerda, que não tem Editar).
+            <>
+              <div className="flex items-center justify-between">
+                <EditarNomeCliente key={selecionado} nome={selecionado} />
+                <ApagarCliente nome={selecionado} />
+              </div>
+              <div className="card flex h-40 items-center justify-center text-gray-400">
+                Cliente sem dados.
+              </div>
+            </>
           ) : (
             <>
               <div className="flex items-center justify-between">
