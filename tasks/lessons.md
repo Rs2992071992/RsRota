@@ -2,6 +2,21 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-10-01] | `app-motorista-android/src/components/DespesasIcones.tsx`
+  (porte do `components/DespesasIcones.tsx` do site) ficou desatualizado
+  face ao original: só acendia o ícone de portagens quando havia
+  `portagensExtra` (valor manual, raro) — faltava a condição por
+  `zonaPortagem` (lookup automático, presente em quase todas as paragens)
+  que o site já tinha. Resultado: o ícone de portagens praticamente nunca
+  aparecia na app do telemóvel, dando a impressão de que "os ícones não
+  aparecem" em geral. | Componentes "porte do site" na app Android (já vi
+  isto acontecer com validações de meias-paletes também, lição de
+  2026-09-29 acima) tendem a divergir silenciosamente do original quando o
+  site evolui sem um porte correspondente na mesma sessão — ao corrigir
+  algo no site que tenha equivalente na app Android, verificar sempre se o
+  ficheiro espelho precisa da mesma correção, mesmo que ninguém tenha
+  reportado lá ainda.
+
 - [2026-09-29] | O modelo de dados de `nMeiasPaletes` (campo único) já tinha
   DUAS heurísticas divergentes no código para decidir a que sentido as
   meias pertenciam numa paragem MISTA: `cargaRota.ts::linhasCargaParagem`
