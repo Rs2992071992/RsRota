@@ -1,6 +1,6 @@
 import React from "react";
 import { Document, Page, View, Text, Svg, Rect, Circle, Path, Line, G, StyleSheet } from "@react-pdf/renderer";
-import { CABINE_FORMAS, transformCabine } from "@/lib/cabine-desenho";
+import { CABINE, FRENTE_REBOQUE, transformFrente } from "@/lib/cabine-desenho";
 import { EMPRESA } from "@/lib/pdf/empresa";
 import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
 
@@ -96,52 +96,22 @@ function espacoFrenteMm(souReboque: boolean): number {
 
 /** Desenho esquemático (vista de cima) da frente da caixa — mesmo desenho do
  * ecrã (components/CarregamentoFloorPlan.tsx::DesenhoFrente), em primitivas do
- * react-pdf. Cabine para o veículo trator (minimalista: corpo + nariz +
- * para-brisas panorâmico, sem rodas); trem de rodas + barra de tração do
- * dolly para o reboque (não tem cabine própria). Cores da marca (ver
- * tailwind.config.ts::brand). */
+ * react-pdf. Formas partilhadas em lib/cabine-desenho.ts. */
 function DesenhoFrentePdf({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
-  const meio = larguraMm / 2;
-  const corpo = "#1e3a5f";
-  const corpoClaro = "#2c5282";
-  const pneu = "#1f2937";
-  const aro = "#e5e7eb";
-  const farol = "#fbbf24";
-  const contorno = "#ffffff";
-
-  if (souReboque) {
-    const eixo1 = meio - larguraMm * 0.32;
-    const eixo2 = meio + larguraMm * 0.32;
-    const raioPneu = Math.min(larguraMm * 0.10125, 180);
-    const raioAro = raioPneu * 0.5;
-    return (
-      <G>
-        <Rect x={-1275} y={meio - 15} width={1013} height={30} rx={14} fill={corpo} stroke={contorno} strokeWidth={4} />
-        <Circle cx={-1245} cy={meio} r={56} fill="none" stroke={corpoClaro} strokeWidth={12} />
-        <Circle cx={-1245} cy={meio} r={15} fill={farol} />
-        <Rect x={-360} y={30} width={360} height={larguraMm - 60} rx={23} fill={corpo} stroke={contorno} strokeWidth={4} />
-        {[eixo1, eixo2].map((cy) => (
-          <React.Fragment key={cy}>
-            <Circle cx={-225} cy={cy} r={raioPneu} fill={pneu} />
-            <Circle cx={-225} cy={cy} r={raioAro} fill={aro} />
-            <Circle cx={-120} cy={cy} r={raioPneu} fill={pneu} />
-            <Circle cx={-120} cy={cy} r={raioAro} fill={aro} />
-          </React.Fragment>
-        ))}
-      </G>
-    );
-  }
-
-  // Cabine: ocupa de x=-1450 a x=-100 (1350 mm), centrada na largura da caixa.
-  const { escala, tx, ty } = transformCabine(larguraMm, 1350, -100);
+  // Cabine: de x=-1450 a x=-100 (1350 mm). Reboque: parede frontal encostada à
+  // caixa (x=0), barra de tração e olhal até ao limite da zona da frente.
+  const desenho = souReboque ? FRENTE_REBOQUE : CABINE;
+  const { escala, tx, ty } = transformFrente(desenho, larguraMm, 1350, souReboque ? 0 : -100);
   return (
     <G transform={`translate(${tx} ${ty}) scale(${escala})`}>
-      {CABINE_FORMAS.map((f, i) => {
+      {desenho.formas.map((f, i) => {
         switch (f.t) {
           case "rect":
             return <Rect key={i} x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} fill={f.fill} />;
           case "circle":
-            return <Circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill} />;
+            return (
+              <Circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill ?? "none"} stroke={f.stroke} strokeWidth={f.sw} />
+            );
           case "path":
             return (
               <Path

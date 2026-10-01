@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CaixaResultado } from "@/lib/calc/paletePacking";
-import { CABINE_FORMAS, transformCabine } from "@/lib/cabine-desenho";
+import { CABINE, FRENTE_REBOQUE, transformFrente } from "@/lib/cabine-desenho";
 
 // Paleta categórica fixa (8 cores) — atribuída por ordem de 1ª aparição do
 // cliente no carregamento (nunca reordenada por tamanho/frequência). Nunca
@@ -26,62 +26,30 @@ function raioCanto(comprimento: number, largura: number): number {
 }
 
 /** Espaço (mm) reservado à esquerda do x=0 da caixa para o desenho decorativo
- * da frente — cabine (veículo) ou engate (reboque, dolly de dois eixos, ex.
- * Lecitrailer/Schmitz: barra de tração + rodado próprio). Só cosmético, não
- * entra em nenhum cálculo de espaço/packing. */
+ * da frente — cabine (veículo) ou barra de tração + olhal (reboque). Só
+ * cosmético, não entra em nenhum cálculo de espaço/packing. */
 function espacoFrenteMm(souReboque: boolean): number {
   return souReboque ? 1350 : 1500;
 }
 
 /** Desenho esquemático (vista de cima) da frente da caixa, à esquerda de x=0.
- * Cabine para o veículo trator (formas em lib/cabine-desenho.ts, partilhadas
- * com o PDF); para o reboque, o trem de rodas + barra de tração do dolly
- * (não tem cabine própria). */
+ * Cabine para o veículo trator, frente com barra de tração para o reboque
+ * (formas em lib/cabine-desenho.ts, partilhadas com o PDF). */
 function DesenhoFrente({ larguraMm, souReboque }: { larguraMm: number; souReboque: boolean }) {
-  const meio = larguraMm / 2;
-  const corpo = "#1e3a5f";
-  const corpoClaro = "#2c5282";
-  const pneu = "#1f2937";
-  const aro = "#e5e7eb";
-  const farol = "#fbbf24";
-  const contorno = "#ffffff";
-
-  if (souReboque) {
-    const eixo1 = meio - larguraMm * 0.32;
-    const eixo2 = meio + larguraMm * 0.32;
-    const raioPneu = Math.min(larguraMm * 0.10125, 180);
-    const raioAro = raioPneu * 0.5;
-    return (
-      <g>
-        {/* Barra de tração até ao engate (olhal) */}
-        <rect x={-1275} y={meio - 15} width={1013} height={30} rx={14} fill={corpo} stroke={contorno} strokeWidth={4} />
-        <circle cx={-1245} cy={meio} r={56} fill="none" stroke={corpoClaro} strokeWidth={12} />
-        <circle cx={-1245} cy={meio} r={15} fill={farol} />
-        {/* Chassis do dolly */}
-        <rect x={-360} y={30} width={360} height={larguraMm - 60} rx={23} fill={corpo} stroke={contorno} strokeWidth={4} />
-        {/* Rodado (2 eixos), pneu + jante */}
-        {[eixo1, eixo2].map((cy) => (
-          <g key={cy}>
-            <circle cx={-225} cy={cy} r={raioPneu} fill={pneu} />
-            <circle cx={-225} cy={cy} r={raioAro} fill={aro} />
-            <circle cx={-120} cy={cy} r={raioPneu} fill={pneu} />
-            <circle cx={-120} cy={cy} r={raioAro} fill={aro} />
-          </g>
-        ))}
-      </g>
-    );
-  }
-
-  // Cabine: ocupa de x=-1450 a x=-100 (1350 mm), centrada na largura da caixa.
-  const { escala, tx, ty } = transformCabine(larguraMm, 1350, -100);
+  // Cabine: de x=-1450 a x=-100 (1350 mm). Reboque: parede frontal encostada à
+  // caixa (x=0), barra de tração e olhal até ao limite da zona da frente.
+  const desenho = souReboque ? FRENTE_REBOQUE : CABINE;
+  const { escala, tx, ty } = transformFrente(desenho, larguraMm, 1350, souReboque ? 0 : -100);
   return (
     <g transform={`translate(${tx} ${ty}) scale(${escala})`}>
-      {CABINE_FORMAS.map((f, i) => {
+      {desenho.formas.map((f, i) => {
         switch (f.t) {
           case "rect":
             return <rect key={i} x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} fill={f.fill} />;
           case "circle":
-            return <circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill} />;
+            return (
+              <circle key={i} cx={f.cx} cy={f.cy} r={f.r} fill={f.fill ?? "none"} stroke={f.stroke} strokeWidth={f.sw} />
+            );
           case "path":
             return (
               <path
