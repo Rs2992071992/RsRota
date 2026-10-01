@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, Truck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { exigirPerfil, getSessaoInfo } from "@/lib/session";
 import Calculadora from "@/components/Calculadora";
@@ -25,7 +25,10 @@ export default async function MotoristaLayout({ children }: { children: React.Re
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-md px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-brand">🚚 {nome}</span>
+            <span className="flex items-center gap-2 font-bold text-brand">
+              <Truck size={20} strokeWidth={2} />
+              {nome}
+            </span>
             <form action="/api/auth/logout" method="post">
               <button className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
                 <LogOut size={16} strokeWidth={2} />
