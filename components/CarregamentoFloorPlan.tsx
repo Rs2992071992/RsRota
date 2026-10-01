@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CaixaResultado } from "@/lib/calc/paletePacking";
-import { CABINE, FRENTE_REBOQUE, transformFrente } from "@/lib/cabine-desenho";
+import { CABINE, FRENTE_REBOQUE, ehCaixaReboque, transformFrente } from "@/lib/cabine-desenho";
 
 // Paleta categórica fixa (8 cores) — atribuída por ordem de 1ª aparição do
 // cliente no carregamento (nunca reordenada por tamanho/frequência). Nunca
@@ -197,7 +197,7 @@ export default function CarregamentoFloorPlan({
     <div className="space-y-5">
       {caixas.map((cx) => {
         const pct = cx.areaTotalMm2 > 0 ? Math.round((cx.areaUsadaMm2 / cx.areaTotalMm2) * 100) : 0;
-        const souReboque = cx.caixa.id.startsWith("reboque-");
+        const souReboque = ehCaixaReboque(cx.caixa.id);
         const frenteMm = espacoFrenteMm(souReboque);
         return (
           <div key={cx.caixa.id}>

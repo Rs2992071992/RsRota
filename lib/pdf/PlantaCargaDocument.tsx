@@ -1,6 +1,6 @@
 import React from "react";
 import { Document, Page, View, Text, Svg, Rect, Circle, Path, Line, G, StyleSheet } from "@react-pdf/renderer";
-import { CABINE, FRENTE_REBOQUE, transformFrente } from "@/lib/cabine-desenho";
+import { CABINE, FRENTE_REBOQUE, ehCaixaReboque, transformFrente } from "@/lib/cabine-desenho";
 import { EMPRESA } from "@/lib/pdf/empresa";
 import type { CarregamentoDetalhe } from "@/lib/carregamento-service";
 
@@ -197,7 +197,7 @@ export function PlantaCargaDocument({ detalhe }: { detalhe: CarregamentoDetalhe 
         )}
 
         {detalhe.packing.caixas.map((cx) => {
-          const souReboque = cx.caixa.id.startsWith("reboque-");
+          const souReboque = ehCaixaReboque(cx.caixa.id);
           const frenteMm = espacoFrenteMm(souReboque);
           const comprimentoTotalMm = cx.caixa.comprimentoMm + frenteMm;
           const larguraPt = Math.min(

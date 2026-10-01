@@ -140,3 +140,8 @@ export function transformFrente(
     ty: larguraCaixaMm / 2 - (d.altura / 2) * escala,
   };
 }
+
+/** A caixa é a do reboque? Nas Cargas o id é `reboque-<id>`, nas Rotas só `reboque`. */
+export function ehCaixaReboque(caixaId: string): boolean {
+  return caixaId === "reboque" || caixaId.startsWith("reboque-");
+}
