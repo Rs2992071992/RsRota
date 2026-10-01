@@ -2,6 +2,27 @@
 
 Formato: [data] | o que correu mal | regra para evitar
 
+- [2026-10-01] | Pedi uma auditoria completa (agente Explore) comparando a
+  app Android com o site, depois das correções pontuais de hoje
+  (calculadora, preço combustível, editor completo, ícone de portagens).
+  Resultado: `app-motorista-android/src/lib/calc/cargaRota.ts` (motor que
+  decide o aviso "sem espaço" mostrado ao motorista) estava CONGELADO numa
+  versão antiga — faltavam a ordem inversa de empacotamento, a heurística
+  de maior-área-primeiro, e sobretudo a lógica de ligação recolha→entrega
+  que corrige 2 bugs reais já resolvidos no site (rotas RIC-Tec-A24,
+  RIC-Percam: recolha ligada à entrega do mesmo cliente, paragem MISTA que
+  é origem de uma linha mas também tem entrega local própria). Também
+  faltava todo o modo "kg"/palete legado no editor de correção
+  (`ParagemEditorModal.tsx`) — paragens anteriores a 2026-08-28 não
+  conseguiam ser corrigidas no telemóvel sem forçar conversão para
+  paletes. Sincronizei os dois ficheiros com a versão atual do site. |
+  Depois de uma sessão de correções pontuais numa app "porte do site",
+  vale sempre a pena pedir uma auditoria exaustiva de paridade no fim, em
+  vez de só corrigir o que foi reportado — o motor de cálculo divergente
+  não tinha sido reportado por ninguém (só um aviso "sem espaço"
+  eventualmente errado, difícil de notar sem comparar lado a lado) e podia
+  ter ficado por detetar indefinidamente.
+
 - [2026-10-01] | `app-motorista-android/src/components/DespesasIcones.tsx`
   (porte do `components/DespesasIcones.tsx` do site) ficou desatualizado
   face ao original: só acendia o ícone de portagens quando havia
