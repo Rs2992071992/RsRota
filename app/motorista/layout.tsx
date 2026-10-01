@@ -15,6 +15,10 @@ export default async function MotoristaLayout({ children }: { children: React.Re
       ? await prisma.utilizador.findUnique({ where: { id: sessao.id } })
       : null;
   const nome = user?.nome || user?.codigo || "Motorista";
+  const tarefasPendentes =
+    sessao?.perfil === "MOTORISTA"
+      ? await prisma.tarefa.count({ where: { motoristaId: sessao.id, concluida: false } })
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -50,9 +54,14 @@ export default async function MotoristaLayout({ children }: { children: React.Re
             </Link>
             <Link
               href="/motorista/tarefas"
-              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              className="relative rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >
               Tarefas
+              {tarefasPendentes > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-red-600 px-1 py-0.5 text-[10px] font-bold leading-none text-white">
+                  {tarefasPendentes}
+                </span>
+              )}
             </Link>
             <Link
               href="/motorista/perfil"

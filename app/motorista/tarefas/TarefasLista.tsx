@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { fmtData } from "@/lib/format";
 
 export interface TarefaMotorista {
@@ -14,6 +15,7 @@ export interface TarefaMotorista {
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 export default function TarefasLista({ inicial }: { inicial: TarefaMotorista[] }) {
+  const router = useRouter();
   const [tarefas, setTarefas] = useState(inicial);
   const [aAtualizar, setAAtualizar] = useState<number | null>(null);
   const [erro, setErro] = useState("");
@@ -30,6 +32,8 @@ export default function TarefasLista({ inicial }: { inicial: TarefaMotorista[] }
       const resp = await res.json().catch(() => ({}));
       if (!res.ok) return setErro(resp.erro || "Erro ao atualizar.");
       setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, concluida: resp.tarefa.concluida } : x)));
+      // O número no separador vem do layout (servidor) — força-o a recalcular.
+      router.refresh();
     } catch {
       setErro("Erro de ligação.");
     } finally {
