@@ -487,8 +487,29 @@ model Utilizador {
 
   paragens Paragem[]
   avarias  Avaria[]
+  tarefas  Tarefa[] @relation("TarefasDoMotorista")
 
   criadoEm DateTime @default(now())
+}
+
+/// Tarefa pedida pelo escritório a um motorista (ex.: "recolha em X", "aferir
+/// o tacógrafo"). Única (sem recorrência); o motorista só a marca como feita.
+model Tarefa {
+  id Int @id @default(autoincrement())
+
+  motoristaId Int
+  motorista   Utilizador @relation("TarefasDoMotorista", fields: [motoristaId], references: [id], onDelete: Cascade)
+
+  dataPrevista DateTime
+  titulo       String
+  descricao    String?
+
+  concluida   Boolean   @default(false)
+  concluidaEm DateTime?
+
+  criadoEm DateTime @default(now())
+
+  @@index([motoristaId, concluida])
 }
 
 /// Catálogo de tipos de palete (dimensões em mm), editável em Parâmetros.

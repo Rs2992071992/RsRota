@@ -49,6 +49,12 @@ export default async function MotoristaLayout({ children }: { children: React.Re
               Ped. Manutenção
             </Link>
             <Link
+              href="/motorista/tarefas"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Tarefas
+            </Link>
+            <Link
               href="/motorista/perfil"
               className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >

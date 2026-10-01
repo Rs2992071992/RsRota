@@ -464,3 +464,19 @@ export const dividirPedidoSchema = z.object({
 });
 
 export type ReordenarPedidosForm = z.infer<typeof reordenarPedidosSchema>;
+
+/** POST /api/tarefas — escritório cria uma tarefa para um motorista. */
+export const tarefaSchema = z.object({
+  motoristaId: z.number().int().positive(),
+  dataPrevista: z.string().min(1, "Data obrigatória"),
+  titulo: z.string().trim().min(1, "Título obrigatório").max(200),
+  descricao: z.string().trim().max(1000).nullable().optional(),
+});
+
+/** PATCH /api/tarefas/[id] — escritório edita; motorista só envia `concluida`. */
+export const tarefaUpdateSchema = z.object({
+  dataPrevista: z.string().min(1).optional(),
+  titulo: z.string().trim().min(1).max(200).optional(),
+  descricao: z.string().trim().max(1000).nullable().optional(),
+  concluida: z.boolean().optional(),
+});

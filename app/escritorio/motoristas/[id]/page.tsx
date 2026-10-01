@@ -5,6 +5,7 @@ import { fmtData, fmtEuro, fmtNum } from "@/lib/format";
 import { carregarEstatisticasMotorista } from "@/lib/motoristas-service";
 import MotoristaParamsForm from "./MotoristaParamsForm";
 import AlterarPinMotorista from "./AlterarPinMotorista";
+import TarefasMotorista from "./TarefasMotorista";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,11 @@ export default async function MotoristaRotas(props: { params: Promise<{ id: stri
   const motorista = await prisma.utilizador.findUnique({ where: { id } });
   if (!motorista || motorista.perfil !== "MOTORISTA") notFound();
 
-  const [paragens, stats] = await Promise.all([
+  const [tarefas, paragens, stats] = await Promise.all([
+    prisma.tarefa.findMany({
+      where: { motoristaId: id },
+      orderBy: [{ concluida: "asc" }, { dataPrevista: "asc" }, { id: "asc" }],
+    }),
     prisma.paragem.findMany({
       where: { motoristaId: id },
       orderBy: [{ data: "desc" }, { id: "desc" }],
@@ -67,6 +72,18 @@ export default async function MotoristaRotas(props: { params: Promise<{ id: stri
           mostraAlimentacao: motorista.mostraAlimentacao,
           mostraHorasExtra: motorista.mostraHorasExtra,
         }}
+      />
+
+      <TarefasMotorista
+        motoristaId={motorista.id}
+        inicial={tarefas.map((t) => ({
+          id: t.id,
+          dataPrevista: t.dataPrevista.toISOString(),
+          titulo: t.titulo,
+          descricao: t.descricao,
+          concluida: t.concluida,
+          concluidaEm: t.concluidaEm?.toISOString() ?? null,
+        }))}
       />
 
       <AlterarPinMotorista id={motorista.id} codigo={motorista.codigo} />

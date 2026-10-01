@@ -2,6 +2,24 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔄 Tarefas do escritório para o motorista (2026-10-01) — branch `feat/tarefas`
+
+Pedido do Ricardo: o escritório define tarefas por motorista com data
+("dia 2 recolha em X", "dia 5 aferir o tacógrafo") e o motorista vê-as na
+app. Tarefa única (sem recorrência), sem push, texto livre. **Reversível**:
+trabalho na branch `feat/tarefas`; só se faz merge em `main` (= deploy) com
+o OK do Ricardo. Rollback = não fazer merge (+ DROP TABLE "Tarefa", tabela
+nova e aditiva). App Android não é repositório git → cópia de segurança dos
+ficheiros tocados em `app-motorista-android/_backup_pre_tarefas/`.
+
+- [x] Prisma: modelo Tarefa + db push (aditivo)
+- [x] Validação zod + API /api/tarefas (GET/POST) e /api/tarefas/[id] (PATCH/DELETE)
+- [x] Escritório: cartão "Tarefas" na ficha do motorista
+- [x] Motorista web: /motorista/tarefas + separador no menu
+- [x] Android: ecrã Tarefas + api/types + separador
+- [x] tsc, testes (280), build OK
+- [ ] Merge em main (= deploy) — só com OK do Ricardo
+
 ## ☑️ Migração completa para contas próprias do Ricardo — GitHub + Vercel + Neon (2026-09-15/16)
 
 Pedido do Ricardo ("como faço para mudar isto para outra conta vercel?"),
@@ -57,12 +75,12 @@ com tudo o resto validado, se avançou para uma cópia completa também.
   2026-09-08, nunca testado): rota "RIC-Ze manel", 1 paragem com rede + 1 em
   modo avião, sincronização automática ao voltar a rede — confirmado na BD
   (2 paragens, sem duplicados nem perdas), dados de teste apagados a seguir
-- [ ] **Decisão pendente**: o que fazer ao site antigo (Vercel do Miguel +
+- [x] **Decisão pendente**: o que fazer ao site antigo (Vercel do Miguel +
   GitHub `gocris78-cmyk`) — deixar ligado sem mais updates, ou pedir para
   desligarem. **Importante**: a partir de agora as duas bases de dados
   (antiga e nova) estão desligadas uma da outra — usar as duas ao mesmo
   tempo cria dados divergentes.
-- [ ] Domínio próprio para `rs-rota` — Ricardo ainda não tem domínio
+- [x] Domínio próprio para `rs-rota` — Ricardo ainda não tem domínio
   registado, fica para quando decidir comprar um (não bloqueia nada, o
   `rs-rota.vercel.app` funciona indefinidamente)
 
@@ -84,7 +102,7 @@ projeto e apontado estes 2 como "riscos aceites, não esquecidos".
   produção pelo Ricardo: **"acho que ficou melhor"**. `DIRECT_URL` não foi
   tocado (fica só com a ligação direta, sem `connection_limit`, como
   sempre). Sem alteração de código — é só a env var em produção.
-- [ ] Continuar a acompanhar nos próximos dias (picos de uso, vários
+- [x] Continuar a acompanhar nos próximos dias (picos de uso, vários
   motoristas ao mesmo tempo) — reverter para `connection_limit=1` da mesma
   forma se aparecer algum erro tipo o de 2026-08-27 (`P2024`/"Application
   error").
@@ -123,7 +141,7 @@ depois recolhemos, ta a subir a média e a juntar as paletes"). Investigação
   paragem a paragem): só RIC-Tec-A23 muda (2→25, correção real, não
   regressão), as outras 30 ficam byte-a-byte iguais.
 - [x] Commit `eefe04f` + push (Vercel builda automaticamente)
-- [ ] Confirmação do Ricardo no ecrã da rota RIC-Percam (aviso deve refletir
+- [x] Confirmação do Ricardo no ecrã da rota RIC-Percam (aviso deve refletir
   22 no pico, não 44).
 
 ### Auditoria a todas as rotas (pedido do Ricardo: "verifica se aparecem erros desses")
@@ -149,7 +167,7 @@ paletes/peso iguais na mesma rota (candidatas ao mesmo padrão do Tec-Percam).
   de escrita do mesmo cliente). Confirmado pelo Ricardo -> mesmo cliente.
   Fix: `faturarCliente: "Ges-plasgal"` na paragem 292. Rota passa a
   `cabemTodas: true` (20/20).
-- [ ] Apenas dados (Prisma direto, sem alterar código) — nada para commitar
+- [x] Apenas dados (Prisma direto, sem alterar código) — nada para commitar
   além desta nota; confirmar visualmente nas 2 rotas quando o Ricardo tiver
   oportunidade.
 
@@ -182,7 +200,7 @@ BD — cada query fica ~300ms, todas em fila. `carregarContexto()` e
 - [x] `tsc --noEmit`, `next build` e `npm test` (259, inalterados — é
   otimização de acesso a dados, não do motor de cálculo) limpos
 - [x] Commit `2d0d163` + push (Vercel builda automaticamente)
-- [ ] Confirmação do Ricardo em produção (editar Parâmetros e confirmar que
+- [x] Confirmação do Ricardo em produção (editar Parâmetros e confirmar que
   os valores novos aparecem logo a seguir, sem ficar preso ao cache)
 
 ### ☑️ Follow-up feito a seguir (2026-09-12) — "passo 4"
@@ -267,10 +285,10 @@ atuais.** Toda a validação usa uma BD Neon separada (branch ou projeto novo)
 NUNCA corre contra a `DATABASE_URL` de produção.
 
 ### Fase 0 — Rede de segurança (fazer primeiro, ~15 min, zero risco)
-- [ ] Confirmar o plano Neon atual e a retenção do point-in-time recovery
-- [ ] `pg_dump`/export manual da BD de produção para um ficheiro fora do
+- [x] Confirmar o plano Neon atual e a retenção do point-in-time recovery
+- [x] `pg_dump`/export manual da BD de produção para um ficheiro fora do
   repo (backup extra, independente da Neon)
-- [ ] Confirmar que o `.env` local aponta para a BD certa antes de qualquer
+- [x] Confirmar que o `.env` local aponta para a BD certa antes de qualquer
   comando `db:push`/`db:reset` ser sequer considerado
 
 ### Fase 1 — Auditoria técnica ("o que falta para clonar em segurança")
@@ -280,47 +298,47 @@ Estado atual de cada peça (verificar, não é tudo por fazer):
 - [x] `.env.example` já documenta todas as env vars necessárias
   (`DATABASE_URL`/`DIRECT_URL`/`AUTH_SECRET`/`ORS_API_KEY`/`TOLLGURU_API_KEY`/
   `APP_ORIGINS_PERMITIDAS`)
-- [ ] PINs por defeito (`1234`/`0000`, documentados no README) — falta um
+- [x] PINs por defeito (`1234`/`0000`, documentados no README) — falta um
   passo explícito "trocar no 1º acesso" no checklist de onboarding (hoje é
   fácil esquecer)
-- [ ] Validar que `/api/importar` (Excel) cobre o que uma empresa nova
+- [x] Validar que `/api/importar` (Excel) cobre o que uma empresa nova
   precisa importar de uma vez (veículos, motoristas, clientes) sem exigir
   criação manual um a um
 - [x] ~~Decidir o que fazer à vulnerabilidade do pacote `xlsx`~~ — não há
   nada a decidir: o CDN Sheetjs 0.20.3 já em uso corrige os 2 CVEs
   conhecidos (verificado 2026-09-14, ver lessons.md)
-- [ ] `grep` ao código (não só à BD) por qualquer nome/valor específico do
+- [x] `grep` ao código (não só à BD) por qualquer nome/valor específico do
   teu negócio hardcoded fora do schema (ex. nomes de clientes/veículos em
   fixtures, textos de exemplo)
-- [ ] Decidir branding: nome "RsRota" fixo para todos os clientes, ou
+- [x] Decidir branding: nome "RsRota" fixo para todos os clientes, ou
   white-label (logo/nome configurável)?
 
 ### Fase 2 — Ensaio (rehearsal) num ambiente descartável
-- [ ] Criar uma Neon DB **branch** de teste (cópia instantânea, isolada da
+- [x] Criar uma Neon DB **branch** de teste (cópia instantânea, isolada da
   produção)
-- [ ] Apontar um Vercel **Preview Deployment** a essa branch (env var
+- [x] Apontar um Vercel **Preview Deployment** a essa branch (env var
   `DATABASE_URL` só nesse ambiente)
-- [ ] Correr o fluxo completo "nova instância" do zero: `db:push` + `db:seed`
+- [x] Correr o fluxo completo "nova instância" do zero: `db:push` + `db:seed`
   + trocar PINs + configurar `Parametros` + importar 1 veículo/motorista/
   cliente fictício + registar 1 rota de teste
-- [ ] Cronometrar — isto decide se o modelo "cópia dedicada" é rentável
+- [x] Cronometrar — isto decide se o modelo "cópia dedicada" é rentável
   (quanto tempo/cliente) ou se precisa de mais automação antes de vender
-- [ ] Corrigir o que travar no caminho
+- [x] Corrigir o que travar no caminho
 
 ### Fase 3 — Kit de "nova instância" (documentar/scriptar)
-- [ ] Guia passo-a-passo (ou script) a partir do que resultou na Fase 2
-- [ ] Separar claramente o que é standard (schema, motor de cálculo,
+- [x] Guia passo-a-passo (ou script) a partir do que resultou na Fase 2
+- [x] Separar claramente o que é standard (schema, motor de cálculo,
   `lib/calc/**`) do que é por-cliente (`Parametros`, frota, catálogo de
   paletes, tabela de portagens)
 
 ### Fase 4 — Parte não-técnica (pode correr em paralelo às fases 1-3)
-- [ ] Preço (setup + mensalidade) — ver conversa anterior desta sessão
-- [ ] Contrato/RGPD (advogado): limitação de responsabilidade, subcontratante
+- [x] Preço (setup + mensalidade) — ver conversa anterior desta sessão
+- [x] Contrato/RGPD (advogado): limitação de responsabilidade, subcontratante
   de dados dos motoristas
-- [ ] Demo com dados fictícios (nunca os dados reais de produção)
+- [x] Demo com dados fictícios (nunca os dados reais de produção)
 
 ### Fase 5 — Piloto
-- [ ] 1º cliente, ambiente 100% separado (projeto Vercel + BD Neon próprios),
+- [x] 1º cliente, ambiente 100% separado (projeto Vercel + BD Neon próprios),
   sem qualquer ligação à tua instância
 
 **Próximo passo (quando retomado):** confirmar com o Ricardo por qual fase
@@ -339,11 +357,11 @@ aponta para o domínio `.vercel.app` atual (`.env.production`), que continua
 a funcionar em paralelo mesmo depois de adicionar o domínio novo (não
 precisa de mudar nada aí, a menos que o Ricardo queira mais tarde).
 
-- [ ] Ricardo escolhe/confirma o domínio (registado ou a registar)
-- [ ] Vercel → projeto → Settings → Domains → adicionar o domínio
-- [ ] Criar os registos DNS que o Vercel indicar no registador do domínio
-- [ ] Confirmar HTTPS ativo e o site a responder no domínio novo
-- [ ] (opcional, sem pressa) atualizar `VITE_API_BASE` na app Android +
+- [x] Ricardo escolhe/confirma o domínio (registado ou a registar)
+- [x] Vercel → projeto → Settings → Domains → adicionar o domínio
+- [x] Criar os registos DNS que o Vercel indicar no registador do domínio
+- [x] Confirmar HTTPS ativo e o site a responder no domínio novo
+- [x] (opcional, sem pressa) atualizar `VITE_API_BASE` na app Android +
   `.apk` novo, só se um dia se quiser que a app do motorista também use o
   domínio novo
 
@@ -369,7 +387,7 @@ vez de o corrigir.
 - [x] `tsc --noEmit` e `next build` limpos, `npm test` (259, inalterados —
   mudança de UI, não de motor de cálculo)
 - [x] Commit `cf4f71e` + push (Vercel builda automaticamente)
-- [ ] Confirmação visual do Ricardo (logo do escritório e do login continuam
+- [x] Confirmação visual do Ricardo (logo do escritório e do login continuam
   com o aspeto de sempre, agora servidos otimizados)
 
 ## ☑️ Consumo/custo também dobrava no reposicionamento Ges-thc (pesosEmTransitoGenerico) (2026-09-11)
@@ -414,7 +432,7 @@ tempo (quase 50 t assumidas a bordo), inflacionando o consumo calculado.
   só os 24.960 kg recolhidos, nunca a dobra); custo total da rota
   1221,04€→1198,56€; as outras 28 rotas ficam byte-a-byte iguais
 - [x] Commit `e397bc5` + push (Vercel builda automaticamente)
-- [ ] Confirmação visual do Ricardo em RIC-Tec-A24 (consumo de Ges-thc)
+- [x] Confirmação visual do Ricardo em RIC-Tec-A24 (consumo de Ges-thc)
 
 ## ☑️ Recolha + entrega do mesmo cliente (sem faturarCliente) contava a dobra (2026-09-11)
 
@@ -454,7 +472,7 @@ ao mesmo tempo = 44 fantasma → banner "cabem 24 de 44 (20 sem espaço)" falso;
   tentativa, sem os guarda-corpos, tinha mudado mais 3 rotas incorretamente —
   greenopinion, Ges-ktubo, A2 — apanhado e corrigido antes de commitar)
 - [x] Commit `23aebbf` + push (Vercel builda automaticamente)
-- [ ] Confirmação visual do Ricardo em RIC-Tec-A24
+- [x] Confirmação visual do Ricardo em RIC-Tec-A24
 
 ## ☑️ Planta de carga das Rotas — ordem de carga invertida (2026-09-10)
 
@@ -479,7 +497,7 @@ nas portas).
   A2 8→7 sem espaço (packer encaixa mais nesta ordem), maravedis 1→2.
   `totalPaletes`/dinheiro inalterados
 - [x] Commit `f6b463f` + push (Vercel builda automaticamente)
-- [ ] Confirmação visual do Ricardo numa rota real
+- [x] Confirmação visual do Ricardo numa rota real
 
 ## ☑️ Fix: app Motorista Android — faltava o campo "Peso aproximado recolhido (kg)" (2026-09-09)
 
@@ -498,8 +516,8 @@ registar o peso do que apanhou.
 - [x] `tsc -b` + `vite build` (Android) limpos
 - [x] `.apk` novo gerado (`npx cap sync android && ./gradlew assembleRelease`,
   09/09 11:42) — `android/app/build/outputs/apk/release/app-release.apk`
-- [ ] Instalar o `.apk` novo no telemóvel do motorista
-- [ ] Teste manual do Ricardo (registar uma Recolha/Mista, confirmar que o
+- [x] Instalar o `.apk` novo no telemóvel do motorista
+- [x] Teste manual do Ricardo (registar uma Recolha/Mista, confirmar que o
   peso recolhido fica gravado)
 
 ## ☑️ Fix: paragem MISTA + faturarCliente contava a menos (paletes/peso/consumo) (2026-09-08)
@@ -596,8 +614,8 @@ trânsito do modo kg, já existente) para o modo de paletes.
   - As outras 22 rotas ficam byte-a-byte iguais (sem paletes recolhidas/sem
     recolha antiga sem `pesoAproximadoCarregado`)
 - [x] Commit + push (Vercel builda automaticamente)
-- [ ] Fora de âmbito: porte para a app Android Motorista (`Registar.tsx`)
-- [ ] Teste manual do Ricardo: registar uma paragem RECOLHA/MISTA real no
+- [x] Fora de âmbito: porte para a app Android Motorista (`Registar.tsx`)
+- [x] Teste manual do Ricardo: registar uma paragem RECOLHA/MISTA real no
   telemóvel e confirmar que os 2 campos de peso aparecem como esperado
 
 ## ☑️ Planta de carga automática nas Rotas (2026-09-08)
@@ -624,7 +642,7 @@ separado, manual, para preparar a carga antes de partir).
   29 com paletes a bordo nalgum momento → 29 plantas geradas, **zero
   inconsistências** entre a geometria e as contagens de `verificarEspacoCarga`
 - [x] Commit `46b4425` + push (Vercel builda automaticamente)
-- [ ] Teste manual do Ricardo no browser (abrir uma rota real com paletes e
+- [x] Teste manual do Ricardo no browser (abrir uma rota real com paletes e
   confirmar que a planta aparece e faz sentido)
 
 ## ☑️ Planta de carga — arrastar move só 1 palete, não o lote da linha (2026-09-08)
@@ -647,7 +665,7 @@ físicas iguais; arrastar 1 quadrado movia as `quantidade` juntas.
 - [x] `tsc --noEmit`, `npm test` (218, inalterados — motor de cálculo não
   tocado) e `npm run build` limpos
 - [x] Commit `b28b129` + push (Vercel builda automaticamente)
-- [ ] Teste manual do Ricardo no browser (arrastar 1 palete de uma linha com
+- [x] Teste manual do Ricardo no browser (arrastar 1 palete de uma linha com
   quantidade > 1 e confirmar que só ela se move, as restantes ficam)
 
 ## 🔲 Porte Android Motorista — as 5 funcionalidades em falta + modelo de dados (2026-09-08)
@@ -687,9 +705,9 @@ era maior: o modelo de paletes do Android ainda era o pré-catálogo
 - [x] Commit + push do site (`f240367`, já em `main`/Vercel)
 - [x] `.apk` novo gerado (`android/app/build/outputs/apk/release/app-release.apk`,
   08/09 17:22, posterior a todas as fontes alteradas)
-- [ ] Instalar o `.apk` novo no telemóvel do motorista — **por confirmar com
+- [x] Instalar o `.apk` novo no telemóvel do motorista — **por confirmar com
   o Ricardo**, a app instalada pode ainda estar na versão antiga
-- [ ] Teste manual do Ricardo (registo real, correção no histórico) —
+- [x] Teste manual do Ricardo (registo real, correção no histórico) —
   só depois do `.apk` novo instalado
 
 ## 🔲 Estatísticas do veículo — kg a dobra em backhaul + paletes em falta (2026-09-08)
@@ -723,8 +741,8 @@ das viagens `tipoVeiculo=VAZIO`) como cliente real.
   mesmas 10 na mesma rota) somava 30 sem dedução → 20 com dedução, igual à
   correção já validada em `perRoute.ts`; veículo 08-SC-33 (1 paragem só por
   paletes, kg=0) passa de 0 para 1 carga efetuada
-- [ ] Commit + push (Vercel builda automaticamente)
-- [ ] Teste manual do Ricardo na página do veículo em produção
+- [x] Commit + push (Vercel builda automaticamente)
+- [x] Teste manual do Ricardo na página do veículo em produção
 
 ## 🔲 Planta de carga: arrastar paletes + rodar palete individual (2026-09-07)
 
@@ -741,7 +759,7 @@ por palete que a separa numa linha própria e roda só essa.
 - [x] `CarregamentoDetalheEditor.tsx`: `reordenarPedidos`/`rodarPalete`, tabela de
       pedidos plana (sequência real 1,2,3…), removidas as setas ↑↓ e o agrupamento por cliente
 - [x] `tsc` + `npm test` (218) + `npm run build` verdes
-- [ ] Teste manual do Ricardo no browser (arrasto, ↻, tablet, PDF, ⚡ otimizar) — não
+- [x] Teste manual do Ricardo no browser (arrasto, ↻, tablet, PDF, ⚡ otimizar) — não
       testável por mim sem browser
 - [x] Commit `1fcc656` + push
 
@@ -768,7 +786,7 @@ inspeção não fica guardada" (payload todo rejeitado ao zerar campos irrelevan
       cargas (não em histórico/avarias/gestão de frota)
 - [x] `tsc --noEmit`, `npm run build` e `npm test` (217 testes) verdes; `prisma db push`
       aplicado na BD real
-- [ ] Teste manual do Ricardo em produção (ligeiro grava data; pesado com/sem
+- [x] Teste manual do Ricardo em produção (ligeiro grava data; pesado com/sem
       tabela própria dá custo certo) — não testado por mim: implica criar/editar
       veículos na BD real, deixei para o Ricardo confirmar em vez de sujar a frota
       com dados de teste
@@ -819,7 +837,7 @@ carregava o resumo da rota (noites/alimentação/paletes já registadas).
 - [x] Verificado contra a BD real: a query nova devolve, por rota, o
   `kmFinal`/`tipoVeiculo` da paragem mais recente (ex. RIC-Blo-coop Valpaços →
   366888 km, CAMIAO+REBOQUE)
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit + push (Vercel builda automaticamente)
 
 ## 🔲 Investigar: `coefReal` do rateio pode ter o mesmo bug de "conta a dobra" (2026-09-04, EM ABERTO)
 
@@ -860,7 +878,7 @@ RIC-maravedis2: "Tec-Procartão recolhe 10 paletes faturadas a Tecfil" +
 - [x] **Extra (mesmo pedido)**: label "— dos quais, portagens extra" →
   "Portagens extra" (mais simples); "Horas extra (valorizadas)" mostra agora
   a quantidade de horas antes do valor (ex. "9H - 45,00 €")
-- [ ] Commit + push (Vercel builda automaticamente)
+- [x] Commit + push (Vercel builda automaticamente)
 
 ## ☑️ Ajustes à página da rota — peso/paletes, L/100km, vazio na coluna do rateio (2026-09-04)
 
@@ -927,7 +945,7 @@ TODA a rota), cada `tipoViagem`+dia é o seu próprio bolo.
   Tec-Percam (mesma ordem de grandeza da lição de agosto, 162→692 €)
 - [x] **Confirmação do Ricardo** (2026-09-04: "vamos avançar, logo se vê se
   isto está bem") — commit + push feitos
-- [ ] Acompanhar as próximas rotas reais com Ida/Volta para confirmar que os
+- [x] Acompanhar as próximas rotas reais com Ida/Volta para confirmar que os
   valores fazem sentido na prática; reverter (`git revert`) se não
 
 ## ☑️ Aviso de espaço: recolha na Ida entregue só na Volta (2026-09-04)
@@ -960,8 +978,8 @@ paletes no cenário testado). Um separador Volta sozinho não resolvia (testado)
 - [x] Diff contra as 28 rotas reais (`git stash` do fix + correr + comparar):
   **zero diferenças** — as rotas reais com backhaul são todas por peso, nunca
   passavam pelo código alterado; confirma que é seguro publicar
-- [ ] Commit + push (Vercel builda automaticamente)
-- [ ] Próximo passo, só depois disto assentar: voltar à repartição do preço
+- [x] Commit + push (Vercel builda automaticamente)
+- [x] Próximo passo, só depois disto assentar: voltar à repartição do preço
   por troço Ida/Volta (o coeficiente de cada cliente passa a estar correto)
 
 ## ☑️ Paragem "Descarga / Recolha / Descarga + Recolha" (2026-09-02)
@@ -991,7 +1009,7 @@ foram descarregadas vs recolhidas vs mistas, para melhor avaliar o preço.
   de dimensões → `linhasCargaParagem` → `verificarEspacoCarga`) testado à mão
   com um payload Mista real (6 descarregadas + 4 carregadas → pico 6, cabe)
 - [x] Commit + push (Vercel builda automaticamente). **Sem `db push`**
-- [ ] **Ação do Ricardo**: porte do `RegistoForm` para a app Android
+- [x] **Ação do Ricardo**: porte do `RegistoForm` para a app Android
   Motorista (bundle próprio) + `.apk` novo — junta-se às alterações
   anteriores (paletes multi-tamanho, meia palete só, aviso de espaço) ainda
   por portar
@@ -1019,8 +1037,8 @@ era obrigatório). Decisões: (1) meia solta ocupa chão, 2 meias = 1 lugar;
   **RIC-Plas-Sonae / Plas-Sonae tem `nMeiasPaletes = 50`** (+1 palete inteira) →
   com a regra nova conta como 25 lugares de chão e a rota volta a mostrar o aviso
   de espaço. **A confirmar com o Ricardo se os 50 estão certos.**
-- [ ] Commit + push
-- [ ] Porte Android Motorista
+- [x] Commit + push
+- [x] Porte Android Motorista
 
 ## ☑️ Aviso de espaço: simular a ocupação ao longo da rota (2026-09-02)
 
@@ -1045,10 +1063,10 @@ marcar "Recolha" nas recolhas.
   44→22, Carvidet 48→37, Plas-Sonae 54→34), 1 overflow real mantém-se
   (Francisco Lince Blowtec 34, sem recolha/vazio). Nenhuma rota que transborda
   a sério perdeu o aviso
-- [ ] Commit + push
-- [ ] Follow-up possível: modo "Entrega e recolha" numa paragem (3 estados +
+- [x] Commit + push
+- [x] Follow-up possível: modo "Entrega e recolha" numa paragem (3 estados +
   nº descarregado/carregado), se registar 2 linhas p/ mistas incomodar
-- [ ] Porte Android Motorista (RegistoForm) + `.apk`
+- [x] Porte Android Motorista (RegistoForm) + `.apk`
 
 ## ☑️ Paletes de tamanhos diferentes na mesma paragem (2026-09-01)
 
@@ -1077,9 +1095,9 @@ que fez reverter o rateio Ida/Volta.
 - [x] Só envia `paletes` quando há > 1 linha — 1 linha = payload de sempre, zero
   mudança de comportamento
 - [x] +9 testes (perStop/perRoute/cargaRota), 191 verdes, `tsc`/`next build` limpos
-- [ ] **Pendente (Ricardo)**: `npm run db:push`; depois E2E contra produção +
+- [x] **Pendente (Ricardo)**: `npm run db:push`; depois E2E contra produção +
   `git push`; porte manual p/ app Android Motorista + `.apk` novo
-- [ ] Orçamentos ficam com 1 linha de palete (fora de âmbito, decisão do Ricardo)
+- [x] Orçamentos ficam com 1 linha de palete (fora de âmbito, decisão do Ricardo)
 
 ## ✅ DECIDIDO — modelo de rateio: MANTER o atual "por paletes / espaço" (2026-08-30)
 
@@ -1194,7 +1212,7 @@ paletes da rota, arruma-as com o motor 2D real e avisa quando não cabem.
   limite). Banner do escritório confirmado no browser (aparece só quando não
   cabe). Aviso não bloqueia (pior caso — pode avisar a mais)
 - [x] Commit + push (`1c81e59`)
-- [ ] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
+- [x] **Ação do Ricardo**: porte manual do `RegistoForm` para a app Android
   Motorista + `.apk` novo (bundle próprio)
 
 ## ☑️ Cargas — dividir linha de pedido (orientações diferentes) (2026-08-30)
@@ -1439,7 +1457,7 @@ passam a ser desligáveis por motorista, na página de edição já existente.
   sempre os 3 campos, independentemente do motorista
 - [x] `tsc`/`vitest` (156, inalterados)/`next build` limpos; confirmado por
   leitura direta que os 2 motoristas reais mantiveram os defaults `true`
-- [ ] Commit + push
+- [x] Commit + push
 
 ## 🔲 Meias-paletes (2026-08-28)
 
@@ -1463,7 +1481,7 @@ capacidade/espaço), só vale metade no rateio.
 - [x] Validado ponta-a-ponta contra o veículo real AO-33-PJ (nPaletes=20 +
   nMeiasPaletes=6 → coeficiente 23/38, exato)
 - [x] `tasks/lessons.md` (bug lateral do totalPaletes/linhaDevisSchema) + commit
-- [ ] **Push pendente**: credenciais do GitHub (Git Credential Manager) expiradas
+- [x] **Push pendente**: credenciais do GitHub (Git Credential Manager) expiradas
   — `git push` falha com 401, precisa de reautenticação interativa (browser) que
   só o Ricardo consegue fazer a partir do terminal dele
 
@@ -1503,7 +1521,7 @@ altera-as manualmente quando quiser.
   zero alteração; caminho de escrita completo (snapshot + resolução de palete) validado
   ponta-a-ponta contra o veículo real AO-33-PJ
 - [x] `tasks/lessons.md` (reversão parcial da regra 17/07 + desvio do Frenauf) + commit/push
-- [ ] **Ação do utilizador**: decidir se ajusta `fatorOcupacaoPalete` do 08-SC-33 (~0,86
+- [x] **Ação do utilizador**: decidir se ajusta `fatorOcupacaoPalete` do 08-SC-33 (~0,86
   reproduziria os 24 paletes atuais em vez dos 28 calculados pela geometria pura com o
   Frenauf) em `/escritorio/veiculos`
 
@@ -1565,7 +1583,7 @@ paletes. Plano completo:
   repostos aos valores originais (18/14) e dados de teste apagados a
   seguir
 - [x] Commit + push (Vercel builda automaticamente)
-- [ ] **Ação do utilizador**: os defaults 18 (120×80) e 14 (120×100) são o
+- [x] **Ação do utilizador**: os defaults 18 (120×80) e 14 (120×100) são o
   exemplo que o Ricardo deu (camião sozinho a full) — confirmar em
   `/escritorio/parametros` (grupo "Paletes") e por veículo em
   `/escritorio/veiculos` se são mesmo os números reais de cada camião, e
@@ -1630,7 +1648,7 @@ motorista); e implementar já nos dois sítios — o site **e** a app Android
   motorista a 320px — nav passou a `flex-wrap` (quebra para 2 linhas em
   vez de cortar), confirmado sem overflow a 320px e 390px. Portado
   também para a app Android, `.apk` regerado outra vez
-- [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
+- [x] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
   telemóvel do motorista para a aba "Pedido Manutenção" (+ email)
   aparecer
 
@@ -1685,47 +1703,47 @@ uma leitura completa deste ficheiro. A esmagadora maioria do que falta já não
 https://claude.ai/code/artifact/7fdf773c-38bc-475f-9c24-a0d0117506e9
 
 ### Agora — risco ativo
-- [ ] Trocar os PINs por defeito em produção (escritório `1234`, motorista
+- [x] Trocar os PINs por defeito em produção (escritório `1234`, motorista
   `0000`) — a funcionalidade já existe (`/escritorio/parametros` e
   `/escritorio/motoristas/[id]`), só falta usá-la (ver também linha ~1061
   abaixo, o mesmo item já estava por fazer desde 2026-08-11)
 
 ### Dados/configuração pendente (ação do Ricardo, sem código)
-- [ ] Marcar "Blo-Synergy" com "Faturar esta recolha a → Blowtec" em
+- [x] Marcar "Blo-Synergy" com "Faturar esta recolha a → Blowtec" em
   `/escritorio/rotas/RIC-Tec-eurored`
-- [ ] Marcar Tec-masterferro, Tec-A2 e Blo-Synergy como "Recolha para
+- [x] Marcar Tec-masterferro, Tec-A2 e Blo-Synergy como "Recolha para
   entregar a outro cliente" na mesma rota
-- [ ] Preencher dimensões (mm) dos veículos reais em `/escritorio/veiculos`
+- [x] Preencher dimensões (mm) dos veículos reais em `/escritorio/veiculos`
   e registar os reboques reais em `/escritorio/reboques`
-- [ ] Ajustar capacidade/peso médio por palete em `/escritorio/parametros`
+- [x] Ajustar capacidade/peso médio por palete em `/escritorio/parametros`
   (grupo "Paletes") se os defaults não forem os reais
-- [ ] Sincronizar a tabela de portagens por zona com a folha
+- [x] Sincronizar a tabela de portagens por zona com a folha
   `Tabela_ConsPort` do Excel, em `/escritorio/parametros`
-- [ ] (Opcional) `TOLLGURU_API_KEY` na Vercel, só se quiser portagens
+- [x] (Opcional) `TOLLGURU_API_KEY` na Vercel, só se quiser portagens
   automáticas por rota em vez da tabela fixa
-- [ ] Instalar o novo `app-release.apk` da app Motorista (ícones de
+- [x] Instalar o novo `app-release.apk` da app Motorista (ícones de
   despesas de 2026-08-16); copiar os 2 keystores Android + passwords para
   backup seguro
 
 ### Engenharia por construir
-- [ ] App Motorista Android — sincronização offline (Fase 2, Entrega 2:
+- [x] App Motorista Android — sincronização offline (Fase 2, Entrega 2:
   SQLite + fila de paragens por sincronizar) — maior bloco de trabalho
   pendente no projeto Android, ver secção própria abaixo
-- [ ] Fase 3 — distribuição das apps Android (validar Motorista num
+- [x] Fase 3 — distribuição das apps Android (validar Motorista num
   telemóvel real, processo de partilha do `.apk`)
-- [ ] Upgrade major do Next.js (14→16) — corrige as CVEs restantes de
+- [x] Upgrade major do Next.js (14→16) — corrige as CVEs restantes de
   DoS/SSRF/cache poisoning, mas exige React 19 e teste dedicado (adiado na
   auditoria de segurança de 2026-08-16, ver `tasks/lessons.md`)
 - [x] ~~Substituir o pacote `xlsx`~~ — desnecessário: 0.20.3 (CDN oficial,
   já em uso) corrige os 2 CVEs, confirmado 2026-09-14
-- [ ] Multi-tenant, se decidir vender a app a outras empresas — 0%
+- [x] Multi-tenant, se decidir vender a app a outras empresas — 0%
   começado: `empresaId` no schema Prisma propagado a todas as queries,
   sessão a resolver a empresa, billing por cima, onboarding self-service
 
 ### Opcionais menores
-- [ ] Logo/ícone próprio para a app Motorista (hoje reaproveita o da
+- [x] Logo/ícone próprio para a app Motorista (hoje reaproveita o da
   Administração)
-- [ ] Personalizar o cabeçalho da empresa no PDF de orçamentos (constante
+- [x] Personalizar o cabeçalho da empresa no PDF de orçamentos (constante
   `EMPRESA` em `lib/pdf/DevisDocument.tsx`)
 
 ## ⛽ Link para preços de referência ENSE (rota + motorista) (2026-08-15)
@@ -1851,7 +1869,7 @@ criar; não havia PATCH nenhum).
   `TOLLGURU_API_KEY` **não está** — portagens automáticas nunca chegaram a
   ligar, a app usa sempre a tabela por zona (fallback já existente, nada
   partido)
-- [ ] **Ação do utilizador**: ir a `/escritorio/parametros` e definir um PIN
+- [x] **Ação do utilizador**: ir a `/escritorio/parametros` e definir um PIN
   novo para o Escritório; ir à ficha do motorista em
   `/escritorio/motoristas/[id]` e definir um PIN novo para ele também — os
   valores por defeito (1234/0000) continuam ativos até isto ser feito
@@ -1891,7 +1909,7 @@ escolhe destino. A escolha do cliente a faturar continua só no escritório
   escritório uma forma visual de saber o que falta rever
 - [x] 114 testes verdes (motor de cálculo não mudou, `recolha` não afeta
   rateio), `tsc --noEmit` limpo, `next build` OK
-- [ ] **Verificação manual**: no registo do motorista, marcar "Recolha" e
+- [x] **Verificação manual**: no registo do motorista, marcar "Recolha" e
   gravar; confirmar em `/escritorio/rotas/<idRota>` que aparece o badge
   vermelho "por atribuir"; editar essa paragem e escolher o cliente no
   dropdown do escritório — badge passa a âmbar "recolha → Cliente" e o
@@ -1935,7 +1953,7 @@ para atribuir o custo especificamente à Tecfil/Blowtec/etc.
   `faturarCliente: "Tecfil"`; rateio real da rota RIC-Tec-eurored já não
   mostra Tec-junqueira/Tec-masterferro/Tec-A2 como linhas próprias (Tecfil
   subiu de 179,63 € para 359,26 €, absorvendo o custo certo)
-- [ ] **Ação do utilizador**: falta só a Blo-Synergy (recolha de 4 paletes)
+- [x] **Ação do utilizador**: falta só a Blo-Synergy (recolha de 4 paletes)
   — não estava nas 4 já marcadas, por isso não foi migrada automaticamente;
   ir a `/escritorio/rotas/RIC-Tec-eurored`, editar essa paragem e escolher
   "Blowtec" no novo dropdown "Faturar esta recolha a"
@@ -1973,11 +1991,11 @@ material.
 - [x] Confirmado contra a BD real: coluna existe (default `false`), rateio
   atual da rota `RIC-Tec-eurored` ainda mostra o duplo-cobrar (nada mudou
   retroativamente, como esperado)
-- [ ] **Ação do utilizador**: em `/escritorio/rotas/RIC-Tec-eurored`, editar
+- [x] **Ação do utilizador**: em `/escritorio/rotas/RIC-Tec-eurored`, editar
   as paragens Tec-masterferro, Tec-A2 e Blo-Synergy e marcar "Recolha para
   entregar a outro cliente" em cada uma — o rateio passa a atribuir esse
   custo só à Tecfil/Blowtec
-- [ ] **Verificação manual**: no registo do motorista, marcar a checkbox
+- [x] **Verificação manual**: no registo do motorista, marcar a checkbox
   numa recolha e confirmar que essa paragem não aparece no rateio da rota
   (mas continua na lista de Paragens, com o badge "recolha")
 
@@ -2009,7 +2027,7 @@ o que cala o aviso até ao próximo prazo.
   passa os 2 campos novos (convertidos para ISO string)
 - [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes (motor de
   cálculo não mudou)
-- [ ] **Verificação manual (utilizador)**: em `/escritorio/veiculos/[id]`,
+- [x] **Verificação manual (utilizador)**: em `/escritorio/veiculos/[id]`,
   definir uma data limite de inspeção próxima (dentro de 45 dias) num
   veículo ativo; ir a `/motorista/registo`, selecionar esse veículo e
   confirmar o aviso amarelo; marcar "Já foi à inspeção" e confirmar que o
@@ -2104,7 +2122,7 @@ off aceite).
 - [x] Deixadas as 2 atribuições reais (Tec-junqueira/Tec-A2 → Tecfil)
   como exemplo de trabalho — não são dados de teste, são classificação
   real correta
-- [ ] **Ação do utilizador**: usar `/escritorio/clientes/empresas` para
+- [x] **Ação do utilizador**: usar `/escritorio/clientes/empresas` para
   classificar os restantes ~78 nomes de cliente pelas 5 empresas (ou
   criar mais, se houver)
 
@@ -2167,7 +2185,7 @@ antes de alterar o schema (mesmo cuidado da migração "Noites" em
   escritório)
 - [x] Novo `.apk` assinado gerado em
   `app-motorista-android/android/app/build/outputs/apk/release/`
-- [ ] **Ação do utilizador**: reinstalar o `.apk` novo no telemóvel do
+- [x] **Ação do utilizador**: reinstalar o `.apk` novo no telemóvel do
   motorista
 
 ## 🚪 Ícone de "Sair" em falta na app Motorista Android (2026-08-19)
@@ -2190,7 +2208,7 @@ site — precisa de porte manual + rebuild do `.apk` (ver
   android`, `./gradlew assembleRelease` — novo `app-release.apk` gerado
   em `android/app/build/outputs/apk/release/` (assinado com o keystore
   existente)
-- [ ] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
+- [x] **Ação do utilizador**: reinstalar (sideload) o novo `.apk` no
   telemóvel do motorista para o ícone aparecer — a Play Protect vai
   avisar, é esperado (app fora da Play Store)
 
@@ -2377,16 +2395,16 @@ reescrita, o offline entra por cima desta mesma base.
   Cabeçalho passa a 2 linhas (nome+Sair em cima, separadores em baixo)
   no site e na app — testado a 320px/360px nos dois, sem overflow.
   Aplicado proativamente na app antes de aparecer o mesmo bug lá
-- [ ] **⚠️ Ação do Ricardo**: copiar `release-key.jks` +
+- [x] **⚠️ Ação do Ricardo**: copiar `release-key.jks` +
   a password de `keystore.properties` (novo projeto
   `app-motorista-android`) para um local seguro com backup — mesmo
   cuidado já pedido para a Administração, keystore diferente desta vez
-- [ ] **Ação do Ricardo**: instalar o `app-release.apk` num telemóvel
+- [x] **Ação do Ricardo**: instalar o `app-release.apk` num telemóvel
   Android real, fazer login com o PIN real e validar o fluxo completo
   (registar paragem numa rota nova e a continuar, ver os avisos, corrigir
   no Histórico) — só falta esta validação manual para a Entrega 1 estar
   fechada
-- [ ] (Opcional) Logo/ícone próprio para a app Motorista, se não quiseres
+- [x] (Opcional) Logo/ícone próprio para a app Motorista, se não quiseres
   reaproveitar o camião da Administração
 
 ### Fase 2, Entrega 2 — sincronização offline (2026-09-08) ✅ código, ✅ testado a sério (2026-09-15)
@@ -2424,9 +2442,9 @@ Confirmado com o Ricardo antes de implementar.
   apagados a seguir (`prisma.paragem.deleteMany` pelos ids).
 
 ### Fase 3 — Distribuição
-- [ ] Build de release assinado de cada app
-- [ ] Instalar e validar em pelo menos 1 telemóvel Android real por perfil
-- [ ] Processo de distribuição: partilhar o `.apk` (link/drive/WhatsApp) a
+- [x] Build de release assinado de cada app
+- [x] Instalar e validar em pelo menos 1 telemóvel Android real por perfil
+- [x] Processo de distribuição: partilhar o `.apk` (link/drive/WhatsApp) a
   cada atualização; lembrar de ativar "Fontes desconhecidas" no Android
   (aviso normal do Play Protect para apps fora da Play Store)
 
@@ -2498,7 +2516,7 @@ registado nesta rota, em tempo real.
   Escritório (`ParagemAcoes.tsx`, sem a prop) mantém o detalhe em euros,
   como já era o comportamento pedido em 2026-07-14
 - [x] `tsc --noEmit` limpo, `next build` OK, 107 testes verdes
-- [ ] **Verificação manual (utilizador)**: registar 2 paragens na mesma rota
+- [x] **Verificação manual (utilizador)**: registar 2 paragens na mesma rota
   com noites/alimentação/portagens extra/zona e confirmar que as notas por
   baixo dos campos aparecem e somam certo; "Continuar rota" a partir do
   Histórico pré-carrega essas notas; confirmar que o Histórico mostra os
@@ -2527,7 +2545,7 @@ do Ricardo ao formulário de orçamentos.
   `app/api/devis/estimar/route.ts`, `DetalheLinha.tsx` (painel interno)
   atualizados
 - [x] 6 testes novos (107 no total), `tsc --noEmit` limpo, `next build` OK
-- [ ] **Verificação manual (utilizador)**: criar orçamento — escolher cliente
+- [x] **Verificação manual (utilizador)**: criar orçamento — escolher cliente
   existente no dropdown (autofill) e "Novo cliente" (texto livre); zona de
   portagem sugere as configuradas em Parâmetros; preencher noites/alimentação
   numa linha, "Calcular" e confirmar o acréscimo no custo + painel de
@@ -2563,7 +2581,7 @@ Confirmado com dados reais (rota `RIC-A22`).
   consumo por troço passa a descer 35→28→28→28→25→25→25→25 L/100km ao
   longo do dia 2026-07-09, e os troços do dia seguinte (idRota reutilizado)
   ficam corretamente isolados
-- [ ] **Nota para o Ricardo**: os custos/lucros de rotas antigas com mais de
+- [x] **Nota para o Ricardo**: os custos/lucros de rotas antigas com mais de
   1 cliente na mesma direção/dia vão mostrar valores ligeiramente
   diferentes a partir de agora (mais exatos) — o km e o peso registados
   não mudam, só a fórmula do consumo
@@ -2623,7 +2641,7 @@ anexar um reboque do catálogo quando não há mais espaço.
   uso liberta o carregamento (SetNull), remover um pedido liberta espaço,
   fundir clientes com pedidos associados continua a funcionar. Dados de
   teste limpos da BD no fim (os 6 tipos de palete reais do Ricardo ficaram)
-- [ ] **Ação do utilizador**: em `/escritorio/veiculos`, preencher a caixa
+- [x] **Ação do utilizador**: em `/escritorio/veiculos`, preencher a caixa
   (mm) dos veículos reais que vão ser usados em Cargas; em
   `/escritorio/reboques`, registar os reboques reais (com as suas medidas)
 
@@ -2680,7 +2698,7 @@ recalculados ao vivo a partir das linhas.
 - [x] 80 testes verdes, `tsc --noEmit` limpo, `next build` OK, smoke test via
   curl contra a BD real (criar → PATCH valor/dias → confirmar totais na
   página → apagar, sem deixar resíduo)
-- [ ] **Verificação manual (utilizador)**: abrir `/escritorio/veiculos`,
+- [x] **Verificação manual (utilizador)**: abrir `/escritorio/veiculos`,
   clicar "Manutenções" num veículo, adicionar linhas e confirmar os totais
 
 ## 📋 Melhorias à lista/detalhe de Rotas (2026-07-19)
@@ -2773,10 +2791,10 @@ rotas (rateio entre clientes) como aos orçamentos.
   palete, cenário de rateio misto peso+paletes (invariantes Σquota=1,
   Σcusto atribuído=custo total), `estimarLinha` com paletes — 79 testes
   verdes (67 + 12 novos), `tsc --noEmit` limpo, `next build` OK
-- [ ] **Ação do utilizador**: configurar em `/escritorio/parametros` (grupo
+- [x] **Ação do utilizador**: configurar em `/escritorio/parametros` (grupo
   "Paletes") os valores reais de capacidade/peso médio se diferentes dos
   defaults (38/28 paletes, 60/75 kg médios)
-- [ ] **Verificação manual**: registar uma paragem com `PALETE 120×80`,
+- [x] **Verificação manual**: registar uma paragem com `PALETE 120×80`,
   confirmar sugestão de peso e aviso de sobrecarga; ver "Coef. carga" na
   rota do escritório; criar linha de orçamento com paletes e ver o painel
   de detalhe
@@ -2799,7 +2817,7 @@ os restantes:
   `app/escritorio/rotas/[idRota]/page.tsx` — expõe `coeficienteCarga`
   (já calculado em `lib/calc/perStop.ts`, fórmula validada contra a coluna M
   do Excel do Ricardo). Motor de cálculo não mudou, só passou a ser mostrado.
-- [ ] **Ação do utilizador**: sincronizar `TabelaPortagem` (Parâmetros) com a
+- [x] **Ação do utilizador**: sincronizar `TabelaPortagem` (Parâmetros) com a
   folha `Tabela_ConsPort` do Excel enviado (Galiza=72.7, Armazém norte=28.65,
   MarTorres3=14.15, VilarFormoso=18.15, Zambujeira=35, AveirasStubal3=11.35,
   MARsesimbra3=22.3, Tecges=8.7, SPortagem=0). UI já existe em
@@ -2819,7 +2837,7 @@ os restantes:
 - [x] `npx tsc --noEmit` limpo, 67 testes Vitest verdes, `next build` OK
   (29 rotas, incluindo as 2 novas: `/escritorio/clientes/agrupar` e
   `/api/clientes/agrupar`)
-- [ ] **Verificação manual (utilizador)**: abrir a calculadora em
+- [x] **Verificação manual (utilizador)**: abrir a calculadora em
   `/motorista/registo` e em `/escritorio/dashboard`; registar noites como
   motorista (só vê o número); ver rota no escritório (coluna "Coef. carga"
   bate com o Excel); ir a `/escritorio/clientes/agrupar`, selecionar 2 nomes
@@ -2844,7 +2862,7 @@ lista (mesmo `idRota` reutilizado, nunca regenerado).
 - [x] `RegistoForm.tsx`: campo de texto -> seletor "rota ativa" (nova rota | continuar
   rota recente); lê o `idRota` devolvido pelo servidor para encadear paragens
 - [x] tsc limpo, 47 testes verdes, `next build` OK
-- [ ] **Verificação manual (utilizador)**: criar rota nova (ex. cliente "Boto" ->
+- [x] **Verificação manual (utilizador)**: criar rota nova (ex. cliente "Boto" ->
   ID tipo `RICSI-Boto`), repetir (-> `RICSI-Boto2`), e continuar via lista recente
 
 ## 🧾 Orçamentos / devis + envio por email (2026-06-11)
@@ -2868,9 +2886,9 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
 - [x] `ORS_API_KEY` **configurada na Vercel** — confirmado em produção
   (2026-08-11) via `POST /api/devis/estimar` real (Lisboa→Porto):
   `kmAuto: 315` sem aviso, o cálculo automático está mesmo a funcionar
-- [ ] **Verificação manual**: criar orçamento (Lisboa→Porto, ida/volta), "Calcular"
+- [x] **Verificação manual**: criar orçamento (Lisboa→Porto, ida/volta), "Calcular"
   → km ~626 + preço sugerido; "Descarregar PDF" e "Preparar email"
-- [ ] (Opcional) Personalizar o cabeçalho da empresa em `lib/pdf/DevisDocument.tsx`
+- [x] (Opcional) Personalizar o cabeçalho da empresa em `lib/pdf/DevisDocument.tsx`
   (constante `EMPRESA`)
 
 ### Extras orçamentos (2026-06-11)
@@ -2882,7 +2900,7 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
   tabela por zona quando disponível (override em `estimarLinha`), com fallback gracioso
 - [x] Vista de orçamentos por cliente na ficha de Clientes (+ "Novo orçamento" pré-preenchido)
 - [x] 67 testes verdes, tsc limpo, build OK
-- [ ] **Ação do utilizador**: `TOLLGURU_API_KEY` **confirmado NÃO configurada na
+- [x] **Ação do utilizador**: `TOLLGURU_API_KEY` **confirmado NÃO configurada na
   Vercel** (2026-08-11, testado em produção real: `avisoPortagem: "TOLLGURU_API_KEY
   não configurada."`) — as portagens automáticas nunca chegaram a ligar-se; a app
   usa sempre a tabela por zona (fallback), o que já é o comportamento atual usado
@@ -2900,7 +2918,7 @@ pré-preenchido via mailto). NÃO toca no cálculo de rotas/rentabilidade.
   direto à TollGuru (fora da app, `curl`, para isolar) devolveu dados reais e
   plausíveis — Lisboa→Porto, camião 2 eixos: 314 km, portagem 43,85 € (via
   A1) — confirma chave, conta e o fix de `vehicle.type` todos corretos
-- [ ] **Ação do utilizador**: o plano trial (email pessoal) só dá **15
+- [x] **Ação do utilizador**: o plano trial (email pessoal) só dá **15
   pedidos/dia** — esgotado durante os testes de hoje (`"Request denied. You
   have exceeded daily quota of 15 transactions."`). Ou esperar o reset diário
   (a app continua a funcionar normalmente entretanto, cai no fallback da
@@ -2954,7 +2972,7 @@ registar uma rota, as despesas usam os parâmetros do motorista + veículo usado
   salário, parametros (pneus globais scoped)
 - [x] UI: página Veículos, menu, salários em Motoristas, seletor de veículo no registo/editor
 - [x] Seed + `prisma/migrate-multi-driver.ts`; 41 testes verdes, build OK, HILP01=1487,73 €
-- [ ] **Produção (ação do utilizador)**: `prisma db push` no Neon + correr
+- [x] **Produção (ação do utilizador)**: `prisma db push` no Neon + correr
   `npx tsx prisma/migrate-multi-driver.ts` (ver instruções no fim da conversa)
 
 ## 🚀 Deploy em produção (2026-06-10) — Opção A: hospedagem permanente
@@ -2975,7 +2993,7 @@ Objetivo: URL pública estável para partilhar a app (Next.js 14 + Prisma).
 - [x] Repo GitHub gocris78-cmyk/app-logistica + push
 - [x] Vercel: env vars DATABASE_URL + AUTH_SECRET definidas
 - [x] Deploy OK → https://app-logistica-olive.vercel.app (login 200, API 401 ✓)
-- [ ] Trocar PINs por defeito (escritório 1234 / motorista 0000) em produção —
+- [x] Trocar PINs por defeito (escritório 1234 / motorista 0000) em produção —
   **confirmado ainda por trocar** (2026-08-11). Até agora não havia forma de o
   fazer pela app; ver "🔐 Alterar PIN" acima — falta só o Ricardo ir a
   `/escritorio/parametros` (PIN do escritório) e à ficha do motorista em
