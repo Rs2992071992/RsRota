@@ -17,7 +17,10 @@ interface SearchParams {
   dir?: string;
 }
 
-type SortKey = "data" | "paragens" | "km" | "custo" | "receita" | "lucro";
+type SortKey = "data" | "paragens" | "km" | "custo" | "custoKm" | "receita" | "lucro";
+
+// Custo por km da rota (0 se a rota não tem km, para não dar Infinity/NaN).
+const custoPorKm = (r: RotaCalc) => (r.kmTotais > 0 ? r.custoTotalRota / r.kmTotais : 0);
 
 // Valor numérico ordenável por chave (datas → timestamp).
 const sortValue: Record<SortKey, (r: RotaCalc) => number> = {
@@ -25,6 +28,7 @@ const sortValue: Record<SortKey, (r: RotaCalc) => number> = {
   paragens: (r) => r.paragens.length,
   km: (r) => r.kmTotais,
   custo: (r) => r.custoTotalRota,
+  custoKm: custoPorKm,
   receita: (r) => r.receitaTotal,
   lucro: (r) => r.lucro,
 };
@@ -179,6 +183,7 @@ export default async function RotasPage(props: { searchParams: Promise<SearchPar
               <SortableTh label="Paragens" sortKey="paragens" sort={sort} dir={dir} hrefFor={sortHref} />
               <SortableTh label="KM" sortKey="km" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <SortableTh label="Custo" sortKey="custo" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
+              <SortableTh label="€/km" sortKey="custoKm" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <SortableTh label="Receita" sortKey="receita" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <SortableTh label="Lucro" sortKey="lucro" sort={sort} dir={dir} hrefFor={sortHref} align="right" />
               <th className="th">Alerta</th>
@@ -188,7 +193,7 @@ export default async function RotasPage(props: { searchParams: Promise<SearchPar
           <tbody className="divide-y divide-gray-100">
             {rotas.length === 0 && (
               <tr>
-                <td className="td text-gray-400" colSpan={9}>
+                <td className="td text-gray-400" colSpan={10}>
                   Sem rotas para os filtros escolhidos.
                 </td>
               </tr>
@@ -208,6 +213,7 @@ export default async function RotasPage(props: { searchParams: Promise<SearchPar
                 <td className="td">{r.paragens.length}</td>
                 <td className="td text-right">{fmtNum(r.kmTotais)}</td>
                 <td className="td text-right">{fmtEuro(r.custoTotalRota)}</td>
+                <td className="td text-right whitespace-nowrap">{r.kmTotais > 0 ? fmtEuro(custoPorKm(r)) : "—"}</td>
                 <td className="td text-right">{fmtEuro(r.receitaTotal)}</td>
                 <td className={`td text-right font-semibold ${r.lucro < 0 ? "text-red-600" : "text-green-600"}`}>
                   {fmtEuro(r.lucro)}
