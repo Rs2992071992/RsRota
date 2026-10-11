@@ -1392,3 +1392,15 @@ Formato: [data] | o que correu mal | regra para evitar
   identidade. | Assinar `perfil:id` por HMAC e manter `getSessao()` a devolver o perfil
   (compatibilidade) + novo `getSessaoInfo()`/`getMotoristaId()`; o middleware Edge faz só
   parsing leve (`split(".")[0].split(":")[0]`), a validação forte fica server-side.
+
+- [2026-10-11] | O Ricardo reparou que "faltam símbolos de portagens ou
+  alimentação" na app Android do motorista. Auditoria ficheiro a ficheiro
+  (componentes, motor de carga, textos de Registar/Histórico/Avarias/Perfil,
+  menu): tudo igual ao site, exceto o Histórico da app — as paragens ainda
+  "por sincronizar" (fila offline) não renderizavam `<DespesasIcones>`,
+  só as já sincronizadas. Ou seja, o símbolo desaparecia justamente nas
+  paragens acabadas de registar. | Quando um ecrã mostra o mesmo item em
+  2 estados (já sincronizado vs. em fila local), conferir que AMBOS os
+  ramos de render têm os mesmos ícones/badges; o `payload` da fila tem os
+  mesmos campos que `Paragem`, por isso `DespesasIcones raw={item.payload}`
+  serve nos dois.
