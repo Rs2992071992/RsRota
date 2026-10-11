@@ -8,8 +8,14 @@ import { SESSION_COOKIE } from "@/lib/auth";
 // todas as páginas e rotas API protegidas.
 function perfilFromCookie(value: string | undefined): "ESCRITORIO" | "MOTORISTA" | null {
   if (!value) return null;
-  // Formato da cookie: "<perfil>:<id>.<hmac>".
-  const perfil = value.split(".")[0].split(":")[0];
+  // Formato da cookie: "<perfil>:<id>:<expira>:<versao>.<hmac>". Aqui só se
+  // confere a forma e a validade (a assinatura e a versão validam-se em
+  // lib/session.ts) — cookies no formato antigo ou expirados contam como sem sessão.
+  const partes = value.split(".")[0].split(":");
+  if (partes.length !== 4) return null;
+  const expira = Number(partes[2]);
+  if (!Number.isFinite(expira) || expira * 1000 <= Date.now()) return null;
+  const perfil = partes[0];
   return perfil === "ESCRITORIO" || perfil === "MOTORISTA" ? perfil : null;
 }
 
@@ -55,9 +61,10 @@ export function proxy(req: NextRequest) {
 
   const perfil = perfilFromCookie(req.cookies.get(SESSION_COOKIE)?.value);
 
-  if (pathname === "/login" && perfil) {
-    return NextResponse.redirect(new URL(homeFor(perfil), req.url));
-  }
+  // /login NÃO redireciona por aqui: o cookie pode parecer válido e já ter sido
+  // revogado (PIN mudado), e mandar para o painel — que o recusa e volta a
+  // mandar para /login — daria um ciclo infinito. O redirect de quem já tem
+  // sessão válida está em app/login/layout.tsx (valida a sessão a sério).
 
   const precisaEscritorio = pathname.startsWith("/escritorio");
   const precisaMotorista = pathname.startsWith("/motorista");
