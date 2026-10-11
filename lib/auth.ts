@@ -7,6 +7,16 @@ export interface Sessao {
   id: number; // id do Utilizador (escritório ou motorista)
 }
 
+/** Sessão tal como vem assinada no token: inclui a versão a comparar com a BD. */
+export interface SessaoAssinada extends Sessao {
+  versao: number;
+}
+
+/** Validade do cookie do site (renova-se ao fazer login). */
+export const TTL_COOKIE_SEG = 60 * 60 * 12; // 12 horas
+/** Validade do token da app Android (longa: o motorista trabalha offline). */
+export const TTL_TOKEN_APP_SEG = 60 * 60 * 24 * 30; // 30 dias
+
 export const SESSION_COOKIE = "sessao";
 
 // Segredo para assinar a cookie de sessão. Em produção, definir AUTH_SECRET no .env.
@@ -35,14 +45,25 @@ function sign(value: string): string {
   return crypto.createHmac("sha256", segredo()).update(value).digest("hex");
 }
 
-/** Cria o valor assinado da cookie: "<perfil>:<id>.<hmac>". */
-export function createSessionValue(perfil: Perfil, id: number): string {
-  const payload = `${perfil}:${id}`;
+/**
+ * Cria o valor assinado da sessão: "<perfil>:<id>:<expira>:<versao>.<hmac>",
+ * com `expira` em segundos unix. Sem validade embutida, um token copiado
+ * funcionaria para sempre.
+ */
+export function createSessionValue(
+  perfil: Perfil,
+  id: number,
+  versao: number,
+  ttlSeg: number,
+  agoraMs: number = Date.now(),
+): string {
+  const expira = Math.floor(agoraMs / 1000) + ttlSeg;
+  const payload = `${perfil}:${id}:${expira}:${versao}`;
   return `${payload}.${sign(payload)}`;
 }
 
 /** Valida o valor da cookie e devolve a sessão, ou null se inválido. */
-export function readSessionValue(value: string | undefined): Sessao | null {
+export function readSessionValue(value: string | undefined, agoraMs: number = Date.now()): SessaoAssinada | null {
   if (!value) return null;
   const dot = value.lastIndexOf(".");
   if (dot < 0) return null;
@@ -58,9 +79,15 @@ export function readSessionValue(value: string | undefined): Sessao | null {
     return null;
   }
 
-  const [perfil, idStr] = payload.split(":");
+  // Formato antigo (sem validade) tem só 2 partes e é recusado de propósito.
+  const partes = payload.split(":");
+  if (partes.length !== 4) return null;
+  const [perfil, idStr, expiraStr, versaoStr] = partes;
   const id = Number(idStr);
+  const expira = Number(expiraStr);
+  const versao = Number(versaoStr);
   if (perfil !== "ESCRITORIO" && perfil !== "MOTORISTA") return null;
-  if (!Number.isInteger(id)) return null;
-  return { perfil, id };
+  if (!Number.isInteger(id) || !Number.isInteger(expira) || !Number.isInteger(versao)) return null;
+  if (expira * 1000 <= agoraMs) return null;
+  return { perfil, id, versao };
 }

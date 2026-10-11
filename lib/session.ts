@@ -1,6 +1,22 @@
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { SESSION_COOKIE, readSessionValue, type Perfil, type Sessao } from "@/lib/auth";
+
+/**
+ * A assinatura e a validade já foram verificadas; falta confirmar na BD que o
+ * utilizador ainda existe, tem este perfil e que o PIN não mudou desde que o
+ * token foi emitido (versão). Em cache por pedido: layouts e páginas chamam
+ * getSessaoInfo várias vezes e só deve haver uma consulta.
+ */
+const utilizadorValido = cache(async (id: number, perfil: Perfil, versao: number) => {
+  const u = await prisma.utilizador.findUnique({
+    where: { id },
+    select: { perfil: true, sessaoVersao: true },
+  });
+  return !!u && u.perfil === perfil && u.sessaoVersao === versao;
+});
 
 /**
  * Lê e valida (HMAC) a sessão completa server-side. Devolve {perfil, id} ou null.
@@ -14,12 +30,12 @@ import { SESSION_COOKIE, readSessionValue, type Perfil, type Sessao } from "@/li
  */
 export async function getSessaoInfo(): Promise<Sessao | null> {
   const auth = (await headers()).get("authorization");
-  if (auth?.startsWith("Bearer ")) {
-    const viaToken = readSessionValue(auth.slice(7));
-    if (viaToken) return viaToken;
-  }
-  const value = (await cookies()).get(SESSION_COOKIE)?.value;
-  return readSessionValue(value);
+  let assinada = null;
+  if (auth?.startsWith("Bearer ")) assinada = readSessionValue(auth.slice(7));
+  if (!assinada) assinada = readSessionValue((await cookies()).get(SESSION_COOKIE)?.value);
+  if (!assinada) return null;
+  if (!(await utilizadorValido(assinada.id, assinada.perfil, assinada.versao))) return null;
+  return { perfil: assinada.perfil, id: assinada.id };
 }
 
 /** Devolve apenas o perfil (compatibilidade com os call-sites existentes). */

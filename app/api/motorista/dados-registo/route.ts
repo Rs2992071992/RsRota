@@ -10,7 +10,9 @@ import { getSessaoInfo } from "@/lib/session";
 // por clientes que não podem renderizar no servidor (ex. app nativa).
 export async function GET() {
   const sessao = await getSessaoInfo();
-  if (!sessao || sessao.perfil !== "MOTORISTA") {
+  // 401 sem sessão (a app Android usa-o para voltar ao login); 403 se for outro perfil.
+  if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
+  if (sessao.perfil !== "MOTORISTA") {
     return NextResponse.json({ erro: "Sem permissão." }, { status: 403 });
   }
 

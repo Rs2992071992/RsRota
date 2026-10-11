@@ -461,6 +461,11 @@ model Utilizador {
   perfil  String // "ESCRITORIO" | "MOTORISTA"
   pinHash String
 
+  // Versão das sessões deste utilizador, incluída no token assinado. Sobe ao
+  // mudar/repor o PIN — invalida de uma vez todas as sessões e tokens antigos
+  // (ver lib/session.ts::getSessaoInfo).
+  sessaoVersao Int @default(0)
+
   // Bloqueio por força bruta no PIN (ver POST /api/auth/login): incrementa a
   // cada falha, bloqueia a conta durante BLOQUEIO_MINUTOS ao atingir o limite.
   tentativasFalhadas Int       @default(0)

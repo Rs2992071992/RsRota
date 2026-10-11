@@ -29,7 +29,8 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 
   await prisma.utilizador.update({
     where: { id },
-    data: { pinHash: bcrypt.hashSync(parsed.data.pin, 10) },
+    // Repor o PIN termina as sessões abertas desse motorista (versão +1).
+    data: { pinHash: bcrypt.hashSync(parsed.data.pin, 10), sessaoVersao: { increment: 1 } },
   });
   return NextResponse.json({ ok: true });
 }

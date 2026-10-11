@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE, createSessionValue } from "@/lib/auth";
+import { SESSION_COOKIE, TTL_COOKIE_SEG, TTL_TOKEN_APP_SEG, createSessionValue } from "@/lib/auth";
 
 const schema = z.object({
   perfil: z.enum(["ESCRITORIO", "MOTORISTA"]),
@@ -16,6 +16,7 @@ const schema = z.object({
 // combinações) deixa de ser viável de adivinhar por tentativa e erro.
 const LIMITE_TENTATIVAS = 5;
 const BLOQUEIO_MINUTOS = 15;
+const HASH_FALSO = bcrypt.hashSync("sem-utilizador", 10);
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -32,6 +33,10 @@ export async function POST(req: Request) {
   }
 
   const user = await prisma.utilizador.findUnique({ where: { codigo: codigoLogin } });
+
+  // Conta inexistente também gasta um bcrypt, para o tempo de resposta não
+  // revelar quais os IDs de motorista que existem.
+  if (!user) bcrypt.compareSync(pin, HASH_FALSO);
 
   if (user?.bloqueadoAte && user.bloqueadoAte > new Date()) {
     const minutos = Math.ceil((user.bloqueadoAte.getTime() - Date.now()) / 60000);
@@ -72,9 +77,9 @@ export async function POST(req: Request) {
     // Para apps nativas (origem diferente do site, ex. Motorista offline): mesma
     // credencial da cookie, mas para guardar em storage seguro e enviar como
     // "Authorization: Bearer <token>". O browser ignora este campo.
-    token: createSessionValue(perfil, user.id),
+    token: createSessionValue(perfil, user.id, user.sessaoVersao, TTL_TOKEN_APP_SEG),
   });
-  res.cookies.set(SESSION_COOKIE, createSessionValue(perfil, user.id), {
+  res.cookies.set(SESSION_COOKIE, createSessionValue(perfil, user.id, user.sessaoVersao, TTL_COOKIE_SEG), {
     httpOnly: true,
     // Nunca enviar a cookie de sessão por HTTP simples (só https) em produção.
     // Em dev (localhost) fica false — Secure exige https, que não há em localhost
@@ -82,7 +87,7 @@ export async function POST(req: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 12, // 12 horas
+    maxAge: TTL_COOKIE_SEG,
   });
   return res;
 }
