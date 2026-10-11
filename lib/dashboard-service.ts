@@ -22,6 +22,9 @@ export interface DashboardData {
   kpis: {
     nRotas: number;
     kmTotais: number;
+    /** Km das paragens com tipoVeiculo VAZIO (camião sem carga) e % sobre os km totais. */
+    kmVazio: number;
+    pctKmVazio: number;
     custoTotal: number;
     receitaTotal: number;
     lucroTotal: number;
@@ -174,6 +177,11 @@ export async function carregarDashboard(base?: Base): Promise<DashboardData> {
   const receitaTotal = rotas.reduce((a, r) => a + r.receitaTotal, 0);
   const lucroTotal = receitaTotal - custoTotal;
   const kmTotais = rotas.reduce((a, r) => a + r.kmTotais, 0);
+  const kmVazio = rotas.reduce(
+    (a, r) => a + r.paragens.filter((p) => p.tipoVeiculo === "VAZIO").reduce((s, p) => s + p.kmFeitos, 0),
+    0,
+  );
+  const pctKmVazio = kmTotais > 0 ? (kmVazio / kmTotais) * 100 : 0;
   const nPrejuizo = rotas.filter((r) => r.lucro < 0).length;
   // Margem média: média das margens % das rotas com receita.
   const margens = rotas
@@ -262,6 +270,8 @@ export async function carregarDashboard(base?: Base): Promise<DashboardData> {
     kpis: {
       nRotas: rotas.length,
       kmTotais,
+      kmVazio,
+      pctKmVazio,
       custoTotal,
       receitaTotal,
       lucroTotal,

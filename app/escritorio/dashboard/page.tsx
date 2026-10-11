@@ -52,6 +52,12 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* Km a vazio (camião sem carga: paragens com tipo de veículo VAZIO) */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+        <Kpi titulo="KM a vazio" valor={fmtNum(d.kpis.kmVazio)} />
+        <Kpi titulo="% KM a vazio" valor={`${d.kpis.pctKmVazio.toFixed(1)} %`} />
+      </div>
+
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="card">
           <h2 className="mb-3 font-semibold">Evolução mensal</h2>
