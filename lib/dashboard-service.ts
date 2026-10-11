@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/db";
 import { carregarContexto } from "@/lib/contexto";
-import { calcularParagem } from "@/lib/calc/perStop";
+import { calcularParagem, efetivos } from "@/lib/calc/perStop";
 import { calcularRotas } from "@/lib/calc/perRoute";
-import { valorPortagem } from "@/lib/calc/lookups";
-import type { RotaCalc } from "@/lib/calc/types";
+import type { ParagemCalc, RotaCalc } from "@/lib/calc/types";
 import { paragemToInput, includeRelacoes } from "@/lib/rotas-service";
 import { carregarBaseSnapshot } from "@/lib/snapshot-service";
 
@@ -211,18 +210,26 @@ export async function carregarDashboard(base?: Base): Promise<DashboardData> {
     .map(([cliente, v]) => ({ cliente, custo: v.custo, receita: v.receita, lucro: v.receita - v.custo }))
     .sort((a, b) => a.lucro - b.lucro);
 
-  // Evolução mensal (por paragem, somando todas as componentes de custo + receita)
+  // Evolução mensal: cada paragem entra no mês da sua data, com EXATAMENTE as
+  // componentes que `calcularRota` soma em `custoTotalRota` (custo da paragem já
+  // com o peso em trânsito da rota + noites × valor/noite + alimentação + horas
+  // extra + portagem da tabela, tudo ao valor congelado no snapshot) — assim
+  // Σ meses = custo total dos KPIs. (Antes somava as noites como se cada noite
+  // custasse 1 €, ignorava o valor por noite e o peso em trânsito.)
+  const calcPorId = new Map<number, ParagemCalc>();
+  for (const r of rotas) for (const pc of r.paragens) if (pc.id != null) calcPorId.set(pc.id, pc);
   const mensal = new Map<string, { custo: number; receita: number }>();
   for (let i = 0; i < paragensRaw.length; i++) {
     const p = paragensRaw[i];
-    const calc = calcularParagem(inputs[i], ctx);
-    const portagem = valorPortagem(p.zonaPortagem, ctx.tabelaPortagens).valor;
+    const calc = calcPorId.get(p.id);
+    if (!calc) continue;
+    const eff = efetivos(inputs[i], ctx);
     const custo =
       calc.custoParagem +
-      p.noitesFora +
+      p.noitesFora * eff.valorNoite +
       p.alimentacao +
-      p.horasExtra * ctx.params.valorHoraExtra +
-      portagem;
+      p.horasExtra * eff.valorHoraExtra +
+      calc.portagemTabela;
     const d = new Date(p.data);
     const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const at = mensal.get(mes) ?? { custo: 0, receita: 0 };
