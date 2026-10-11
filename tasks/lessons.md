@@ -1404,3 +1404,15 @@ Formato: [data] | o que correu mal | regra para evitar
   ramos de render têm os mesmos ícones/badges; o `payload` da fila tem os
   mesmos campos que `Paragem`, por isso `DespesasIcones raw={item.payload}`
   serve nos dois.
+
+- [2026-10-11] | Ao dar validade às sessões (formato novo do token), só testei
+  a API com tokens Bearer. Em produção, quem tinha o cookie ANTIGO ficou com
+  `ERR_TOO_MANY_REDIRECTS` em /login: `proxy.ts` redirecionava /login →
+  painel só porque existia um cookie com "forma" de sessão; o painel
+  (`exigirPerfil`) recusava-o e voltava a mandar para /login. | Ao mudar o
+  formato/validação da sessão, testar também a NAVEGAÇÃO de páginas com
+  (a) cookie antigo, (b) cookie revogado/expirado, (c) cookie válido, e
+  nunca deixar o proxy (que só vê a forma do cookie) redirecionar para
+  longe de /login — quem valida a sessão a sério (layout/servidor) é que
+  decide. O mesmo vale para qualquer par de redirects que dependa de duas
+  verificações diferentes da mesma sessão.
