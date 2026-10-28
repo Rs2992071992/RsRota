@@ -452,27 +452,35 @@ function estadosDaRota(
   // PRÓPRIA entrega, sem nada a ver com essa recolha (ex. RIC-Percam:
   // Tec-Percam descarrega 22 localmente E recolhe 22 para o Tecfil — as 22
   // locais não podem desaparecer só porque a recolha entrou numa linha).
-  const origensLinha = new Set<number>();
-  const destinosLinha = new Set<number>();
-  const alvos = new Set<string>();
+  //
+  // A entrega que fecha a linha é a 1ª entrega do alvo DEPOIS da recolha
+  // (índice maior), nunca uma anterior: o mesmo cliente pode receber na Ida,
+  // fornecer uma recolha mais tarde e receber de novo no fim (RIC-Tec-A210:
+  // Tec-A2 entrega na Ida, recolhe e volta a entregar). Ligar a recolha à
+  // entrega da Ida (a 1ª da rota) tirava essas paletes da Ida e nunca punha a
+  // recolha a bordo. Uma recolha sem nenhuma entrega depois dela fica como
+  // recolha normal (a bordo até ao fim do segmento). Várias recolhas do mesmo
+  // alvo antes da mesma entrega fecham todas nela.
+  const candidatas = new Set<number>();
   ordenadas.forEach((p, i) => {
     const alvo = alvoRecolha(p);
-    if (alvo && p.recolhidas.length > 0 && clientesComEntrega.has(alvo)) {
-      origensLinha.add(i);
-      alvos.add(alvo);
-    }
+    if (alvo && p.recolhidas.length > 0 && clientesComEntrega.has(alvo)) candidatas.add(i);
   });
-  // Índice da 1ª entrega de cada alvo — fecha a linha (todas as recolhas
-  // desse alvo, mesmo várias, ficam a bordo até essa entrega). Uma 2ª entrega
-  // para o mesmo alvo, se existir, NÃO entra na linha — fica no "resto" como
-  // uma entrega normal (limitação assumida: só a 1ª entrega fecha a linha).
-  const entregaIndicePorAlvo = new Map<string, number>();
-  ordenadas.forEach((p, i) => {
-    if (origensLinha.has(i)) return;
-    const nome = p.cliente?.trim();
-    if (nome && p.entregues.length > 0 && alvos.has(nome) && !entregaIndicePorAlvo.has(nome)) {
-      destinosLinha.add(i);
-      entregaIndicePorAlvo.set(nome, i);
+  const origensLinha = new Set<number>();
+  const destinosLinha = new Set<number>();
+  /** índice da recolha (origem) -> índice da entrega que fecha a linha. */
+  const entregaPorOrigem = new Map<number, number>();
+  candidatas.forEach((i) => {
+    const alvo = alvoRecolha(ordenadas[i])!;
+    for (let k = i + 1; k < n; k++) {
+      if (candidatas.has(k)) continue;
+      const q = ordenadas[k];
+      if (q.entregues.length > 0 && q.cliente?.trim() === alvo) {
+        origensLinha.add(i);
+        destinosLinha.add(k);
+        entregaPorOrigem.set(i, k);
+        break;
+      }
     }
   });
 
@@ -491,6 +499,13 @@ function estadosDaRota(
   for (let j = 0; j <= n; j++) {
     const segCorte = segmentoDe[Math.min(j, n - 1)];
     const aBordo: LinhaCarga[] = [];
+    // Corte numa paragem VAZIO = o camião chega a ela sem carga (é um trecho
+    // vazio, a caminho da próxima recolha). A carga do segmento que começa
+    // nessa paragem só entra a bordo mais à frente — contá-la aqui dava
+    // "paletes sem espaço" falsos (e sem o reboque, que só conta nas paragens
+    // CAMIAO+REBOQUE) em rotas como RIC-A23. Só as linhas recolha->entrega
+    // (passo 2) atravessam um VAZIO.
+    const trechoVazio = j < n && ordenadas[j].tipoVeiculo === "VAZIO";
 
     // 1) Resto: dentro do MESMO segmento (VAZIO) do corte. As entregues contam
     // sempre, EXCETO nas paragens que fecham uma linha (`destinosLinha`) — essa
@@ -501,7 +516,7 @@ function estadosDaRota(
     // inteira), uma paragem MISTA que é origem de linha perdia a sua própria
     // entrega (lote distinto, nada a ver com a recolha) — ver RIC-Percam.
     ordenadas.forEach((p, i) => {
-      if (segmentoDe[i] !== segCorte) return;
+      if (trechoVazio || segmentoDe[i] !== segCorte) return;
       if (i >= j && !destinosLinha.has(i)) aBordo.push(...p.entregues);
       if (i < j && !origensLinha.has(i)) aBordo.push(...p.recolhidas);
     });
@@ -510,7 +525,7 @@ function estadosDaRota(
     // (a entrega, se existir, tem índice >= j) — atravessa segmentos/VAZIO.
     ordenadas.forEach((p, i) => {
       if (!origensLinha.has(i) || p.recolhidas.length === 0 || i >= j) return;
-      const idxEntrega = entregaIndicePorAlvo.get(alvoRecolha(p)!);
+      const idxEntrega = entregaPorOrigem.get(i);
       if (idxEntrega == null || j <= idxEntrega) aBordo.push(...p.recolhidas);
     });
 

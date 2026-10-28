@@ -1416,3 +1416,20 @@ Formato: [data] | o que correu mal | regra para evitar
   longe de /login — quem valida a sessão a sério (layout/servidor) é que
   decide. O mesmo vale para qualquer par de redirects que dependa de duas
   verificações diferentes da mesma sessão.
+
+- [2026-10-28] | O Ricardo reparou que na planta da Ida da rota RIC-Tec-A210
+  faltavam as 4 paletes do Tec-A2. Auditoria às 51 rotas (planta de cada
+  rota + avisos "sem espaço") encontrou 2 erros de simulação em
+  `lib/calc/cargaRota.ts::estadosDaRota`: (1) a recolha era ligada à PRIMEIRA
+  entrega do cliente-alvo na rota, mesmo que fosse ANTERIOR à recolha (Tec-A2
+  entrega na Ida, recolhe e volta a entregar) — tirava essas paletes da Ida e
+  nunca punha a recolha a bordo; (2) no corte numa paragem VAZIO contava a
+  carga do segmento seguinte como já a bordo, e sem o reboque (só entra nas
+  paragens CAMIAO+REBOQUE) → "sem espaço" falsos (RIC-A23, Plas-Sonae,
+  Valpaços). | Numa simulação por "cortes" no tempo, qualquer ligação entre
+  eventos (recolha → entrega) tem de respeitar a ORDEM (o fecho é o 1º evento
+  DEPOIS da origem, nunca antes), e um trecho marcado VAZIO tem de ser
+  tratado como camião sem carga. Antes de dar uma planta por boa, correr a
+  simulação sobre TODAS as rotas reais e comparar antes/depois (aqui: 13
+  rotas mudaram, 3 avisos falsos desapareceram). Cada correção neste motor
+  tem de ser copiada também para `app-motorista-android/src/lib/calc/cargaRota.ts`.
