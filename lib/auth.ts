@@ -15,7 +15,7 @@ export interface SessaoAssinada extends Sessao {
 /** Validade do cookie do site (renova-se ao fazer login). */
 export const TTL_COOKIE_SEG = 60 * 60 * 12; // 12 horas
 /** Validade do token da app Android (longa: o motorista trabalha offline). */
-export const TTL_TOKEN_APP_SEG = 60 * 60 * 24 * 30; // 30 dias
+export const TTL_TOKEN_APP_SEG = 60 * 60 * 24 * 90; // 90 dias
 
 export const SESSION_COOKIE = "sessao";
 

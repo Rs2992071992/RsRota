@@ -2,6 +2,21 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Offline na app Android + token 90 dias (2026-10-28)
+
+Pedido do Ricardo: "vamos fazer essas coisas" (Histórico e Tarefas sem rede,
+prazo do token, chave do Android).
+
+- [x] Histórico: guarda a última lista (`lib/offline.ts`); sem rede mostra-a
+  com aviso e esconde "Corrigir" (precisa de rede); erro do servidor continua erro
+- [x] Tarefas: cópia local + marcações offline em fila, enviadas ao voltar a rede
+  (App.tsx liga ao listener de rede); 404 descarta, 401 mantém e volta ao login
+- [x] Badge de Tarefas usa a mesma cópia
+- [x] Token da app: 30 → 90 dias (`lib/auth.ts::TTL_TOKEN_APP_SEG`)
+- [x] Testado com simulação (7 cenários) + tsc + build; APK nova gerada
+- [ ] Chave `release-key.jks` + `keystore.properties`: cópia fora do PC (feita pelo Ricardo)
+- Avarias offline e criar rota nova offline: NÃO feitos (fora de âmbito)
+
 ## 🔄 Tarefas do escritório para o motorista (2026-10-01) — branch `feat/tarefas`
 
 Pedido do Ricardo: o escritório define tarefas por motorista com data
