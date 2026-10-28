@@ -59,10 +59,17 @@ export interface FolhaMotorista {
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
-function observacoesDe(p: { idRota: string; tipoVeiculo: string; recolha: boolean }, calc: ParagemCalc): string {
+/** Observações: rota + o que se fez na paragem (vazio / recolha / descarga + recolha). */
+function observacoesDe(
+  p: Parameters<typeof linhasCargaParagem>[0] & { idRota: string; tipoVeiculo: string; recolha: boolean },
+  calc: ParagemCalc,
+): string {
   const partes = [`Rota ${p.idRota}`];
-  if (p.tipoVeiculo === "VAZIO") partes.push("vazio");
-  else if (p.recolha) partes.push("recolha");
+  const { entregues, recolhidas } = linhasCargaParagem(p);
+  const entrega = entregues.some((l) => l.nPaletes > 0);
+  const recolhe = p.recolha || recolhidas.some((l) => l.nPaletes > 0);
+  if (p.tipoVeiculo === "VAZIO") partes.push(recolhe ? "vazio · recolha" : "vazio");
+  else if (recolhe) partes.push(entrega ? "descarga + recolha" : "recolha");
   if (calc.pesoTransportado > 0) partes.push(`${Math.round(calc.pesoTransportado)} kg`);
   return partes.join(" · ");
 }
