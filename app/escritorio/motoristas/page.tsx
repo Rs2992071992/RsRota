@@ -20,7 +20,12 @@ export default async function MotoristasPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">Motoristas</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Motoristas</h1>
+        <Link href="/escritorio/motoristas/folha" className="btn-secondary text-sm">
+          Folha de registo (PDF / Excel)
+        </Link>
+      </div>
 
       {motoristas.length === 0 ? (
         <div className="card text-sm text-gray-500">

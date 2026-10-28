@@ -2,6 +2,26 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🔄 Folha de registo do camião (PDF + Excel) (2026-10-28) — branch `feat/folha-motorista`
+
+Pedido do Ricardo: uma empresa pediu uma folha em papel (Camião / Mês; colunas
+Dia, Empresa, Km Iniciais, Km Finais, % da carga, Gasóleo (L), Preço,
+Observações). Gerar isto a partir dos dados do motorista, em PDF e Excel, com
+intervalo de datas, filtro por empresa-mãe (como em Cobranças) e (opcional)
+camião.
+Decisões do Ricardo: Empresa = nome do cliente (ex. "Tec-armazém do norte"),
+1 linha por paragem; Gasóleo só em LITROS (preço = opção ligar/desligar);
+% da carga = % de ocupação da planta (mesma simulação das Rotas), por paragem
+= o que vai a bordo ao CHEGAR a essa paragem.
+Aviso: o motorista não regista abastecimentos (0/264) → litros = estimativa do
+sistema (litrosGastos), preço = €/L usado no cálculo; dito no rodapé do PDF.
+
+- [x] cargaRota.ts: `ocupacaoPorParagem` (+ cópia no Android para não divergir)
+- [x] lib/folha-motorista-service.ts (filtros, agrupar por camião+mês)
+- [x] PDF (react-pdf, A4 horizontal, 1 página+ por camião/mês) e Excel (xlsx)
+- [x] GET /api/folha-motorista (só escritório) + página /escritorio/motoristas/folha
+- [x] Testes do cálculo da %; tsc, vitest, build; ver o PDF renderizado
+
 ## ☑️ Offline na app Android + token 90 dias (2026-10-28)
 
 Pedido do Ricardo: "vamos fazer essas coisas" (Histórico e Tarefas sem rede,

@@ -160,6 +160,8 @@ export interface EspacoCarga {
 
 /** Uma paragem da rota, para a simulação de ocupação de espaço. */
 export interface ParagemCarga {
+  /** Identificador da paragem — opcional, só para `ocupacaoPorParagem` devolver o resultado por paragem. */
+  id?: number;
   /** Descarregadas aqui — vinham a bordo desde o início do segmento. */
   entregues: LinhaCarga[];
   /** Carregadas aqui — ficam a bordo até ao fim do segmento. */
@@ -516,4 +518,38 @@ function estadosDaRota(
   }
 
   return { estados, ordenadas };
+}
+
+/**
+ * % de ocupação do veículo (+ reboque, quando atrelado) por paragem, para a
+ * folha de registo do camião. É a MESMA % da planta de carga das Rotas
+ * (área ocupada ÷ área da caixa, ver `CaixaResultado`), mas calculada para o
+ * corte de cada paragem em vez de só o pior momento: o que vai a bordo ao
+ * CHEGAR a essa paragem (corte `j` de `estadosDaRota` = "mesmo antes de
+ * processar a paragem j": as entregas dessa paragem ainda a bordo, as
+ * recolhas dela ainda não). Soma as áreas das caixas aplicáveis nesse corte.
+ *
+ * Só devolve entradas para paragens com `id`; mapa vazio sem caixa
+ * configurada (a % não se consegue calcular). 0 quando nada vai a bordo.
+ */
+export function ocupacaoPorParagem(
+  caixasBase: CaixaInput[],
+  caixaReboque: CaixaInput | null,
+  paragens: ParagemCarga[],
+): Map<number, number> {
+  const mapa = new Map<number, number>();
+  if (caixasBase.length === 0 && !caixaReboque) return mapa;
+  const comLinhas = filtrarLinhasValidas(paragens);
+  if (comLinhas.length === 0) return mapa;
+
+  const { estados, ordenadas } = estadosDaRota(comLinhas);
+  ordenadas.forEach((p, j) => {
+    if (p.id == null) return;
+    const caixas = caixasNoCorte(caixasBase, caixaReboque, ordenadas, j);
+    const estado = empacotarEstado(caixas, estados[j]);
+    const usada = estado.packing?.caixas.reduce((a, c) => a + c.areaUsadaMm2, 0) ?? 0;
+    const total = caixas.reduce((a, c) => a + c.comprimentoMm * c.larguraMm, 0);
+    mapa.set(p.id, total > 0 ? (usada / total) * 100 : 0);
+  });
+  return mapa;
 }
