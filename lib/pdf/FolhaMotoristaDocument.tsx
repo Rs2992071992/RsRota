@@ -64,14 +64,15 @@ interface Coluna {
 function colunas(comPreco: boolean): Coluna[] {
   const base: Coluna[] = [
     { chave: "dia", titulo: "Dia", largura: "5%", alinhar: "centro" },
-    { chave: "empresa", titulo: "Empresa", largura: "25%", alinhar: "esquerda" },
-    { chave: "kmInicial", titulo: "Km Iniciais", largura: "11%", alinhar: "direita" },
-    { chave: "kmFinal", titulo: "Km Finais", largura: "11%", alinhar: "direita" },
-    { chave: "pct", titulo: "% da carga", largura: "9%", alinhar: "centro" },
-    { chave: "litros", titulo: "Gasóleo (L)", largura: "10%", alinhar: "direita" },
+    { chave: "empresa", titulo: "Empresa", largura: "22%", alinhar: "esquerda" },
+    { chave: "kmInicial", titulo: "Km Iniciais", largura: "10%", alinhar: "direita" },
+    { chave: "kmFinal", titulo: "Km Finais", largura: "10%", alinhar: "direita" },
+    { chave: "kmPercorridos", titulo: "Km Percorridos", largura: "10%", alinhar: "direita" },
+    { chave: "pct", titulo: "% da carga", largura: "8%", alinhar: "centro" },
+    { chave: "litros", titulo: "Gasóleo (L)", largura: "9%", alinhar: "direita" },
   ];
-  if (comPreco) base.push({ chave: "preco", titulo: "Preço (€/L)", largura: "9%", alinhar: "direita" });
-  base.push({ chave: "obs", titulo: "Observações", largura: comPreco ? "20%" : "29%", alinhar: "esquerda" });
+  if (comPreco) base.push({ chave: "preco", titulo: "Preço (€/L)", largura: "8%", alinhar: "direita" });
+  base.push({ chave: "obs", titulo: "Observações", largura: comPreco ? "18%" : "26%", alinhar: "esquerda" });
   return base;
 }
 
@@ -86,6 +87,8 @@ function valorDe(g: GrupoFolha, i: number, chave: string): string {
       return num0.format(l.kmInicial);
     case "kmFinal":
       return num0.format(l.kmFinal);
+    case "kmPercorridos":
+      return num0.format(l.kmPercorridos);
     case "pct":
       return l.pctCarga == null ? "—" : `${num0.format(l.pctCarga)} %`;
     case "litros":
@@ -159,8 +162,8 @@ export function FolhaMotoristaDocument({
                     <Text style={estiloAlinhar(c.alinhar)}>
                       {c.chave === "empresa"
                         ? "Total"
-                        : c.chave === "kmFinal"
-                          ? `${num0.format(g.totalKm)} km`
+                        : c.chave === "kmPercorridos"
+                          ? num0.format(g.totalKm)
                           : c.chave === "litros"
                             ? num1.format(g.totalLitros)
                             : ""}

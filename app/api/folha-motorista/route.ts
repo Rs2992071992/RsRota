@@ -45,7 +45,7 @@ const nomeFolha = (s: string, usados: Set<string>) => {
 function paraExcel(folha: FolhaMotorista, incluirPreco: boolean): Uint8Array<ArrayBuffer> {
   const wb = XLSX.utils.book_new();
   const usados = new Set<string>();
-  const cab = ["Dia", "Empresa", "Km Iniciais", "Km Finais", "% da carga", "Gasóleo (L)", ...(incluirPreco ? ["Preço (€/L)"] : []), "Observações"];
+  const cab = ["Dia", "Empresa", "Km Iniciais", "Km Finais", "Km Percorridos", "% da carga", "Gasóleo (L)", ...(incluirPreco ? ["Preço (€/L)"] : []), "Observações"];
   const arred = (v: number, casas: number) => Math.round(v * 10 ** casas) / 10 ** casas;
 
   if (folha.grupos.length === 0) {
@@ -57,12 +57,13 @@ function paraExcel(folha: FolhaMotorista, incluirPreco: boolean): Uint8Array<Arr
       l.empresa,
       Math.round(l.kmInicial),
       Math.round(l.kmFinal),
+      Math.round(l.kmPercorridos),
       l.pctCarga == null ? "" : Math.round(l.pctCarga),
       arred(l.litros, 1),
       ...(incluirPreco ? [arred(l.preco, 3)] : []),
       l.observacoes,
     ]);
-    const totais = ["", "Total", "", Math.round(g.totalKm), "", arred(g.totalLitros, 1), ...(incluirPreco ? [""] : []), ""];
+    const totais = ["", "Total", "", "", Math.round(g.totalKm), "", arred(g.totalLitros, 1), ...(incluirPreco ? [""] : []), ""];
     const ws = XLSX.utils.aoa_to_sheet([
       ["Camião:", g.camiao],
       ["Mês:", rotuloMes(g.mes)],
@@ -74,7 +75,7 @@ function paraExcel(folha: FolhaMotorista, incluirPreco: boolean): Uint8Array<Arr
         ? [[], ["Gasóleo = litros estimados pelo sistema a partir dos km e da carga (não são abastecimentos registados)."]]
         : []),
     ]);
-    ws["!cols"] = [{ wch: 6 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 11 }, { wch: 12 }, ...(incluirPreco ? [{ wch: 12 }] : []), { wch: 36 }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 11 }, { wch: 12 }, ...(incluirPreco ? [{ wch: 12 }] : []), { wch: 36 }];
     XLSX.utils.book_append_sheet(wb, ws, nomeFolha(`${g.camiao} ${g.mes}`, usados));
   }
   return new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);

@@ -30,6 +30,8 @@ export interface LinhaFolha {
   empresa: string;
   kmInicial: number;
   kmFinal: number;
+  /** Km percorridos nesta paragem (km finais − km iniciais). */
+  kmPercorridos: number;
   /** % de ocupação do camião (+ reboque) ao chegar a esta paragem; null = sem caixa configurada. */
   pctCarga: number | null;
   /** Litros de gasóleo (ver `litrosEstimados`). */
@@ -152,6 +154,7 @@ export async function carregarFolha(filtros: FiltrosFolha = {}): Promise<FolhaMo
       empresa: p.cliente,
       kmInicial: p.kmInicial,
       kmFinal: p.kmFinal,
+      kmPercorridos: p.kmFinal - p.kmInicial,
       pctCarga: pct == null ? null : pct,
       litros,
       preco,
