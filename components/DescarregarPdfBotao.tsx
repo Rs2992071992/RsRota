@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { descarregarBlob } from "@/lib/descarregar";
 
 interface Props {
   /** Endpoint que devolve o PDF (GET). */
@@ -28,15 +29,7 @@ export default function DescarregarPdfBotao({
         alert("Erro ao gerar o PDF.");
         return;
       }
-      const blob = await res.blob();
-      const objUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objUrl;
-      a.download = `${nomeFicheiro}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(objUrl);
+      await descarregarBlob(await res.blob(), `${nomeFicheiro}.pdf`);
     } finally {
       setAGerar(false);
     }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { fmtEuro, fmtData } from "@/lib/format";
+import { descarregarBlob } from "@/lib/descarregar";
 import type { LinhaCobranca } from "@/lib/cobrancas-service";
 import EstadoPagamentoBadge from "@/components/EstadoPagamentoBadge";
 import PagoToggle from "@/components/PagoToggle";
@@ -96,15 +97,7 @@ export default function CobrancasTabela({ linhas }: { linhas: LinhaCobranca[] })
         alert("Erro ao gerar o PDF.");
         return;
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${titulo}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await descarregarBlob(await res.blob(), `${titulo}.pdf`);
     } finally {
       setAGerarPdf(false);
     }

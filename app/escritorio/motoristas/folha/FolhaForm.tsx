@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { descarregarBlob } from "@/lib/descarregar";
 
 // Mesmo valor especial de lib/folha-motorista-service.ts (não se importa de lá
 // para não puxar o Prisma para o bundle do browser).
@@ -56,15 +57,7 @@ export default function FolhaForm({
       p.set("formato", formato);
       const res = await fetch(`/api/folha-motorista?${p.toString()}`);
       if (!res.ok) return setErro("Erro ao gerar a folha.");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `folha-registo.${formato}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await descarregarBlob(await res.blob(), `folha-registo.${formato}`);
     } catch {
       setErro("Erro de ligação.");
     } finally {

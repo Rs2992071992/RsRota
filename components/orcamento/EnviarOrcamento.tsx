@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { descarregarBlob } from "@/lib/descarregar";
 
 interface Props {
   id: number;
@@ -27,15 +28,7 @@ export default function EnviarOrcamento({ id, numero, clienteEmail, estado }: Pr
       alert("Erro ao gerar o PDF.");
       return false;
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${numero}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    await descarregarBlob(await res.blob(), `${numero}.pdf`);
     return true;
   }
 
