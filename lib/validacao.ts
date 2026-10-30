@@ -195,10 +195,10 @@ export const veiculoSchema = z.object({
   // Inspeção periódica — prazo + confirmação de que já foi feita.
   dataLimiteInspecao: z.string().trim().nullable().optional(),
   inspecaoVerificada: z.boolean().optional(),
-  pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })),
+  pneus: z.array(z.object({ eixo: z.string().trim().min(1), custo: n, km: n.positive() })).max(50),
   // Tabela de consumo própria (L/100km por escalão de carga) — só PESADO;
   // vazia = usa a tabela global de Parâmetros (ver lib/snapshot-service.ts).
-  consumo: z.array(z.object({ cargaKg: n, consumoL100: n })).default([]),
+  consumo: z.array(z.object({ cargaKg: n, consumoL100: n })).max(100).default([]),
 });
 
 export type VeiculoForm = z.infer<typeof veiculoSchema>;
@@ -221,7 +221,7 @@ export type ManutencaoForm = z.infer<typeof manutencaoSchema>;
 export const avariaSchema = z.object({
   veiculoId: z.number().int().positive(),
   data: z.string().min(1, "Data obrigatória"),
-  itens: z.array(z.string().trim().min(1)).min(1, "Adicione pelo menos uma situação"),
+  itens: z.array(z.string().trim().min(1)).min(1, "Adicione pelo menos uma situação").max(100),
   observacoes: z.string().trim().max(1000).nullable().optional(),
 });
 
@@ -281,7 +281,7 @@ export type ClienteContactoForm = z.infer<typeof clienteContactoSchema>;
 
 /** Agrupar/fundir variantes de nome de cliente num nome canónico. */
 export const agruparClientesSchema = z.object({
-  nomesVariantes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome"),
+  nomesVariantes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome").max(500),
   nomeCanonico: z.string().trim().min(1, "Nome canónico obrigatório"),
 });
 
@@ -294,13 +294,13 @@ export const empresaSchema = z.object({
 
 /** Atribuir um grupo de clientes a uma empresa-mãe. */
 export const atribuirEmpresaSchema = z.object({
-  nomes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome"),
+  nomes: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um nome").max(500),
   empresaId: z.number().int().positive(),
 });
 
 /** PDF de uma seleção manual de linhas de cobrança (checkboxes na tabela). */
 export const selecaoCobrancaSchema = z.object({
-  ids: z.array(z.number().int().positive()).min(1, "Selecione pelo menos uma linha"),
+  ids: z.array(z.number().int().positive()).min(1, "Selecione pelo menos uma linha").max(5000),
   titulo: z.string().trim().max(100).optional(),
 });
 
@@ -345,7 +345,7 @@ export const devisSchema = z.object({
   validade: z.string().nullable().optional(),
   estado: z.enum(ESTADOS_DEVIS).default("RASCUNHO"),
   origemPadrao: txtContacto,
-  linhas: z.array(linhaDevisSchema).default([]),
+  linhas: z.array(linhaDevisSchema).max(200).default([]),
   observacoes: z.string().trim().max(2000).nullable().optional(),
   ivaPercent: z.number().min(0).max(100).default(23),
 });
@@ -451,7 +451,7 @@ export type PedidoPaleteUpdateForm = z.infer<typeof pedidoPaleteUpdateSchema>;
 /** Nova ordem de carga: `pedidoId` de todos os pedidos do carregamento, na
  * sequência pretendida. A rota valida que é uma permutação exata dos pedidos. */
 export const reordenarPedidosSchema = z.object({
-  ordemPedidoIds: z.array(z.number().int().positive()).min(1),
+  ordemPedidoIds: z.array(z.number().int().positive()).min(1).max(1000),
 });
 
 /** Quantas paletes separar de uma linha de pedido para uma linha nova (mesmo

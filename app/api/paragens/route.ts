@@ -29,6 +29,18 @@ export async function POST(req: Request) {
   // ID da rota: se vier preenchido, é "continuar rota" -> reutiliza tal como está.
   // Se vier vazio, é uma rota nova -> gera `INICIAIS-Cliente` (único) a partir do condutor.
   let idRota = d.idRota?.trim() ?? "";
+  const ehMotorista = sessao.perfil === "MOTORISTA";
+  // Um motorista só pode continuar rotas suas (ou novas): nunca acrescentar
+  // paragens a uma rota que já tem paragens de OUTRO motorista.
+  if (idRota && ehMotorista) {
+    const alheia = await prisma.paragem.findFirst({
+      where: { idRota, motoristaId: { not: sessao.id } },
+      select: { id: true },
+    });
+    if (alheia) {
+      return NextResponse.json({ erro: "Esta rota pertence a outro motorista." }, { status: 403 });
+    }
+  }
   if (!idRota) {
     const user = await prisma.utilizador.findUnique({
       where: { id: sessao.id },
@@ -95,15 +107,18 @@ export async function POST(req: Request) {
       alimentacao: d.alimentacao,
       horasExtra: d.horasExtra,
       recolha: d.recolha,
-      faturarCliente: d.faturarCliente?.trim() || null,
-      faturarClienteApenasRecolha: d.faturarClienteApenasRecolha ?? null,
+      // Campos reservados ao escritório (mesma regra do PATCH, CAMPOS_ESCRITORIO):
+      // num registo de motorista são ignorados — as apps do motorista nunca os
+      // enviam, por isso isto só trava pedidos feitos à mão.
+      faturarCliente: ehMotorista ? null : d.faturarCliente?.trim() || null,
+      faturarClienteApenasRecolha: ehMotorista ? null : (d.faturarClienteApenasRecolha ?? null),
       // Só faz sentido num troço VAZIO — defensivo, a UI de registo nunca envia isto.
       rateioManual:
-        d.tipoVeiculo === "VAZIO" && d.rateioManual
+        !ehMotorista && d.tipoVeiculo === "VAZIO" && d.rateioManual
           ? (d.rateioManual as unknown as Prisma.InputJsonValue)
           : Prisma.JsonNull,
-      precoCombRefOverride: d.precoCombRefOverride ?? null,
-      receitaPaga: d.receitaPaga,
+      precoCombRefOverride: ehMotorista ? null : (d.precoCombRefOverride ?? null),
+      receitaPaga: ehMotorista ? 0 : d.receitaPaga,
       litrosEspanha: d.litrosEspanha ?? null,
       custoEspanha: d.custoEspanha ?? null,
     },

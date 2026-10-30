@@ -41,9 +41,9 @@ const paramsSchema = z.object({
 
 const payloadSchema = z.object({
   params: paramsSchema,
-  pneus: z.array(z.object({ eixo: z.string(), custo: n, km: n.positive() })),
-  portagens: z.array(z.object({ zona: z.string().trim().min(1), valor: n })),
-  consumo: z.array(z.object({ cargaKg: n, consumoL100: n })),
+  pneus: z.array(z.object({ eixo: z.string(), custo: n, km: n.positive() })).max(50),
+  portagens: z.array(z.object({ zona: z.string().trim().min(1), valor: n })).max(2000),
+  consumo: z.array(z.object({ cargaKg: n, consumoL100: n })).max(100),
 });
 
 // PUT /api/parametros — guarda parâmetros + tabelas (só escritório), transacional.

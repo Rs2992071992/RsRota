@@ -1456,3 +1456,15 @@ Formato: [data] | o que correu mal | regra para evitar
   nas Rotas, via `empacotarEstado`; as Cargas continuam com `empacotar`, que é
   estável a anexar). Ao mudar um motor, testes que codificam números do motor
   antigo (aqui "12 > 10") têm de ser revistos para a intenção, não só passados.
+
+- [2026-10-30] | Análise de segurança periódica: o `npm audit` voltou a dar
+  críticos NOVOS (Next 16.0–16.4.0: RCE sem autenticação no otimizador de
+  imagens/`use cache`; Capacitor Android 8.5.0: conteúdo remoto na origem da
+  app) — as versões fixadas (`next` 16.3.8, `@capacitor/* ^8.5.0`) ficaram
+  vulneráveis só por o tempo passar. | Correr `npm audit --omit=dev` nos 3
+  projetos (site + 2 apps) de tempos a tempos e ao fim de cada sessão grande;
+  versões fixadas = atualizações de segurança manuais. Também: o POST
+  /api/paragens aceitava `receitaPaga`/`faturarCliente`/`precoCombRefOverride`
+  de um MOTORISTA (o PATCH já os ignorava) — qualquer regra "só escritório"
+  tem de existir em TODOS os métodos que gravam o mesmo campo. `allowBackup`
+  nas apps passou a false (o token de 90 dias não deve ir para backups).

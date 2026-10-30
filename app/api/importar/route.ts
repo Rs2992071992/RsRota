@@ -55,6 +55,11 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ erro: "Ficheiro em falta." }, { status: 400 });
   }
+  // Limite de tamanho: um .xlsx real de viagens tem poucas centenas de KB; evita
+  // processar (e descomprimir) ficheiros enormes.
+  if (file.size > 5 * 1024 * 1024) {
+    return NextResponse.json({ erro: "Ficheiro demasiado grande (máx. 5 MB)." }, { status: 413 });
+  }
 
   // Valor por noite (para converter a coluna "Noites" do Excel, em euros, em contagem).
   const params = await prisma.parametros.findUnique({ where: { id: 1 } });
