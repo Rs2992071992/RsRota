@@ -13,8 +13,10 @@ offline Histórico/Tarefas, folha de registo PDF/Excel, plantas (cabine/reboque,
 - [ ] **Ricardo**: na rota RIC-Tec-absorvalor, paragem Gesplast: "Faturar esta
   recolha a" = Ges-sacofilme (muda o rateio: 47,7/52,3 → 16,8/83,2); e pôr a receita (está a 0)
 - [ ] **Ricardo**: guardar fora do PC `release-key.jks` + `keystore.properties` (Motorista e Admin)
-- [ ] 5 rotas ainda com "sem espaço": RIC-A22 (2 dias sem VAZIO, 39/77), RIC-plastiserra,
-  RIC-maravedis2, RIC-Tec-eurored, RIC-Tec-maravedis — ver se é erro de registo ou sobrecarga real
+- [x] 5 rotas com "sem espaço" analisadas (2026-10-30): NÃO é erro do motor, são dados — o Ricardo confirma/corrige:
+  A22 (50 paletes 1200x800 a 10/jul = 48 m² > 38,8 m²), plastiserra (34×1300x1100 = 48,6 m²; talvez tipo errado),
+  maravedis2 (30 paletes só camião 18,6 m²; reboque não marcado?), Tec-eurored (95 % da área, 1 palete a mais) e
+  Tec-maravedis (88 %, 1 palete) são justas. Nada alterado nos dados.
 - [ ] Perguntas em aberto (NÃO mexer sem o Ricardo dizer): receita dos "Vazio" fora do
   rateio por cliente (395 €); "Margem média" 19,6 % vs ponderada 15,5 %; coef. carga 200 %
   na paragem mista; trajeto vazio até à recolha registado como recolha carregada
