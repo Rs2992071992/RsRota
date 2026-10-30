@@ -2,6 +2,25 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 📌 PENDENTE para a próxima sessão (2026-10-30)
+
+Feito e publicado nesta sessão: tarefas (site+app), sessões com validade,
+offline Histórico/Tarefas, folha de registo PDF/Excel, plantas (cabine/reboque,
+2 bugs de recolha→entrega + VAZIO + cadeia mista), downloads na app Admin.
+
+- [ ] **Ricardo**: instalar APK nova do Motorista e da Administração; testar a
+  partilha de ficheiros na app Admin (ponte RsRotaAndroid — NUNCA testada num telemóvel)
+- [ ] **Ricardo**: na rota RIC-Tec-absorvalor, paragem Gesplast: "Faturar esta
+  recolha a" = Ges-sacofilme (muda o rateio: 47,7/52,3 → 16,8/83,2); e pôr a receita (está a 0)
+- [ ] **Ricardo**: guardar fora do PC `release-key.jks` + `keystore.properties` (Motorista e Admin)
+- [ ] 5 rotas ainda com "sem espaço": RIC-A22 (2 dias sem VAZIO, 39/77), RIC-plastiserra,
+  RIC-maravedis2, RIC-Tec-eurored, RIC-Tec-maravedis — ver se é erro de registo ou sobrecarga real
+- [ ] Perguntas em aberto (NÃO mexer sem o Ricardo dizer): receita dos "Vazio" fora do
+  rateio por cliente (395 €); "Margem média" 19,6 % vs ponderada 15,5 %; coef. carga 200 %
+  na paragem mista; trajeto vazio até à recolha registado como recolha carregada
+- [ ] Offline ainda por fazer: Avarias, criar rota nova, corrigir paragem
+- [ ] Opcional: folha com os 31 dias pré-numerados; nota "recolha p/ <cliente>" na folha
+
 ## 🔄 Folha de registo do camião (PDF + Excel) (2026-10-28) — branch `feat/folha-motorista`
 
 Pedido do Ricardo: uma empresa pediu uma folha em papel (Camião / Mês; colunas
