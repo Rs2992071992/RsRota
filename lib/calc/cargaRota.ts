@@ -423,7 +423,13 @@ function estadosDaRota(
   comLinhas: ReturnType<typeof filtrarLinhasValidas>,
 ): { estados: LinhaCarga[][]; ordenadas: ReturnType<typeof filtrarLinhasValidas> } {
   // Ordena pela sequência física.
-  const ordenadas = [...comLinhas].sort((a, b) => a.kmInicial - b.kmInicial);
+  // Paragens no mesmo km (ex. recolhe num cliente e entrega logo a seguir no
+  // mesmo sítio): desempata pela ordem de registo (`id`), para o resultado
+  // não depender da ordem em que o chamador leu as paragens (RIC-maravedis2:
+  // com a entrega lida antes da recolha contava as 10 paletes a dobra).
+  const ordenadas = [...comLinhas].sort(
+    (a, b) => a.kmInicial - b.kmInicial || (a.id != null && b.id != null ? a.id - b.id : 0),
+  );
   const n = ordenadas.length;
 
   // Linhas recolha->entrega (ver comentário acima). Passo 1: recolhas cujo

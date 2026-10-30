@@ -115,3 +115,28 @@ describe("cadeia: recolhe, descarrega e volta a carregar no mesmo sítio, entreg
     expect(verificarEspacoCarga([CAMIAO], REB, rota(null)).totalPaletes).toBe(44);
   });
 });
+
+describe("paragens no mesmo km: o resultado não depende da ordem de leitura (RIC-maravedis2)", () => {
+  const u = (id: number, cliente: string, entrega: number, recolhe: number, fat: string | null): ParagemCarga => ({
+    id, cliente, tipoViagem: "Volta", tipoVeiculo: "CAMIAO", kmInicial: 358188, faturarCliente: fat,
+    entregues: entrega ? [L(entrega, 1200, 800, cliente)] : [],
+    recolhidas: recolhe ? [L(recolhe, 1200, 800, cliente)] : [],
+  });
+  const recolhe = u(160, "Tec-Procartão", 0, 10, "Tecfil");
+  const entrega = u(161, "Tecfil", 10, 0, null);
+  // Ida da mesma rota: 10 paletes entregues antes (kms mais baixos).
+  const ida: ParagemCarga[] = [
+    { id: 152, cliente: "Tec-maravedis", tipoViagem: "Ida", tipoVeiculo: "CAMIAO", kmInicial: 357997, entregues: [L(2, 1200, 800, "A")], recolhidas: [] },
+    { id: 157, cliente: "Tec-celcat", tipoViagem: "Ida", tipoVeiculo: "CAMIAO", kmInicial: 358085, entregues: [L(4, 1300, 1100, "B")], recolhidas: [] },
+    { id: 158, cliente: "Tec-marco caires", tipoViagem: "Ida", tipoVeiculo: "CAMIAO", kmInicial: 358137, entregues: [L(2, 1300, 1100, "C")], recolhidas: [] },
+    { id: 159, cliente: "Tec-MAP", tipoViagem: "Ida", tipoVeiculo: "CAMIAO", kmInicial: 358169, entregues: [L(2, 1300, 1100, "D")], recolhidas: [] },
+  ];
+
+  it("recolha lida depois da entrega (mesmo km) dá o mesmo que lida antes", () => {
+    const certa = verificarEspacoCarga([CAMIAO], null, [...ida, recolhe, entrega]);
+    const trocada = verificarEspacoCarga([CAMIAO], null, [...ida, entrega, recolhe]);
+    expect(trocada).toEqual(certa);
+    expect(certa.totalPaletes).toBe(10); // nunca 20 (as 10 da Ida + as 10 da Volta)
+    expect(certa.cabemTodas).toBe(true);
+  });
+});
