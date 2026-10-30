@@ -91,3 +91,27 @@ describe("trecho VAZIO: o camião segue sem carga, não gera 'sem espaço' falso
     expect(ida!.caixas.flatMap((c) => c.itens)).toHaveLength(5);
   });
 });
+
+describe("cadeia: recolhe, descarrega e volta a carregar no mesmo sítio, entrega no destino (RIC-Tec-absorvalor)", () => {
+  const REB: CaixaInput = { id: "reboque", label: "Lecitrailer", comprimentoMm: 8150, larguraMm: 2480 };
+  const p1300 = (n: number, nome: string) => L(n, 1300, 1100, nome);
+  const rota = (faturarNaMista: string | null): ParagemCarga[] => [
+    { id: 423, cliente: "Tec-absorvalor", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 383437, entregues: [], recolhidas: [p1300(22, "Tec-absorvalor")], faturarCliente: "Gesplast" },
+    { id: 424, cliente: "Gesplast", tipoViagem: "Ida", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 383457, entregues: [p1300(22, "Gesplast")], recolhidas: [p1300(22, "Gesplast")], faturarCliente: faturarNaMista },
+    { id: 425, cliente: "Ges-sacofilme", tipoViagem: "Volta", tipoVeiculo: "CAMIAO+REBOQUE", kmInicial: 383562, entregues: [p1300(22, "Ges-sacofilme")], recolhidas: [] },
+    { id: 426, cliente: "Vazio", tipoViagem: "Ida", tipoVeiculo: "VAZIO", kmInicial: 383683, entregues: [], recolhidas: [] },
+  ];
+
+  it("com a recolha da Gesplast marcada para o destino final nunca vão mais de 22 a bordo", () => {
+    const e = verificarEspacoCarga([CAMIAO], REB, rota("Ges-sacofilme"));
+    expect(e.totalPaletes).toBe(22);
+    expect(e.cabemTodas).toBe(true);
+    const { ida, volta } = gerarPlantaCargaPorTroco([CAMIAO], REB, rota("Ges-sacofilme"));
+    expect(ida!.caixas.flatMap((c) => c.itens)).toHaveLength(22);
+    expect(volta!.caixas.flatMap((c) => c.itens)).toHaveLength(22);
+  });
+
+  it("sem marcar a recolha da Gesplast o motor não adivinha o destino (fica como está)", () => {
+    expect(verificarEspacoCarga([CAMIAO], REB, rota(null)).totalPaletes).toBe(44);
+  });
+});

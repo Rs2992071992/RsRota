@@ -1433,3 +1433,14 @@ Formato: [data] | o que correu mal | regra para evitar
   simulação sobre TODAS as rotas reais e comparar antes/depois (aqui: 13
   rotas mudaram, 3 avisos falsos desapareceram). Cada correção neste motor
   tem de ser copiada também para `app-motorista-android/src/lib/calc/cargaRota.ts`.
+
+- [2026-10-30] | Rota RIC-Tec-absorvalor (recolhe 22, descarrega e volta a
+  carregar 22 no mesmo sítio, entrega no destino final): a app dava "44
+  paletes, 20 sem espaço". Mesmo com a recolha da paragem do meio marcada
+  "faturar a <destino>", continuava 44, porque o motor não deixava uma
+  paragem MISTA ser ao mesmo tempo o FECHO de uma linha (recebe a 1ª recolha)
+  e a ORIGEM de outra (a sua própria recolha). | As paragens MISTAS podem
+  encadear linhas recolha→entrega (A→B→C); origem e destino são papéis
+  independentes na mesma paragem. E o motor só liga uma recolha a uma entrega
+  se a recolha tiver "faturar esta recolha a" — sem isso conta as paletes a
+  dobra (entrega a bordo desde o início + recolha a bordo depois).

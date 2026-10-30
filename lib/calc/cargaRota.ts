@@ -473,7 +473,11 @@ function estadosDaRota(
   candidatas.forEach((i) => {
     const alvo = alvoRecolha(ordenadas[i])!;
     for (let k = i + 1; k < n; k++) {
-      if (candidatas.has(k)) continue;
+      // Uma paragem MISTA pode fechar esta linha (recebe a recolha) e, ao mesmo
+      // tempo, abrir outra com a sua própria recolha (descarrega e volta a
+      // carregar no mesmo sítio, RIC-Tec-absorvalor): os dois papéis vivem em
+      // conjuntos separados (origensLinha / destinosLinha), por isso não se
+      // exclui um candidato a origem de ser destino de uma recolha anterior.
       const q = ordenadas[k];
       if (q.entregues.length > 0 && q.cliente?.trim() === alvo) {
         origensLinha.add(i);
