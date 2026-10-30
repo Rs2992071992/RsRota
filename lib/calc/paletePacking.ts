@@ -397,6 +397,102 @@ export function empacotar(caixas: CaixaInput[], unidades: PaleteUnidade[]): Resu
   return maxRects.colocados.length > porFaixas.colocados.length ? maxRects : porFaixas;
 }
 
+/** Combinações (sem repetição, por ordem) de `k` elementos de `arr`. */
+function* combinacoes<T>(arr: T[], k: number, desde = 0, atual: T[] = []): Generator<T[]> {
+  if (k === 0) {
+    yield atual;
+    return;
+  }
+  for (let i = desde; i <= arr.length - k; i++) yield* combinacoes(arr, k - 1, i + 1, [...atual, arr[i]]);
+}
+
+/**
+ * Como `empacotar`, mas quando ficam paletes por colocar tenta RODAR paletes:
+ * a arrumação automática decide cada palete por uma regra fixa e nunca volta
+ * atrás, por isso pode deixar de fora paletes que caberiam com outras
+ * orientações (RIC-Tec-maravedis: 15 paletes, 1 de fora, mas há centenas de
+ * combinações de orientações em que cabem todas). Experimenta rodar 1, depois
+ * 2, depois 3 paletes (relativamente à arrumação atual) e aceita a primeira
+ * combinação que deixe MENOS paletes de fora; repete a partir daí. O resultado
+ * é sempre uma arrumação real calculada por `empacotar` (nunca inventada) e a
+ * ordem das paletes não muda — só a orientação. Orientações fixadas pelo
+ * utilizador (`orientacao` COMPRIDO/TRAVES) são respeitadas.
+ *
+ * Limitado por `maxTentativas` (cada tentativa é um `empacotar` completo) e só
+ * corre quando falham poucas paletes. Sem falhas, é exatamente `empacotar`.
+ */
+export function empacotarComRotacoes(
+  caixas: CaixaInput[],
+  unidades: PaleteUnidade[],
+  opcoes: { maxFalhas?: number; maxUnidades?: number; maxTentativas?: number; maxRotacoes?: number } = {},
+): ResultadoPacking {
+  // Memória: a mesma carga é empacotada várias vezes por pedido (aviso, plantas
+  // Ida/Volta, % por paragem). Função pura e determinística, por isso é seguro.
+  const chave = JSON.stringify([caixas, unidades, opcoes]);
+  const guardado = memoRotacoes.get(chave);
+  if (guardado) return guardado;
+  const resultado = empacotarComRotacoesSemMemoria(caixas, unidades, opcoes);
+  if (memoRotacoes.size >= 300) memoRotacoes.delete(memoRotacoes.keys().next().value as string);
+  memoRotacoes.set(chave, resultado);
+  return resultado;
+}
+
+const memoRotacoes = new Map<string, ResultadoPacking>();
+
+function empacotarComRotacoesSemMemoria(
+  caixas: CaixaInput[],
+  unidades: PaleteUnidade[],
+  opcoes: { maxFalhas?: number; maxUnidades?: number; maxTentativas?: number; maxRotacoes?: number },
+): ResultadoPacking {
+  const { maxFalhas = 6, maxUnidades = 60, maxTentativas = 600, maxRotacoes = 3 } = opcoes;
+  type Indexada = PaleteUnidade & { _idx: number };
+  // Cada unidade leva um índice auxiliar (_idx) para saber, no resultado, qual
+  // palete de entrada é qual (várias partilham pedidoId/ordem). Sai limpo no fim.
+  let atuais: Indexada[] = unidades.map((u, i) => ({ ...u, _idx: i }));
+  let melhor = empacotar(caixas, atuais);
+  const tentar =
+    melhor.naoColocados.length > 0 && melhor.naoColocados.length <= maxFalhas && unidades.length <= maxUnidades;
+
+  let tentativas = 0;
+  esgotado: while (tentar && melhor.naoColocados.length > 0) {
+    // Orientação oposta à atual de cada palete (as que ficaram de fora: atravessada).
+    const rodada = new Map<number, boolean>();
+    for (const c of melhor.colocados) rodada.set((c as unknown as Indexada)._idx, c.rotacionado);
+    const candidatas = atuais
+      .filter((u) => !u.orientacao || u.orientacao === "AUTO")
+      .map((u) => u._idx);
+    const alvo = (i: number): OrientacaoPalete => (rodada.get(i) ? "COMPRIDO" : "TRAVES");
+
+    let melhorou = false;
+    for (let k = 1; k <= maxRotacoes && !melhorou; k++) {
+      for (const combo of combinacoes(candidatas, k)) {
+        if (++tentativas > maxTentativas) break esgotado;
+        const teste = atuais.map((u) => (combo.includes(u._idx) ? { ...u, orientacao: alvo(u._idx) } : u));
+        const r = empacotar(caixas, teste);
+        if (r.naoColocados.length < melhor.naoColocados.length) {
+          melhor = r;
+          atuais = teste;
+          melhorou = true;
+          break;
+        }
+      }
+    }
+    if (!melhorou) break;
+  }
+
+  // Tira o índice auxiliar das paletes devolvidas.
+  const limpa = <T extends object>(x: T): T => {
+    const { _idx, ...resto } = x as T & { _idx?: number };
+    void _idx;
+    return resto as T;
+  };
+  return {
+    caixas: melhor.caixas.map((c) => ({ ...c, itens: c.itens.map(limpa) })),
+    colocados: melhor.colocados.map(limpa),
+    naoColocados: melhor.naoColocados.map((n) => ({ ...n, unidade: limpa(n.unidade) })),
+  };
+}
+
 export interface PedidoParaExpandir {
   pedidoId: number;
   clienteId: number;

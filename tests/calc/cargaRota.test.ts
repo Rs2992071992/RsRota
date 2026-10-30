@@ -80,12 +80,13 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
   });
 
   it("entrega + recolha sobrepostas: o pico é um estado misto", () => {
-    // ordem por km: entrega6@0, recolha6@50, entrega6@100
-    const r = verificarEspacoCarga([CAMIAO], null, [entrega(6, 0), recolha(6, 50), entrega(6, 100)]);
-    // estado após a recolha: entrega6@100 (ainda a bordo) + recolha6@50 = 12
-    // paletes a bordo ao mesmo tempo — mais do que cabem no camião.
+    // ordem por km: entrega7@0, recolha7@50, entrega7@100
+    const r = verificarEspacoCarga([CAMIAO], null, [entrega(7, 0), recolha(7, 50), entrega(7, 100)]);
+    // estado após a recolha: entrega7@100 (ainda a bordo) + recolha7@50 = 14
+    // paletes a bordo ao mesmo tempo — mais do que cabem no camião (a melhor
+    // arrumação, rodando paletes, leva 12 de 1300×1100).
     expect(r.cabemTodas).toBe(false);
-    expect(r.totalPaletes).toBe(12); // pico misto, não a soma (18) nem 6
+    expect(r.totalPaletes).toBe(14); // pico misto, não a soma (21) nem 7
     expect(r.semEspaco).toBeGreaterThan(0);
   });
 
@@ -95,9 +96,9 @@ describe("verificarEspacoCarga — simulação da ocupação ao longo da rota", 
   });
 
   it("segmento só de recolhas que não cabe → avisa", () => {
-    const r = verificarEspacoCarga([CAMIAO], null, [recolha(12, 0)]);
+    const r = verificarEspacoCarga([CAMIAO], null, [recolha(13, 0)]);
     expect(r.cabemTodas).toBe(false);
-    expect(r.totalPaletes).toBe(12);
+    expect(r.totalPaletes).toBe(13);
   });
 
   it("sem caixas → não verificável, não avisa", () => {
@@ -283,20 +284,20 @@ describe("reboque largado a meio da rota (sem VAZIO a separar) — caso real RIC
   // CAMIAO+REBOQUE, paragens seguintes com CAMIAO, sem nenhum VAZIO entre elas.
   const rota = [
     entrega(4, 0, "CAMIAO+REBOQUE"),
-    entrega(6, 50, "CAMIAO"),
-    entrega(6, 100, "CAMIAO"),
+    entrega(7, 50, "CAMIAO"),
+    entrega(7, 100, "CAMIAO"),
   ];
   // Mesmos números, mas o reboque nunca é largado — serve de contraprova.
   const rotaComReboqueSempre = [
     entrega(4, 0, "CAMIAO+REBOQUE"),
-    entrega(6, 50, "CAMIAO+REBOQUE"),
-    entrega(6, 100, "CAMIAO+REBOQUE"),
+    entrega(7, 50, "CAMIAO+REBOQUE"),
+    entrega(7, 100, "CAMIAO+REBOQUE"),
   ];
 
-  it("avisa de sobrecarga depois de largar o reboque (12 > 10, capacidade só do camião)", () => {
+  it("avisa de sobrecarga depois de largar o reboque (14 > 12, capacidade só do camião)", () => {
     const r = verificarEspacoCarga([CAMIAO], REBOQUE, rota);
     expect(r.cabemTodas).toBe(false);
-    expect(r.totalPaletes).toBe(12); // pico: as 2 entregas depois de largar o reboque
+    expect(r.totalPaletes).toBe(14); // pico: as 2 entregas depois de largar o reboque
     expect(r.semEspaco).toBeGreaterThan(0);
   });
 

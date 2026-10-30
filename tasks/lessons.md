@@ -1444,3 +1444,15 @@ Formato: [data] | o que correu mal | regra para evitar
   independentes na mesma paragem. E o motor só liga uma recolha a uma entrega
   se a recolha tiver "faturar esta recolha a" — sem isso conta as paletes a
   dobra (entrega a bordo desde o início + recolha a bordo depois).
+
+- [2026-10-30] | RIC-Tec-maravedis dava "1 palete sem espaço", mas o Ricardo viu
+  que rodando uma palete já colocada a última cabia. Pesquisa exaustiva
+  (2^15 orientações): 832 combinações colocam as 15 — o `empacotar` decide cada
+  palete por uma regra fixa e nunca volta atrás, por isso é conservador. Os
+  testes antigos tinham "capacidade do camião = 10" (de 1300×1100) por causa
+  dessa regra; arrumando em colunas intercaladas cabem 12. | O limite do motor
+  heurístico NÃO é o limite físico: antes de dar um aviso "não cabe" por bom,
+  tentar uma pesquisa de orientações. Nova `empacotarComRotacoes` (só usada
+  nas Rotas, via `empacotarEstado`; as Cargas continuam com `empacotar`, que é
+  estável a anexar). Ao mudar um motor, testes que codificam números do motor
+  antigo (aqui "12 > 10") têm de ser revistos para a intenção, não só passados.

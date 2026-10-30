@@ -7,7 +7,7 @@
 // sai/acaba cheio). Meias-paletes não entram — não ocupam base própria.
 
 import {
-  empacotar,
+  empacotarComRotacoes,
   expandirPedidosEmUnidades,
   type CaixaInput,
   type ResultadoPacking,
@@ -221,7 +221,7 @@ function empacotarEstado(caixas: CaixaInput[], linhas: LinhaCarga[]): EstadoArru
     ordem: i + 1,
     quantidade: Math.floor(l.nPaletes),
   }));
-  const r = empacotar(caixas, expandirPedidosEmUnidades(pedidos));
+  const r = empacotarComRotacoes(caixas, expandirPedidosEmUnidades(pedidos));
   return {
     espaco: {
       totalPaletes,
