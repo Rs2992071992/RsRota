@@ -63,10 +63,10 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes, 
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Veículos</h1>
-        <div className="flex items-center gap-4">
-          <Link href="/escritorio/veiculos/avarias" className="btn-secondary relative gap-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <Link href="/escritorio/veiculos/avarias" className="btn-secondary relative gap-2 whitespace-nowrap">
             <Wrench size={16} strokeWidth={2} />
             Ped. Manutenção
             {avariasPendentes > 0 && (
@@ -75,7 +75,7 @@ export default function VeiculosManager({ veiculos, template, avariasPendentes, 
               </span>
             )}
           </Link>
-          <button onClick={() => setCriarAberto(true)} className="btn">
+          <button onClick={() => setCriarAberto(true)} className="btn whitespace-nowrap">
             + Novo veículo
           </button>
         </div>

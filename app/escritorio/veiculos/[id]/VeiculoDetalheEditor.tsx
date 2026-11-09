@@ -78,7 +78,8 @@ export default function VeiculoDetalheEditor({
 
   return (
     <div className="card">
-      <div className="mb-4 flex items-center justify-between">
+      {/* Em ecrãs estreitos quebra de linha (custo/km em cima, botões por baixo) em vez de empurrar os botões para fora do cartão. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         {f.categoria === "PESADO" ? (
           <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
             Custo veículo / km: <span className="font-bold">{fmtNum2(custoKm)} €</span>
@@ -86,11 +87,11 @@ export default function VeiculoDetalheEditor({
         ) : (
           <div />
         )}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPedidoAberto(true)} className="btn-secondary text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setPedidoAberto(true)} className="btn-secondary whitespace-nowrap text-sm">
             + Pedido de manutenção
           </button>
-          <button onClick={() => setManutencoesAbertas(true)} className="btn-secondary text-sm">
+          <button onClick={() => setManutencoesAbertas(true)} className="btn-secondary whitespace-nowrap text-sm">
             Manutenções
           </button>
         </div>
