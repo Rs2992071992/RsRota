@@ -3083,6 +3083,10 @@ PEGO SAS, Miguel por escrito) com advogado; preço; contrato + RGPD.
 Regra de ouro: nada disto corre contra a BD/Vercel de produção atuais.
 
 ### Fase A — Demo isolada (sem tocar na produção)
+**Progresso (2026-11-10):** cópia independente criada em `Desktopappfrotavenda` (sem .env/.git/dados reais;
+removidos dev.db, xlsx, scripts de migração). Seed fictício + guardas (`prisma/seed-demo.ts`, `prisma/demo/dados.ts`),
+teste que passa a demo pelo motor (7 testes; suite 326 ✓, tsc limpo). Falta: contas Neon/Vercel da demo, `db:push` + `db:seed-demo`,
+deploy e ver no browser. Fora do seed v1: orçamentos (Devis). Guia: `appfrotavenda/DEMO.md`.
 - [ ] BD Neon nova (projeto separado) + projeto Vercel novo para a demo
 - [ ] `db:push` + `db:seed` na BD da demo; confirmar que o `.env` aponta para ela
 - [ ] Script/seed de dados fictícios (frota, motoristas, clientes, ~15 rotas)
