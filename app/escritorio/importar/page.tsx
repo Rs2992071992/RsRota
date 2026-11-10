@@ -1,3 +1,4 @@
+import ExportarBotoes from "./ExportarBotoes";
 import ImportarCliente from "./ImportarCliente";
 
 export default function ImportarPage() {
@@ -10,14 +11,7 @@ export default function ImportarPage() {
         <p className="mb-3 text-sm text-gray-500">
           Descarrega as rotas e paragens calculadas.
         </p>
-        <div className="flex gap-2">
-          <a href="/api/exportar?formato=xlsx" className="btn">
-            Exportar Excel
-          </a>
-          <a href="/api/exportar?formato=csv" className="btn-secondary">
-            Exportar CSV (rotas)
-          </a>
-        </div>
+        <ExportarBotoes />
       </div>
 
       <ImportarCliente />
