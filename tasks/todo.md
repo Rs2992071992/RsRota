@@ -3067,3 +3067,43 @@ Objetivo: URL pública estável para partilhar a app (Next.js 14 + Prisma).
 ## Histórico de validação
 - Importado o Excel real → 9 rotas batem ao cêntimo. 36 testes Vitest verdes. Build OK.
 - Constantes: custo veículo/km 0,2746 € | motorista/km 0,26713 € | HILP01 = 1487,73 €.
+
+## ▶️ RETOMADO — vender a app a outra transportadora (2026-11-10)
+
+Decisões do Ricardo: (1) a tua instância NÃO se mexe; clientes = instalações
+separadas (Vercel + Neon + apps Android próprios); (2) hospedagem: o Ricardo
+trata, no 1º cliente; (3) marca: menu de configuração (não código fixo);
+(4) **demo primeiro**, com dados fictícios. Este bloco substitui o estado
+"PARADO" da secção anterior (as caixas [x] dessa secção NÃO são fiáveis —
+tratar tudo como por fazer até verificar).
+
+Pendente fora do código (Ricardo): confirmar propriedade do código (contrato
+PEGO SAS, Miguel por escrito) com advogado; preço; contrato + RGPD.
+
+Regra de ouro: nada disto corre contra a BD/Vercel de produção atuais.
+
+### Fase A — Demo isolada (sem tocar na produção)
+- [ ] BD Neon nova (projeto separado) + projeto Vercel novo para a demo
+- [ ] `db:push` + `db:seed` na BD da demo; confirmar que o `.env` aponta para ela
+- [ ] Script/seed de dados fictícios (frota, motoristas, clientes, ~15 rotas)
+- [ ] Trocar PINs por defeito; confirmar que nada da produção aparece
+- [ ] Cronometrar o processo → define o preço do setup
+
+### Fase B — Menu de configuração da marca (muda o código; default = hoje)
+Pontos de marca encontrados: `app/layout.tsx` (título), `app/login/page.tsx`
+(nome + logo-icon.png), `app/escritorio/layout.tsx` (alt + logo-manager.png),
+`lib/pdf/empresa.ts` (nome/detalhe/contacto nos 4 PDFs). Fundo `login-bg.jpg`.
+- [ ] Guardar marca em `Parametros` (campos novos com default = valores atuais:
+  nome, detalhe, contacto, cor, logos) → instância atual fica idêntica
+- [ ] Ecrã de configuração no escritório; `lib/pdf/empresa.ts` passa a ler da BD
+- [ ] Cor da marca (classe `brand`) configurável
+- [ ] Testes + verificar que a instância atual não muda visualmente
+
+### Fase C — Apps Android por cliente
+- [ ] Script/guia: nome, appId, ícone, URL, chave de assinatura própria por cliente
+- [ ] Decidir: Motorista com URL fixa no build (hoje) vs. configurável
+
+### Fase D — Kit "nova instância" + limpeza
+- [ ] Guia passo-a-passo a partir da Fase A; separar standard vs. por-cliente
+- [ ] Procurar no código nomes/valores teus hardcoded (clientes, veículos, textos)
+- [ ] Piloto: 1º cliente, ambiente 100% separado
