@@ -296,10 +296,8 @@ export default function CarregamentoFloorPlan({
                           : undefined
                       }
                     >
-                      <title>
-                        {`${item.clienteNome} — ${item.tipoPaleteNome}`}
-                        {arrastavel ? " (arrasta para reposicionar)" : ""}
-                      </title>
+                      {/* Um só texto: o React 19 não aceita vários filhos em <title> (dava erro de hidratação #418). */}
+                      <title>{`${item.clienteNome} — ${item.tipoPaleteNome}${arrastavel ? " (arrasta para reposicionar)" : ""}`}</title>
                     </rect>
                     <foreignObject
                       x={item.y}

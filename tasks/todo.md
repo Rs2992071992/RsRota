@@ -2,6 +2,17 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## ☑️ Segurança — CSP + limite de login por IP (2026-11-10)
+
+- [x] CSP em produção (next.config.mjs): default-src self; scripts/estilos com unsafe-inline (Next);
+  img data:/blob:; frame-ancestors none; form-action self; testada com 17 páginas (escritório + motorista)
+  num Edge real via CDP — 0 violações
+- [x] Limite de falhas de login por IP: 30 / 15 min → 429 (tabela LoginFalha, só HMAC do IP; falha em aberto)
+- [x] Erro de hidratação #418 na planta (`<title>` com vários filhos) corrigido
+- [ ] NÃO feito (decisão): token do motorista em Keystore (precisa de teste em telemóvel); zod 4 (alteração grande,
+  DoS já mitigado com .max()); testar ponte de descarga / proteções entre motoristas / APKs num telemóvel real
+- Nota: o teste do limite deixou 1-2 linhas em LoginFalha (IPs de teste 203.0.113.x) — expiram sozinhas
+
 ## 📌 PENDENTE para a próxima sessão (2026-10-30)
 
 Feito e publicado nesta sessão: tarefas (site+app), sessões com validade,

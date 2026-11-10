@@ -1468,3 +1468,10 @@ Formato: [data] | o que correu mal | regra para evitar
   de um MOTORISTA (o PATCH já os ignorava) — qualquer regra "só escritório"
   tem de existir em TODOS os métodos que gravam o mesmo campo. `allowBackup`
   nas apps passou a false (o token de 90 dias não deve ir para backups).
+
+- [2026-11-10] | Ao ligar uma CSP (e ao testar páginas num browser real via CDP)
+  apareceu um erro de hidratação antigo na planta: `<title>` com 2 filhos
+  (React 19 só aceita texto único). | Testar uma CSP com TODAS as páginas
+  principais (escritório e motorista) num browser real a recolher
+  violações/exceções, em modo produção; e em elementos SVG `<title>` usar
+  sempre UMA string (template literal), nunca vários filhos.

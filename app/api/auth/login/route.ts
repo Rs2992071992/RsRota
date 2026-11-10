@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE, TTL_COOKIE_SEG, TTL_TOKEN_APP_SEG, createSessionValue } from "@/lib/auth";
+import { ipBloqueado, registarFalhaIp } from "@/lib/login-limite";
 
 const schema = z.object({
   perfil: z.enum(["ESCRITORIO", "MOTORISTA"]),
@@ -26,6 +27,15 @@ export async function POST(req: Request) {
   }
   const { perfil, codigo, pin } = parsed.data;
 
+  // Limite por IP (30 falhas / 15 min): trava quem tenta PINs de várias contas a partir do mesmo sítio.
+  const limiteIp = await ipBloqueado(req);
+  if (limiteIp.bloqueado) {
+    return NextResponse.json(
+      { erro: `Demasiadas tentativas deste local. Tente novamente daqui a ${limiteIp.minutos} min.` },
+      { status: 429 },
+    );
+  }
+
   // Escritório: conta única (codigo fixo). Motorista: procura pelo ID introduzido.
   const codigoLogin = perfil === "ESCRITORIO" ? "ESCRITORIO" : (codigo ?? "").trim();
   if (perfil === "MOTORISTA" && !codigoLogin) {
@@ -47,6 +57,7 @@ export async function POST(req: Request) {
   }
 
   if (!user || user.perfil !== perfil || !bcrypt.compareSync(pin, user.pinHash)) {
+    await registarFalhaIp(req);
     if (user) {
       const tentativas = user.tentativasFalhadas + 1;
       const atingiuLimite = tentativas >= LIMITE_TENTATIVAS;

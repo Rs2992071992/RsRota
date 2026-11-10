@@ -492,7 +492,7 @@ model Utilizador {
 
   paragens Paragem[]
   avarias  Avaria[]
-  tarefas  Tarefa[] @relation("TarefasDoMotorista")
+  tarefas  Tarefa[]  @relation("TarefasDoMotorista")
 
   criadoEm DateTime @default(now())
 }
@@ -612,4 +612,13 @@ model PedidoPalete {
   @@index([carregamentoId])
   @@index([clienteId])
   @@index([tipoPaleteId])
+}
+
+/// Falhas de login por IP numa janela curta — trava quem tenta adivinhar PINs de
+/// várias contas a partir do mesmo sítio (o bloqueio por conta, em Utilizador,
+/// não o apanha). Guarda só um HMAC do IP, nunca o IP em claro.
+model LoginFalha {
+  chave        String   @id
+  tentativas   Int      @default(0)
+  janelaInicio DateTime @default(now())
 }
