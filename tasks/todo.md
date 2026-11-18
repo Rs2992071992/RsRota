@@ -2,6 +2,49 @@
 
 Plano completo: `/Users/miguel/.claude/plans/quero-que-construas-uma-piped-sphinx.md`
 
+## 🗺️ PLANO RsRota — próximas sessões (proposto 2026-11-18, aguarda confirmação do Ricardo)
+
+Contexto: a demo de venda está concluída (ver secção "vender a app" mais abaixo). Este plano é só da app
+real (rs-rota.vercel.app + 2 APKs). Nada daqui toca na demo (Desktop\appfrotavenda). Regra: pequenas
+mudanças, um commit lógico cada, testes + build antes de push, e NÃO mexer em rateio/receita/margem
+sem decisão explícita do Ricardo (pedido de 2026-10-11).
+
+### Fase 1 — Fechar o que só o Ricardo pode fazer (sem código, ~30 min)
+- [ ] Rota RIC-Tec-absorvalor, paragem Gesplast: "Faturar esta recolha a" = Ges-sacofilme; pôr a receita (está a 0).
+  Muda o rateio 47,7/52,3 → 16,8/83,2 — conferir o resultado depois
+- [ ] Cópia FORA do PC de release-key.jks + keystore.properties (Motorista e Administração)
+- [ ] RIC-Tec-eurored: aviso "sem espaço" é legítimo (1 de 30 paletes, 95 % da caixa) — só confirmar
+
+### Fase 2 — Decisões sobre cálculos (SESSÃO DE CONVERSA, só depois código) — a mais valiosa, mexe em faturação
+Para cada ponto: eu mostro 1–2 rotas reais com o número antes/depois; o Ricardo decide; só então implemento.
+- [ ] a) Receita dos trechos "Vazio" fica fora do rateio por cliente (≈ 395 €): deve repartir-se?
+- [ ] b) "Margem média" 19,6 % (média simples) vs ponderada 15,5 %: qual mostrar no dashboard (ou as duas)?
+- [ ] c) Coeficiente de carga 200 % numa paragem mista (entrega + recolha somam)
+- [ ] d) Trajeto vazio até à recolha registado como recolha carregada
+- [ ] e) % da carga usa capacidade teórica de grelha, não a ocupação real da planta (memória coef-carga-percentagem-pendente)
+- Critério de pronto: testes novos por ponto decidido; rotas antigas só mudam se o Ricardo aprovar (snapshots/histórico preservados)
+
+### Fase 3 — Offline completo na app do Motorista (valor para quem está na estrada)
+Ordem por risco (menor primeiro), cada uma com fila local + reenvio + testes de simulação (como em 2026-10-28):
+- [ ] 3.1 Avarias offline (só criar)
+- [ ] 3.2 Corrigir paragem offline (conflitos: servidor recalcula — decidir regra "última escrita ganha" ou aviso)
+- [ ] 3.3 Criar rota nova offline (gera idRota localmente — risco de duplicados; definir como reconciliar)
+- Cada passo: APK nova + teste num telemóvel real pelo Ricardo antes do passo seguinte
+
+### Fase 4 — Segurança diferida (sem urgência; rodar npm audit nos 3 projetos de tempos a tempos)
+- [ ] 4.1 zod 3 → 4 (corrige o único aviso alto que resta no npm audit; alteração grande — migrar schemas por ficheiro, com testes)
+- [ ] 4.2 Token do motorista no Keystore do Android (precisa de teste em telemóvel real)
+- [ ] 4.3 Testar num telemóvel as proteções entre motoristas (POST /api/paragens ignora campos do escritório e rotas alheias)
+
+### Fase 5 — Opcionais
+- [ ] Folha de registo com os 31 dias pré-numerados; nota "recolha p/ <cliente>" na folha
+- [ ] Reduzir a duplicação do motor cargaRota/paletePacking (site + Android) — hoje são 2 cópias que têm de ficar iguais
+
+### Ordem sugerida e porquê
+1 → 2 → 3.1 → 4.1 → 3.2 → 3.3 → resto. A Fase 1 é rápida e destrava dados reais; a 2 corrige números de faturação
+(maior impacto, mas só com o Ricardo); a 3 melhora o uso diário; a 4 é higiene. Cada fase termina com tsc + vitest
++ next build, commit pequeno, push (deploy automático) e confirmação do deploy no Vercel (Ready).
+
 ## ☑️ Segurança — CSP + limite de login por IP (2026-11-10)
 
 - [x] CSP em produção (next.config.mjs): default-src self; scripts/estilos com unsafe-inline (Next);
