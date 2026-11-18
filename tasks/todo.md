@@ -3083,6 +3083,15 @@ PEGO SAS, Miguel por escrito) com advogado; preço; contrato + RGPD.
 Regra de ouro: nada disto corre contra a BD/Vercel de produção atuais.
 
 ### Fase A — Demo isolada (sem tocar na produção)
+**ESTADO 2026-11-18: Fase A CONCLUÍDA e testada pelo Ricardo.** Demo no ar em https://frota-demo.vercel.app
+(repo privado Rs2992071992/frota-demo, Vercel frota-demo, Neon app_vender). PINs: escritório 1111, motoristas carlos/rui 2222.
+Marca DemoRota (logos em Desktopappfrotavendamarca). APKs: DesktopDemoRota-Manager.apk e DemoRota-Motorista.apk
+(projetos em Desktopappfrotavenda-*-android, chaves próprias demo-key.jks). PDFs com cabeçalho DemoRota. Next 16.4.6 na demo e na app principal.
+LIÇÃO: no repo da demo, commits com email 329719956+Rs2992071992@users.noreply.github.com (senão Vercel Hobby = Blocked).
+PENDENTE (Ricardo): chave ORS (ORS_API_KEY no .env da demo + Vercel, depois redeploy); backup das chaves reais e da demo.
+PENDENTE (para vender, não iniciado): Fase B menu de marca, C apps por cliente, D kit; advogado/propriedade do código/Miguel, preço, contrato, RGPD.
+Para repor a demo: DEMO_CONFIRMA=SIM npm run db:seed-demo (na pasta appfrotavenda).
+
 **Progresso (2026-11-10):** cópia independente criada em `Desktopappfrotavenda` (sem .env/.git/dados reais;
 removidos dev.db, xlsx, scripts de migração). Seed fictício + guardas (`prisma/seed-demo.ts`, `prisma/demo/dados.ts`),
 teste que passa a demo pelo motor (7 testes; suite 326 ✓, tsc limpo). Falta: contas Neon/Vercel da demo, `db:push` + `db:seed-demo`,
